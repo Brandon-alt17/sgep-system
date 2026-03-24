@@ -16,7 +16,7 @@ El SGEP es una aplicación web **monolítica de ejecución local** construida co
 │                                                         │
 │  ┌──────────────┐    ┌──────────────┐  ┌────────────┐  │
 │  │  Navegador   │───▶│   Laravel    │─▶│  MySQL     │  │
-│  │  (Chrome/FF) │    │  (WAMP/Herd) │  │  (Local)   │  │
+│  │  (Chrome/FF) │    │  (WAMP/MAMP) │  │  (Local)   │  │
 │  └──────────────┘    └──────────────┘  └────────────┘  │
 │                             │                           │
 │                    ┌────────┴────────┐                  │
@@ -33,14 +33,14 @@ El SGEP es una aplicación web **monolítica de ejecución local** construida co
 
 | Capa | Tecnología | Rol |
 |------|-----------|-----|
-| **Backend** | Laravel 10 (PHP 8.2) | Framework MVC principal |
+| **Backend** | Laravel 10 (PHP 8.3+) | Framework MVC principal |
 | **Frontend** | Blade + Tailwind CSS 3 | Vistas y estilos |
 | **Base de datos** | MySQL 8.0 | Almacenamiento local |
 | **Importación** | Maatwebsite/Laravel-Excel | Lectura de CSV y .xlsx |
 | **Documentos Word** | PHPOffice/PHPWord | Generación del F-023 |
 | **Exportación Excel** | Maatwebsite/Laravel-Excel | Reporte maestro .xlsx |
 | **Entorno Windows** | WAMP 3.x | Servidor local PHP + MySQL + Apache |
-| **Entorno macOS** | Laravel Herd + DBngin | Equivalente a WAMP para Mac |
+| **Entorno macOS** | MAMP | Equivalente a WAMP para Mac |
 
 ---
 
@@ -343,10 +343,13 @@ Google Forms
 
 ## URL de Acceso Local
 
+> **Nota:** Entorno recomendado oficial: **WAMP (Windows)** y **MAMP (macOS)**.  
+> **XAMPP** queda como alternativa opcional.
+
 | Entorno | URL |
 |---------|-----|
 | **WAMP (Windows)** | `http://localhost/sgep/public` |
-| **Herd (macOS)** | `http://sgep.test` |
+| **MAMP (macOS)** | `http://localhost:8888/sgep/public` |
 | **XAMPP** | `http://localhost/sgep/public` |
 
 ---

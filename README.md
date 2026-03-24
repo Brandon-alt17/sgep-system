@@ -27,12 +27,15 @@ El **SGEP** es un sistema web local diseñado para automatizar el seguimiento, e
 
 | Capa | Tecnología | Versión |
 |------|-----------|---------|
-| **Backend** | PHP + Laravel | 8.2 + 10.x |
-| **Frontend** | Blade + Tailwind CSS | Nativo + 3.x |
-| **Base de Datos** | MySQL | 8.0.x |
-| **Entorno Local** | WAMP (Windows) / XAMPP (macOS) | Latest |
-| **Documentos** | PHPWord | 1.1+ |
-| **Excel/CSV** | PhpSpreadsheet + Maatwebsite/Excel | 2.0 + 3.1 |
+| **Backend** | PHP + Laravel | 8.3+ + 10.10+ |
+| **Frontend** | Blade + Tailwind CSS + Alpine.js | Nativo + 3.4+ + 3.15+ |
+| **Build Tool** | Vite + Laravel Vite Plugin | 5.x + 1.x |
+| **HTTP Cliente** | Guzzle + Axios | 7.2+ + 1.6+ |
+| **Base de Datos** | MySQL | 8.0+ |
+| **Seguridad/API** | Laravel Sanctum | 3.3+ |
+| **Documentos** | PHPOffice/PHPWord | 1.4+ |
+| **Excel/CSV** | Maatwebsite/Laravel-Excel | 3.1+ |
+| **Entorno Local** | WAMP (Windows) / MAMP (macOS) | Actual |
 
 ---
 
@@ -48,44 +51,116 @@ El **SGEP** es un sistema web local diseñado para automatizar el seguimiento, e
 
 ---
 
-## Instalación Rápida
+## Instalación del Proyecto SGEP
 
-### Prerrequisitos
+### Requisitos previos
 
-- [ ] WAMP instalado (Windows) o XAMPP (macOS)
-- [ ] PHP 8.2+ habilitado
-- [ ] Composer instalado globalmente
-- [ ] MySQL 8.0+ corriendo
+- **PHP 8.3+** (verificar con `php -v`)
+- **Composer 2.x** (verificar con `composer --version`)
+- **Node.js 18+ y NPM 9+** (verificar con `node -v` y `npm -v`)
+- **MySQL 8.0+** (incluido en WAMP/MAMP o XAMPP)
+- **WAMP** (Windows) o **MAMP** (macOS) instalado
 
-### Pasos de Instalación
+> **Nota:** Entorno recomendado oficial: **WAMP (Windows)** y **MAMP (macOS)**.  
+> **XAMPP** puede usarse como alternativa opcional.
+
+### Pasos de instalación
+
+1. **Clonar el repositorio**
 
 ```bash
-# 1. Clonar el repositorio
 git clone https://github.com/Brandon-alt17/sgep-system.git
 cd sgep-system
+```
 
-# 2. Copiar archivo de entorno
-cp .env.example .env
+2. **Instalar dependencias PHP**
 
-# 3. Instalar dependencias
+```bash
 composer install
+```
 
-# 4. Generar clave de aplicación
+3. **Instalar dependencias JavaScript**
+
+```bash
+npm install
+npm run build
+```
+
+4. **Configurar variables de entorno**
+
+```bash
+# Windows
+copy .env.example .env
+
+# macOS/Linux
+cp .env.example .env
+```
+
+5. **Generar clave de aplicación**
+
+```bash
 php artisan key:generate
+```
 
-# 5. Configurar base de datos en .env
-# DB_DATABASE=sgep
-# DB_USERNAME=root
-# DB_PASSWORD=
+6. **Configurar base de datos en `.env`**
 
-# 6. Ejecutar migraciones
-php artisan migrate --seed
+Editar el archivo `.env` y configurar:
 
-# 7. Limpiar caché para producción
-php artisan config:cache
-php artisan route:cache
-php artisan view:cache
+```env
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=sgep
+DB_USERNAME=root
+DB_PASSWORD=
+```
 
-# 8. Acceder al sistema
-# Windows: http://localhost/sgep/public
-# macOS: http://localhost/sgep/public
+7. **Crear base de datos**
+
+Desde phpMyAdmin:
+- Abrir `http://localhost/phpmyadmin`
+- Click en **Nueva**
+- Nombre: `sgep`
+- Collation: `utf8mb4_unicode_ci`
+- Click en **Crear**
+
+8. **Ejecutar migraciones**
+
+```bash
+php artisan migrate
+```
+
+9. **Iniciar el servidor**
+
+```bash
+php artisan serve
+```
+
+10. **Acceder al sistema**
+
+- Opcion A: Usando Laravel (recomendado) -> `http://localhost:8000`
+- Opcion B: Usando WAMP/MAMP/XAMPP -> `http://localhost/sgep-system/public`
+
+### Documentación adicional
+
+- Ver carpeta `/docs` para documentacion tecnica
+- Ver `README.md` para informacion general del proyecto
+
+### Solución de problemas comunes
+
+- **Error: "PHP version does not satisfy"**
+  - Verifica que tengas PHP 8.3+ instalado
+  - Configura WAMP para usar PHP 8.3 (`PHP -> Version -> 8.3.x`)
+- **Error: "npm run build falla"**
+  - Asegurate de tener Node.js 18+
+  - Ejecuta: `npm cache clean --force` y luego `npm install`
+- **Error: "Table already exists"**
+  - Ejecuta: `php artisan migrate:fresh`
+
+### Verificación de instalación
+
+Despues de instalar, verifica:
+- `php artisan --version` muestra Laravel 10.x
+- `npm list` muestra `tailwindcss`, `alpinejs`, `vite`
+- `public/build/manifest.json` existe
+- El servidor inicia sin errores en `http://localhost:8000`
