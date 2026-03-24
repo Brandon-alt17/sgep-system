@@ -1,4 +1,4 @@
-# 🎓 SGEP — Sistema de Gestión de Etapa Productiva
+# SGEP — Sistema de Gestión de Etapa Productiva
 
 **SENA — Centro de Diseño e Innovación Tecnológica Industrial (CDITI)**  
 **Versión:** 1.0 (MVP)  
@@ -7,11 +7,11 @@
 
 ---
 
-## 📖 Descripción
+## Descripción
 
 El **SGEP** es un sistema web local diseñado para automatizar el seguimiento, evaluación y documentación de aprendices en etapa productiva del SENA CDITI.
 
-### ❌ Problema que Resuelve
+### Problema que Resuelve
 
 | Antes (Proceso Manual) | Después (Con SGEP) |
 |----------------------|-------------------|
@@ -23,7 +23,7 @@ El **SGEP** es un sistema web local diseñado para automatizar el seguimiento, e
 
 ---
 
-## 🛠️ Tecnologías
+## Tecnologías
 
 | Capa | Tecnología | Versión |
 |------|-----------|---------|
@@ -36,7 +36,7 @@ El **SGEP** es un sistema web local diseñado para automatizar el seguimiento, e
 
 ---
 
-## 📋 Requisitos del Sistema
+## Requisitos del Sistema
 
 | Componente | Mínimo | Recomendado |
 |-----------|--------|-------------|
@@ -48,7 +48,7 @@ El **SGEP** es un sistema web local diseñado para automatizar el seguimiento, e
 
 ---
 
-## 🚀 Instalación Rápida
+## Instalación Rápida
 
 ### Prerrequisitos
 
