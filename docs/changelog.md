@@ -1,4 +1,4 @@
-# 📝 Changelog — SGEP
+# Changelog — SGEP
 
 Todos los cambios notables del proyecto se documentan en este archivo.
 

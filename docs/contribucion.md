@@ -1,6 +1,6 @@
-# 🤝 Guía de Contribución — SGEP
+# Guía de Contribución — SGEP
 
-**Para:** Equipo de desarrollo (5 personas)  
+**Para:** Equipo de desarrollo (7 personas)  
 **Versión:** 1.0
 
 ---
@@ -20,13 +20,15 @@
 
 | Persona | Rol | Área principal |
 |---------|-----|----------------|
-| **A** | Líder técnico / Backend | Controladores, lógica de negocio, validaciones |
+| **A** | Backend | Controladores, lógica de negocio, validaciones |
 | **B** | Frontend | Vistas Blade, layout, formularios, componentes UI |
 | **C** | Base de datos | Migraciones, modelos Eloquent, relaciones, queries |
 | **D** | QA / Componentes | Testing con datos reales, componentes Blade repetitivos |
 | **E** | Git / Demo | Gestión del repo, merges, instalación en campo, demo |
+| **F** | Backend | |
+| **G** | Frontend | |
 
-> ℹ️ Los roles definen el área de foco, no de exclusividad. Cualquier miembro puede ayudar fuera de su área si es necesario — pero cada tarea tiene un responsable claro.
+> Los roles definen el área de foco, no de exclusividad. Cualquier miembro puede ayudar fuera de su área si es necesario — pero cada tarea tiene un responsable claro.
 
 ---
 
@@ -35,7 +37,7 @@
 ### Ramas
 
 ```
-main                    ← Solo código que funciona y ha sido revisado
+dev                    ← Solo código que funciona y ha sido revisado
 │
 ├── feat/importacion    ← En desarrollo por A
 ├── feat/perfil         ← En desarrollo por B
@@ -45,18 +47,18 @@ main                    ← Solo código que funciona y ha sido revisado
 
 ### Reglas
 
-- ❌ **Nadie hace push directo a `main`**
-- ✅ Cada tarea nueva = rama nueva desde `main`
-- ✅ Merge a `main` solo después de revisión de A o E
-- ✅ Merge al menos una vez cada 24 horas (no acumular días de trabajo sin integrar)
-- ✅ Antes de crear una rama nueva, hacer `git pull origin main`
+- **Nadie hace push directo a `dev`**
+- Cada tarea nueva = rama nueva desde `dev`
+- Merge a `dev` solo después de revisión de A o E
+- Merge al menos una vez cada 24 horas (no acumular días de trabajo sin integrar)
+- Antes de crear una rama nueva, hacer `git pull origin dev`
 
 ### Flujo diario
 
 ```bash
-# 1. Actualizar main local
-git checkout main
-git pull origin main
+# 1. Actualizar dev local
+git checkout dev
+git pull origin dev
 
 # 2. Crear o retomar tu rama
 git checkout -b feat/nombre-de-tarea
@@ -70,7 +72,7 @@ git commit -m "feat(importacion): normalizar correos a minúsculas"
 # 4. Subir tu rama
 git push origin feat/nombre-de-tarea
 
-# 5. Cuando la tarea está lista: abrir Pull Request hacia main
+# 5. Cuando la tarea está lista: abrir Pull Request hacia dev
 # E o A hacen el merge después de revisar
 ```
 
@@ -83,12 +85,12 @@ git push origin feat/nombre-de-tarea
 ### Controladores
 
 ```php
-// ✅ Correcto: PascalCase, singular, sufijo Controller
+// Correcto: PascalCase, singular, sufijo Controller
 class AprendizController extends Controller {}
 class MomentoController extends Controller {}
 class ImportacionController extends Controller {}
 
-// ❌ Incorrecto
+// Incorrecto
 class aprendizesController {}
 class ControladorAprendices {}
 ```
@@ -108,7 +110,7 @@ public function destroy() // DELETE /aprendices/{id}  → eliminar
 ### Rutas
 
 ```php
-// ✅ Correcto: snake_case plural en la URL, resourceful cuando aplique
+// Correcto: snake_case plural en la URL, resourceful cuando aplique
 Route::resource('aprendices', AprendizController::class);
 Route::resource('aprendices.momentos', MomentoController::class);
 
@@ -120,7 +122,7 @@ Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard'
 ### Modelos
 
 ```php
-// ✅ Correcto: PascalCase, singular
+// Correcto: PascalCase, singular
 class Aprendiz extends Model {}
 class Momento extends Model {}
 class FactorValoracion extends Model {}
@@ -154,7 +156,7 @@ resources/views/
 ### Variables en vistas
 
 ```php
-// ✅ Correcto: camelCase para variables, snake_case para campos del modelo
+// Correcto: camelCase para variables, snake_case para campos del modelo
 return view('aprendices.show', [
     'aprendiz' => $aprendiz,
     'momentos' => $aprendiz->momentos,
@@ -169,7 +171,7 @@ return view('aprendices.show', [
 ### Mensajes al usuario
 
 ```php
-// ✅ Correcto: siempre en español
+// Correcto: siempre en español
 session()->flash('success', 'Aprendiz registrado correctamente.');
 session()->flash('error', 'El número de documento ya está registrado.');
 session()->flash('warning', 'Se encontraron duplicados. Por favor revise.');
@@ -182,7 +184,7 @@ session()->flash('warning', 'Se encontraron duplicados. Por favor revise.');
 Usar el formato [Conventional Commits](https://www.conventionalcommits.org/):
 
 ```
-tipo(alcance): descripción en español
+type(scope): description in English
 
 [cuerpo opcional]
 ```
@@ -202,14 +204,14 @@ tipo(alcance): descripción en español
 ### Ejemplos
 
 ```bash
-# ✅ Buenos commits
-git commit -m "feat(importacion): agregar normalización de NITs con decimales"
-git commit -m "fix(momentos): corregir validación de próxima visita obligatoria"
-git commit -m "feat(dashboard): mostrar alertas de visitas en los próximos 30 días"
-git commit -m "refactor(aprendiz): extraer lógica de duplicados a servicio propio"
-git commit -m "docs(base-datos): agregar descripción de tabla reporte_campos"
+# Buenos commits
+git commit -m "feat(import): add NIT normalization with decimal cleanup"
+git commit -m "fix(moments): enforce required next-visit date validation"
+git commit -m "feat(dashboard): show alerts for visits in the next 30 days"
+git commit -m "refactor(apprentice): extract duplicate-detection logic into service"
+git commit -m "docs(database): add description for reporte_campos table"
 
-# ❌ Malos commits
+# Malos commits
 git commit -m "cambios"
 git commit -m "arreglos varios"
 git commit -m "wip"
@@ -225,7 +227,7 @@ Ejemplo: agregar el filtro de búsqueda por nombre en el listado de aprendices.
 ### 1. Crear la rama
 
 ```bash
-git checkout main && git pull
+git checkout dev && git pull
 git checkout -b feat/listado-busqueda-nombre
 ```
 
@@ -275,14 +277,14 @@ git push origin feat/listado-busqueda-nombre
 ### 6. Abrir Pull Request
 
 - E o A revisan el PR
-- Si está bien → merge a main
+- Si está bien → merge a dev
 - Si hay correcciones → se hacen en la misma rama y se vuelve a subir
 
 ---
 
 ## Checklist antes de hacer merge
 
-Antes de pedir que se haga merge de tu rama a `main`, verifica:
+Antes de pedir que se haga merge de tu rama a `dev`, verifica:
 
 ### Funcionalidad
 - [ ] La funcionalidad hace lo que debe hacer
@@ -296,8 +298,8 @@ Antes de pedir que se haga merge de tu rama a `main`, verifica:
 - [ ] Los campos de formulario tienen validación en el backend (Form Request)
 
 ### Git
-- [ ] Hice `git pull origin main` antes de crear la rama
-- [ ] Mis commits tienen mensajes descriptivos en español
+- [ ] Hice `git pull origin dev` antes de crear la rama
+- [ ] Mis commits tienen mensajes descriptivos en inglés
 - [ ] No subí archivos de configuración local (`.env`, `node_modules/`, `vendor/`)
 
 ### Base de datos

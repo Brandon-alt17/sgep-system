@@ -1,4 +1,4 @@
-# 🗃️ Base de Datos — SGEP
+# Base de Datos — SGEP
 
 **Documento:** Referencia completa de tablas, columnas y relaciones  
 **Motor:** MySQL 8.0  
@@ -81,7 +81,7 @@ Datos del ente co-formador donde el aprendiz realiza su práctica.
 | `created_at` | `timestamp` | No | — |
 | `updated_at` | `timestamp` | No | — |
 
-> ℹ️ Una misma empresa puede tener múltiples aprendices. La empresa se guarda por aprendiz (no se deduplica en el MVP) para preservar los datos exactos del formulario de cada uno.
+> Una misma empresa puede tener múltiples aprendices. La empresa se guarda por aprendiz (no se deduplica en el MVP) para preservar los datos exactos del formulario de cada uno.
 
 ---
 
@@ -99,7 +99,7 @@ Catálogo de programas de formación del SENA.
 | `created_at` | `timestamp` | No | — |
 | `updated_at` | `timestamp` | No | — |
 
-> ℹ️ Los programas se precargan con seeders. En el MVP no hay interfaz CRUD para esta tabla.
+> Los programas se precargan con seeders. En el MVP no hay interfaz CRUD para esta tabla.
 
 ---
 
@@ -162,7 +162,7 @@ Almacena la valoración de cada factor técnico y actitudinal por momento.
 | `valoracion` | `enum` | No | `S` (Satisfactorio), `PM` (Por mejorar) |
 | `observacion` | `text` | Sí | Observación opcional por factor |
 
-> ℹ️ Cada momento M2 o M3 genera exactamente 13 filas en esta tabla (8 técnicos + 5 actitudinales).
+> Cada momento M2 o M3 genera exactamente 13 filas en esta tabla (8 técnicos + 5 actitudinales).
 
 ---
 

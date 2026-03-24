@@ -1,4 +1,4 @@
-# 📋 Reglas de Negocio — SGEP
+# Reglas de Negocio — SGEP
 
 **Documento:** Restricciones y comportamientos del dominio  
 **Versión:** 1.0  
@@ -55,7 +55,7 @@ Al importar la segunda parte, el sistema detecta la cédula existente y **comple
 
 ### RN-03 — El número de documento es la clave única de cada aprendiz
 
-> ⚠️ No puede existir dos aprendices con el mismo número de documento.
+> No puede existir dos aprendices con el mismo número de documento.
 
 Si al importar se detecta una cédula ya registrada, el sistema muestra ambos registros y permite al instructor:
 - Conservar el existente
@@ -114,7 +114,7 @@ Si la normalización cambia un valor, el sistema muestra el original y el normal
 
 El Momento 1 (Planeación) corresponde a la primera visita, aproximadamente 15 días después de que el aprendiz inicia en la empresa.
 
-> ❌ Si el instructor intenta crear un segundo Momento 1 para el mismo aprendiz, el sistema lo **bloquea** y redirige a editar el existente.
+> Si el instructor intenta crear un segundo Momento 1 para el mismo aprendiz, el sistema lo **bloquea** y redirige a editar el existente.
 
 Los datos de empresa y ARL se **autocompletan** desde el perfil del aprendiz.
 
@@ -122,7 +122,7 @@ Los datos de empresa y ARL se **autocompletan** desde el perfil del aprendiz.
 
 El Momento 2 (Seguimiento) corresponde a la visita de mitad de etapa, aproximadamente a los 3 meses de iniciada la práctica.
 
-> ❌ Si el instructor intenta crear un segundo Momento 2 para el mismo aprendiz, el sistema lo **bloquea** y redirige a editar el existente.
+> Si el instructor intenta crear un segundo Momento 2 para el mismo aprendiz, el sistema lo **bloquea** y redirige a editar el existente.
 
 Es el único momento en que se evalúan los factores técnicos y actitudinales en el seguimiento intermedio. Al guardarlo, la próxima fecha de visita apunta al Momento 3.
 
@@ -130,7 +130,7 @@ Es el único momento en que se evalúan los factores técnicos y actitudinales e
 
 El Momento 3 (Evaluación final) se realiza al cierre de la etapa productiva.
 
-> ❌ El Momento 3 no puede crearse si no existe al menos un Momento 2 registrado.
+> El Momento 3 no puede crearse si no existe al menos un Momento 2 registrado.
 
 Al guardar el Momento 3:
 - Juicio **"Aprobado"** → estado del aprendiz cambia a `Por certificar`
@@ -150,7 +150,7 @@ El Momento Extraordinario es el **único de los cuatro momentos que puede regist
 
 No hay restricción de fecha, hora ni estado para editar un momento ya guardado. El sistema registra la **fecha y hora de la última modificación** de cada momento.
 
-> ℹ️ Si el aprendiz ya está en estado "Certificado", el sistema muestra un aviso pero **permite continuar** con la edición.
+> Si el aprendiz ya está en estado "Certificado", el sistema muestra un aviso pero **permite continuar** con la edición.
 
 ### RN-12 — Los datos del perfil se autocompletan en todos los momentos
 
@@ -162,7 +162,7 @@ Al abrir el formulario de cualquier momento, el sistema pre-llena automáticamen
 - Estado y nombre de ARL
 - Fechas de inicio/fin de etapa (si están registradas)
 
-> ❌ Ningún dato disponible en el perfil debe reingresarse manualmente en los momentos.
+> Ningún dato disponible en el perfil debe reingresarse manualmente en los momentos.
 
 ### RN-13 — Los factores de evaluación son fijos y no configurables
 
@@ -187,7 +187,7 @@ Los factores están definidos por el formato oficial del SENA y **no pueden modi
 
 ### RN-14 — Todos los factores requieren valoración obligatoria para guardar
 
-> ❌ El botón **"Guardar"** permanece **deshabilitado** hasta que:
+> El botón **"Guardar"** permanece **deshabilitado** hasta que:
 > - Todos los factores (técnicos y actitudinales) tengan valoración seleccionada (`Satisfactorio` o `Por mejorar`)
 > - La observación del instructor esté diligenciada
 
@@ -197,7 +197,7 @@ Las observaciones individuales de cada factor son **opcionales**.
 
 Al finalizar el Momento 1, el instructor **debe** registrar la fecha estimada del Momento 2. Al finalizar el Momento 2, debe registrar la fecha estimada del Momento 3. Esta fecha alimenta las alertas del dashboard.
 
-> ❌ Sin próxima fecha, el momento no puede guardarse.
+> Sin próxima fecha, el momento no puede guardarse.
 
 El Momento 3 no requiere próxima fecha porque es el cierre del ciclo regular. Si hay un Momento Extraordinario posterior, su fecha se registra en ese formulario.
 
@@ -212,7 +212,7 @@ El campo muestra el rango válido: entre hoy y la fecha estimada de fin de etapa
 
 El documento generado debe ser **idéntico** al formato oficial del SENA.
 
-> ❌ **Nunca** se agregan páginas adicionales ni se expanden filas más allá de lo definido en la plantilla original.
+> **Nunca** se agregan páginas adicionales ni se expanden filas más allá de lo definido en la plantilla original.
 
 Si el texto ingresado es demasiado largo para una celda, el sistema lo ajusta dentro de la celda. Los campos de texto extenso tienen un **límite de caracteres** visible en el formulario.
 
@@ -254,7 +254,7 @@ El flujo correcto es:
 Editar datos en SGEP  →  Exportar documento  →  Entregar
 ```
 
-> ❌ No está contemplado que el instructor edite el Word generado y esos cambios vuelvan al sistema.
+> No está contemplado que el instructor edite el Word generado y esos cambios vuelvan al sistema.
 
 Si necesita corregir algo, debe hacerlo en el SGEP y volver a exportar.
 
@@ -302,7 +302,7 @@ Juicio "Aprobado"    →  estado cambia a "Por certificar"
 Juicio "No aprobado" →  estado cambia a "Pendiente por comité de evaluación"
 ```
 
-> ❌ El sistema no permite guardar el Momento 3 sin seleccionar el juicio de evaluación.
+> El sistema no permite guardar el Momento 3 sin seleccionar el juicio de evaluación.
 
 ### RN-25 — El estado "Aplazada" congela las alertas sin eliminar datos
 

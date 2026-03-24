@@ -1,4 +1,4 @@
-# 🚀 Despliegue y Distribución — SGEP
+# Despliegue y Distribución — SGEP
 
 **Documento:** Proceso de empaquetado y distribución a directivos  
 **Versión:** 1.0
@@ -45,7 +45,7 @@ npm install
 npm run build
 ```
 
-> ✅ Esto genera la carpeta `vendor/` con Laravel y todas las librerías, y `public/build/` con los assets CSS compilados. El directivo no necesita Composer ni Node.js.
+> Esto genera la carpeta `vendor/` con Laravel y todas las librerías, y `public/build/` con los assets CSS compilados. El directivo no necesita Composer ni Node.js.
 
 ### Paso 2 — Optimizar para producción
 
@@ -159,7 +159,7 @@ SGEP_v1.0.zip
 └── INSTRUCCIONES.pdf           ← Guía de 1 página para el directivo
 ```
 
-> ⚠️ Verificar que `.env` real **NO** está en el ZIP (solo `.env.example`).
+> Verificar que `.env` real **NO** está en el ZIP (solo `.env.example`).
 
 ---
 
@@ -266,7 +266,7 @@ php artisan migrate
 php artisan config:clear && php artisan config:cache
 ```
 
-> ✅ Los datos ya guardados (aprendices, momentos, evaluaciones) se conservan intactos. `php artisan migrate` solo aplica las tablas o columnas nuevas.
+> Los datos ya guardados (aprendices, momentos, evaluaciones) se conservan intactos. `php artisan migrate` solo aplica las tablas o columnas nuevas.
 
 ---
 
@@ -299,7 +299,7 @@ php artisan migrate:rollback
 # Ver estado de migraciones
 php artisan migrate:status
 
-# Refrescar todo (⚠️ borra todos los datos)
+# Refrescar todo (borra todos los datos)
 php artisan migrate:fresh --seed
 ```
 

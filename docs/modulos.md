@@ -1,4 +1,4 @@
-# 📦 Módulos del Sistema — SGEP
+# Módulos del Sistema — SGEP
 
 **Documento:** Descripción funcional de cada módulo  
 **Versión:** 1.0
@@ -47,7 +47,7 @@ Normalización: nombres, correos, NITs, fechas
     └── Sí  →  Muestra panel de resolución de duplicados
         │
         ▼
-Tabla de resultados: ✅ exitosos / ❌ errores por fila
+Tabla de resultados: exitosos / errores por fila
 ```
 
 ### Requerimientos cubiertos
@@ -100,30 +100,30 @@ Centraliza toda la información de un aprendiz en un perfil único. Permite ver,
 ```
 Perfil del Aprendiz
 │
-├── 📋 Datos personales
+├── Datos personales
 │   ├── Nombre completo, tipo y número de documento
 │   ├── Teléfono, correos (personal e institucional)
 │   └── Alternativa de etapa productiva
 │
-├── 🎓 Datos académicos
+├── Datos académicos
 │   ├── Programa, ficha, modalidad
 │   └── Fecha de registro en SofiaPlus
 │
-├── 🏢 Empresa co-formadora
+├── Empresa co-formadora
 │   ├── Nombre, NIT, dirección, ciudad
 │   ├── Correo organizacional
 │   ├── Jefe inmediato (nombre, cargo, correo, teléfono)
 │   └── Contacto secundario (RRHH)
 │
-├── 👨‍🏫 Campos del instructor [marcados como pendientes]
+├── Campos del instructor [marcados como pendientes]
 │   ├── Ficha/coordinación, Jefe de grupo, Coordinación
 │   ├── Instructor de seguimiento, Teléfono del instructor
 │   └── Estado ARL confirmado
 │
-├── 📊 Estado actual
+├── Estado actual
 │   └── [dropdown con los 7 estados + historial de cambios]
 │
-└── 📝 Historial de momentos
+└── Historial de momentos
     ├── Momento 1 (si existe)
     ├── Momento 2 (si existe)
     ├── Momento 3 (si existe)
@@ -183,26 +183,26 @@ Permite registrar los momentos del formato GFPI-F-023 directamente en el sistema
 ```
 Formulario Momento 2 — Visita de seguimiento
 │
-├── 📋 Cabecera (autocompletada desde perfil)
+├── Cabecera (autocompletada desde perfil)
 │   ├── Nombre del aprendiz, programa, ficha
 │   ├── Empresa, jefe inmediato, ARL
 │   └── Datos del instructor de seguimiento
 │
-├── 🗓️ Datos de la visita
+├── Datos de la visita
 │   ├── Número de visita (automático)
 │   ├── Fecha de la visita
 │   ├── Modalidad (presencial / virtual)
 │   ├── Enlace de grabación (si es virtual)
 │   ├── Ciudad y modalidad de diligenciamiento
-│   └── 📅 Próxima fecha de visita [OBLIGATORIA]
+│   └── Próxima fecha de visita [OBLIGATORIA]
 │
-├── 🔧 Factores técnicos (× 8) [componente reutilizable]
+├── Factores técnicos (× 8) [componente reutilizable]
 │   └── Cada factor: nombre + [◉ Satisfactorio / ○ Por mejorar] + textarea (contador)
 │
-├── 🤝 Factores actitudinales (× 5) [componente reutilizable]
+├── Factores actitudinales (× 5) [componente reutilizable]
 │   └── Misma estructura que técnicos
 │
-└── 💬 Observaciones
+└── Observaciones
     ├── Del instructor [OBLIGATORIA, con contador de caracteres]
     ├── Del aprendiz [opcional]
     └── Del co-formador [opcional]
@@ -278,14 +278,14 @@ Genera el documento GFPI-F-023 oficial con fidelidad exacta al formato del SENA,
 Generar F-023 — [Nombre del aprendiz]
 
 Partes a incluir:
-☑ Página de información general
-☑ Momento 1 — Planeación
-☑ Momento 2 — Seguimiento
-☑ Momento 3 — Evaluación final
-☐ Momento Extraordinario 1 (si existe)
-☐ Momento Extraordinario 2 (si existe)
-☑ Momento 3 — Evaluación final
-☐ Momento Extraordinario (no existe)
+- [x] Página de información general
+- [x] Momento 1 — Planeación
+- [x] Momento 2 — Seguimiento
+- [x] Momento 3 — Evaluación final
+- [ ] Momento Extraordinario 1 (si existe)
+- [ ] Momento Extraordinario 2 (si existe)
+- [x] Momento 3 — Evaluación final
+- [ ] Momento Extraordinario (no existe)
 
 Formato: ◉ Word (.docx)  ○ PDF
 
@@ -389,13 +389,13 @@ class ReporteMaestroExport implements FromQuery, WithHeadings, WithStyles
 
 | Módulo | Estado | Fase |
 |--------|--------|------|
-| Módulo 1 — Importación | 🔄 En desarrollo | MVP |
-| Módulo 2 — Aprendices | 🔄 En desarrollo | MVP |
-| Módulo 3 — Evaluación F-023 | 🔄 En desarrollo | MVP |
+| Módulo 1 — Importación | En desarrollo | MVP |
+| Módulo 2 — Aprendices | En desarrollo | MVP |
+| Módulo 3 — Evaluación F-023 | En desarrollo | MVP |
 | Módulo 4 — Documentos | ⏳ Pendiente | Post-MVP |
 | Módulo 5 — Reporte maestro | ⏳ Pendiente | Post-MVP |
 
-**Leyenda:** ✅ Completado · 🔄 En desarrollo · ⏳ Pendiente
+**Leyenda:** Completado · En desarrollo · Pendiente
 
 ---
 

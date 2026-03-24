@@ -1,4 +1,4 @@
-# 🏗️ Arquitectura del Sistema — SGEP
+# Arquitectura del Sistema — SGEP
 
 **Documento:** Diseño técnico y decisiones de arquitectura  
 **Versión:** 1.0  
@@ -6,7 +6,7 @@
 
 ---
 
-## 📐 Visión General
+## Visión General
 
 El SGEP es una aplicación web **monolítica de ejecución local** construida con el patrón MVC de Laravel. No requiere internet para funcionar. Todos los datos residen en MySQL local.
 
@@ -29,7 +29,7 @@ El SGEP es una aplicación web **monolítica de ejecución local** construida co
 
 ---
 
-## 🔧 Stack Tecnológico
+## Stack Tecnológico
 
 | Capa | Tecnología | Rol |
 |------|-----------|-----|
@@ -44,55 +44,155 @@ El SGEP es una aplicación web **monolítica de ejecución local** construida co
 
 ---
 
-## 🗂️ Patrón de Arquitectura
+## Patrón de Arquitectura
 
 ### MVC con Laravel
 
 ```
-app/
-├── Http/
-│   ├── Controllers/          ← Lógica de cada módulo
-│   │   ├── AprendizController.php
-│   │   ├── ImportacionController.php
-│   │   ├── MomentoController.php
-│   │   ├── ReporteController.php
-│   │   └── DocumentoController.php
-│   ├── Requests/             ← Validaciones de formularios
-│   │   ├── StoreAprendizRequest.php
-│   │   └── StoreMomentoRequest.php
-│   └── Middleware/
-├── Models/                   ← Entidades y relaciones Eloquent
-│   ├── Aprendiz.php
-│   ├── Empresa.php
-│   ├── Momento.php
-│   ├── FactorValoracion.php
-│   └── DocumentoGenerado.php
-├── Imports/                  ← Clases de importación Excel
-│   └── ApprendicesImport.php
-└── Exports/                  ← Clases de exportación Excel
-    └── ReporteMaestroExport.php
-
-resources/
-└── views/                    ← Vistas Blade
-    ├── layouts/
-    │   └── app.blade.php     ← Layout base (sidebar + nav)
-    ├── aprendices/
-    ├── momentos/
-    ├── dashboard/
-    └── componentes/
-        └── factor-row.blade.php   ← Componente reutilizable
-
-database/
-├── migrations/               ← Estructura de la BD
-└── seeders/                  ← Datos iniciales (412 aprendices)
-
-routes/
-└── web.php                   ← Definición de todas las rutas
+sgep/
+├── composer.json                    ✅ TODAS las deps PHP
+├── composer.lock                    ✅ Versiones exactas
+├── package.json                     ✅ Deps JS (Tailwind, Alpine)
+├── package-lock.json                ✅ Versiones exactas JS
+├── vite.config.js                   ✅ Bundler config
+├── .env.example                     ✅ Plantilla (NO subir .env real)
+├── .gitignore                       ✅ Excluir vendor/, node_modules/, .env
+│
+├── app/
+│   ├── Actions/                     ✅ NUEVO - Casos de uso
+│   │   ├── ImportApprenticesAction.php
+│   │   ├── NormalizeDataAction.php
+│   │   ├── GenerateF023Action.php
+│   │   └── ExportReporteMaestroAction.php
+│   │
+│   ├── Http/
+│   │   ├── Controllers/
+│   │   │   ├── ApprenticeController.php
+│   │   │   ├── EvaluationController.php
+│   │   │   ├── ImportController.php
+│   │   │   ├── ReportController.php
+│   │   │   └── DocumentController.php
+│   │   │
+│   │   └── Requests/
+│   │       ├── ImportApprenticesRequest.php
+│   │       ├── StoreEvaluationRequest.php
+│   │       └── UpdateApprenticeRequest.php
+│   │
+│   ├── Models/
+│   │   ├── Apprentice.php
+│   │   ├── Company.php
+│   │   ├── Program.php
+│   │   ├── Ficha.php
+│   │   ├── Evaluation.php
+│   │   ├── Visit.php
+│   │   └── GeneratedDocument.php
+│   │
+│   ├── Services/                    ✅ CRÍTICO - No fase 2
+│   │   ├── ImportService.php
+│   │   ├── NormalizationService.php
+│   │   ├── DocumentGenerationService.php
+│   │   └── ReportService.php
+│   │
+│   ├── Rules/                       ✅ NUEVO - Validaciones custom
+│   │   ├── UniqueDocumentRule.php
+│   │   ├── ValidEmailInstitutionalRule.php
+│   │   └── DocumentoFormatoRule.php
+│   │
+│   └── Providers/
+│       └── AppServiceProvider.php
+│
+├── database/
+│   ├── migrations/
+│   │   ├── 2024_01_01_000001_create_programas_table.php
+│   │   ├── 2024_01_01_000002_create_fichas_table.php
+│   │   ├── 2024_01_01_000003_create_empresas_table.php
+│   │   ├── 2024_01_01_000004_create_aprendices_table.php
+│   │   ├── 2024_01_01_000005_create_evaluaciones_table.php
+│   │   ├── 2024_01_01_000006_create_visitas_table.php
+│   │   └── 2024_01_01_000007_create_generated_documents_table.php
+│   │
+│   ├── seeders/
+│   │   ├── DatabaseSeeder.php
+│   │   ├── ProgramSeeder.php
+│   │   ├── FichaSeeder.php
+│   │   └── ApprenticeSeeder.php
+│   │
+│   └── factories/                   ✅ NUEVO
+│       ├── ProgramFactory.php
+│       ├── ApprenticeFactory.php
+│       └── EvaluationFactory.php
+│
+├── resources/
+│   ├── views/
+│   │   ├── layouts/
+│   │   │   └── app.blade.php        # Layout base
+│   │   │
+│   │   ├── components/
+│   │   │   ├── factor-row.blade.php # Fila de factor técnico/actitudinal
+│   │   │   ├── alert.blade.php
+│   │   │   └── modal.blade.php
+│   │   │
+│   │   ├── dashboard.blade.php
+│   │   ├── apprentices/
+│   │   │   ├── index.blade.php      # Listado
+│   │   │   ├── show.blade.php       # Perfil
+│   │   │   └── edit.blade.php
+│   │   │
+│   │   ├── evaluations/
+│   │   │   ├── create.blade.php
+│   │   │   ├── edit.blade.php
+│   │   │   └── moment1.blade.php
+│   │   │
+│   │   ├── reports/
+│   │   │   └── maestro.blade.php    # Reporte maestro
+│   │   │
+│   │   └── documents/
+│   │       └── generate.blade.php   # Generar F-023
+│   │
+│   └── css/
+│       └── app.css                  # Importa Tailwind
+│
+├── routes/
+│   └── web.php                      ✅ TODAS las rutas aquí
+│
+├── storage/
+│   ├── app/
+│   │   ├── documents/               # Documentos generados
+│   │   ├── templates/               # Plantillas F-023
+│   │   │   └── f023/
+│   │   │       └── GFPI-F-023_V06.docx
+│   │   └── imports/                 # CSVs importados
+│   │
+│   ├── logs/
+│   ├── framework/
+│   └── bootstrap/
+│
+├── public/                          ✅ CRÍTICO - No mencionado
+│   ├── index.php                    # Entry point
+│   ├── robots.txt
+│   └── uploads/                     # Si suben archivos
+│
+├── config/
+│   ├── app.php
+│   ├── database.php
+│   └── sgep.php                     # Configuración específica SGEP
+│
+├── tests/                           ✅ NUEVO - Recomendado
+│   ├── Feature/
+│   │   ├── ImportTest.php
+│   │   ├── EvaluationTest.php
+│   │   └── DocumentGenerationTest.php
+│   │
+│   └── Unit/
+│       └── NormalizationTest.php
+│
+├── vendor/                          ❌ NO subir al repo
+└── node_modules/                    ❌ NO subir al repo
 ```
 
 ---
 
-## 🗃️ Modelo de Datos
+## Modelo de Datos
 
 ### Diagrama de entidades
 
@@ -179,7 +279,7 @@ routes/
 
 ---
 
-## 🔁 Flujo de Datos Principal
+## Flujo de Datos Principal
 
 ```
 Google Forms
@@ -200,8 +300,6 @@ Google Forms
     ├──▶ [Formulario Momento 1] ──▶ único por aprendiz
     │
     ├──▶ [Formulario Momento 2] ──▶ único por aprendiz
-    │         │
-    │         └── proxima_visita ──▶ [Dashboard alertas]
     │
     ├──▶ [Formulario Momento 3] ──▶ único, cambia estado
     │
@@ -212,7 +310,7 @@ Google Forms
 
 ---
 
-## 📦 Dependencias Principales
+## Dependencias Principales
 
 ```json
 {
@@ -231,7 +329,7 @@ Google Forms
 
 ---
 
-## 🔒 Decisiones de Arquitectura
+## Decisiones de Arquitectura
 
 | Decisión | Alternativa descartada | Razón |
 |----------|----------------------|-------|
@@ -243,7 +341,7 @@ Google Forms
 
 ---
 
-## 🌐 URL de Acceso Local
+## URL de Acceso Local
 
 | Entorno | URL |
 |---------|-----|
