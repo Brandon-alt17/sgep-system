@@ -1,16 +1,16 @@
-# Despliegue y Distribución — SGEP
+## Despliegue y distribución — SGEP
 
 **Documento:** Proceso de empaquetado y distribución a directivos  
 **Versión:** 1.0
 
 ---
 
-## Índice
+### Índice
 
 - [Entornos de ejecución](#entornos-de-ejecución)
 - [Proceso de empaquetado](#proceso-de-empaquetado)
 - [Instalación en Windows (WAMP)](#instalación-en-windows-wamp)
-- [Instalación en macOS (Herd)](#instalación-en-macos-herd)
+- [Instalación en macOS (MAMP)](#instalación-en-macos-mamp)
 - [Actualizaciones](#actualizaciones)
 - [Comandos de referencia](#comandos-de-referencia)
 - [Solución de problemas](#solución-de-problemas)
@@ -21,12 +21,14 @@
 
 El SGEP es una aplicación web **100% local**. No requiere internet para funcionar. Cada instalación es independiente y sus datos solo existen en ese PC.
 
+> **Nota:** Entorno recomendado oficial: **WAMP (Windows)** y **MAMP (macOS)**. **XAMPP** puede usarse como alternativa en Windows si el directivo ya lo tiene instalado.
+
 | Componente | Qué provee | Quién lo instala |
 |-----------|-----------|-----------------|
-| **WAMP / XAMPP** (Windows) | PHP 8.2, MySQL 8.0, Apache | El directivo, una sola vez |
-| **Laravel Herd + DBngin** (macOS) | PHP 8.2, MySQL 8.0 | El directivo, una sola vez |
+| **WAMP** (Windows) | PHP 8.3+, MySQL 8.0+, Apache | El directivo, una sola vez |
+| **MAMP** (macOS) | PHP 8.3+, MySQL 8.0+, Apache | El directivo, una sola vez |
 | **Carpeta del SGEP** | Laravel + dependencias + código | El equipo, en cada versión |
-| **Base de datos MySQL** | Tablas vacías o con datos | El script de instalación |
+| **Base de datos MySQL** | Tablas vacías o con datos | El script de instalación o migraciones |
 
 ---
 
@@ -198,41 +200,40 @@ SGEP_v1.0.zip
 
 ---
 
-## Instalación en macOS (Herd)
+## Instalación en macOS (MAMP)
 
-### Prerrequisito: Instalar Herd y DBngin
+### Prerrequisito: Instalar MAMP
+
+1. Descargar **MAMP** desde [mamp.info](https://www.mamp.info) e instalarlo.
+2. Iniciar MAMP y poner **Apache** y **MySQL** en verde.
+3. Por defecto, el sitio web sirve desde `http://localhost:8888` y la carpeta de documentos suele ser `/Applications/MAMP/htdocs/`.
+
+**Crear la base de datos** (terminal o cliente MySQL; el puerto puede ser `8889` en MAMP):
 
 ```bash
-# 1. Instalar Laravel Herd desde https://herd.laravel.com
-#    Seguir el wizard de instalación
-
-# 2. Instalar DBngin desde https://dbngin.com
-#    → Crear un servidor MySQL 8.0
-#    → Iniciar el servidor
-
-# 3. Crear la base de datos con TablePlus o desde terminal:
-mysql -u root -e "CREATE DATABASE sgep CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+# Ajusta -P si tu MySQL usa otro puerto (MAMP suele usar 8889)
+mysql -u root -p -P 8889 -e "CREATE DATABASE sgep CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
 ```
 
 ### Instalación del SGEP
 
 ```bash
-# 1. Descomprimir el ZIP y mover la carpeta a la ruta de Herd
-mv sgep/ ~/Herd/sgep/
+# 1. Descomprimir el ZIP y colocar la carpeta del proyecto en htdocs
+#    Ejemplo: /Applications/MAMP/htdocs/sgep/
 
-# 2. Entrar a la carpeta
-cd ~/Herd/sgep/
+# 2. Entrar a la carpeta del proyecto
+cd /Applications/MAMP/htdocs/sgep
 
 # 3. Copiar y configurar .env
 cp .env.example .env
-# Editar .env: cambiar APP_URL=http://sgep.test
+# Editar .env: APP_URL=http://localhost:8888/sgep/public (ajusta la ruta si cambia el puerto)
 
 # 4. Generar clave y migrar
 php artisan key:generate
 php artisan migrate --force
 
-# 5. Acceder en el navegador:
-# http://sgep.test
+# 5. Abrir en el navegador (ejemplo con puerto 8888):
+# http://localhost:8888/sgep/public
 ```
 
 ---
@@ -252,17 +253,15 @@ Cuando el equipo lanza una nueva versión del SGEP:
 3. Hacer doble clic en "actualizar.bat"
 ```
 
-### En macOS (Herd)
+### En macOS (MAMP)
 
 ```bash
-# Reemplazar archivos (excepto .env)
-rsync -av --exclude='.env' nueva-version/ ~/Herd/sgep/
+# Reemplazar archivos (excepto .env); ajusta la ruta a tu instalación
+rsync -av --exclude='.env' nueva-version/ /Applications/MAMP/htdocs/sgep/
 
-# Aplicar migraciones nuevas
-cd ~/Herd/sgep/
+cd /Applications/MAMP/htdocs/sgep
 php artisan migrate
 
-# Limpiar caché
 php artisan config:clear && php artisan config:cache
 ```
 
@@ -357,7 +356,7 @@ Solución: Revisar storage/logs/laravel.log para ver el error exacto.
 ```
 Causa: PHP no está en el PATH del sistema.
 Solución: Abrir la terminal desde la carpeta de WAMP:
-          C:\wamp64\bin\php\php8.2.x\php.exe artisan migrate
+          C:\wamp64\bin\php\php8.3.x\php.exe artisan migrate
           O agregar PHP al PATH del sistema.
 ```
 
@@ -383,4 +382,4 @@ Solución: El equipo debe correr "npm run build" antes de empaquetar.
 
 ---
 
-*Ver también: [README.md](../README.md) · [ARQUITECTURA.md](./ARQUITECTURA.md)*
+*Ver también: [README.md](../README.md) · [Arquitectura](./architecture.md)*
