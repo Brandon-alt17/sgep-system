@@ -1,56 +1,3 @@
-# SGEP — Sistema de Gestión de Etapa Productiva
-
-**SENA — Centro de Diseño e Innovación Tecnológica Industrial (CDITI)**  
-**Versión:** 1.0 (MVP)  
-**Estado:** En Desarrollo  
-**Año:** 2026
-
----
-
-## Descripción
-
-El **SGEP** es un sistema web local diseñado para automatizar el seguimiento, evaluación y documentación de aprendices en etapa productiva del SENA CDITI.
-
-### Problema que Resuelve
-
-| Antes (Proceso Manual) | Después (Con SGEP) |
-|----------------------|-------------------|
-| Formularios externos dispersos (Google Forms) | Importación centralizada de CSV/Excel |
-| Consolidación manual en Excel (~30 min/aprendiz) | Dashboard automatizado (~5 min/aprendiz) |
-| Formato GFPI-F-023 diligenciado a mano | Generación automática con fidelidad oficial |
-| Sin alertas de próximas visitas | Agenda integrada con recordatorios (En vista dashboard) |
-| Información fragmentada por instructor | Reporte maestro consolidado (58 columnas) |
-
----
-
-## Tecnologías
-
-| Capa | Tecnología | Versión |
-|------|-----------|---------|
-| **Backend** | PHP + Laravel | 8.3+ + 10.10+ |
-| **Frontend** | Blade + Tailwind CSS + Alpine.js | Nativo + 3.4+ + 3.15+ |
-| **Build Tool** | Vite + Laravel Vite Plugin | 5.x + 1.x |
-| **HTTP Cliente** | Guzzle + Axios | 7.2+ + 1.6+ |
-| **Base de Datos** | MySQL | 8.0+ |
-| **Seguridad/API** | Laravel Sanctum | 3.3+ |
-| **Documentos** | PHPOffice/PHPWord | 1.4+ |
-| **Excel/CSV** | Maatwebsite/Laravel-Excel | 3.1+ |
-| **Entorno Local** | WAMP (Windows) / MAMP (macOS) | Actual |
-
----
-
-## Requisitos del Sistema
-
-| Componente | Mínimo | Recomendado |
-|-----------|--------|-------------|
-| **Sistema Operativo** | Windows 10 / macOS Monterey | Windows 11 / macOS Ventura+ |
-| **Procesador** | Intel Core i3 (8ª gen+) / M1 | Intel Core i5 (10ª gen+) / M2 |
-| **Memoria RAM** | 8 GB | 16 GB |
-| **Almacenamiento** | 256 GB SSD | 512 GB NVMe SSD |
-| **Navegador** | Chrome 100+ / Firefox 90+ | Chrome 120+ |
-
----
-
 ## Instalación del Proyecto SGEP
 
 ### Requisitos previos
@@ -145,7 +92,6 @@ php artisan serve
 
 - Ver carpeta `/docs` para documentacion tecnica
 - Ver `README.md` para informacion general del proyecto
-- Despliegue y distribución: [docs/06-despliegue.md](docs/06-despliegue.md)
 
 ### Solución de problemas comunes
 
