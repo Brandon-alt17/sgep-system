@@ -1,3 +1,10 @@
 *
 !public/
 !.gitignore
+!documents/
+!documents/.gitkeep
+!imports/
+!imports/.gitkeep
+!templates/
+!templates/f023/
+!templates/f023/.gitkeep
