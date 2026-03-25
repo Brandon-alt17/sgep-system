@@ -1,28 +1,23 @@
 ---
 name: "Tarea base de datos"
-about: "Migraciones, modelos, seeders, índices o integridad referencial."
+about: "Esquema, modelos o datos de prueba."
 title: "[DB] "
 labels: ["database"]
 ---
 
-## Cambio de esquema o datos
+## Cambio en esquema
 
-Describe tablas/columnas/relaciones que entran, cambian o salen.
+(Tablas, columnas, índices, claves foráneas que entran, modifican o eliminan.)
 
-## Compatibilidad
+## Modelos
 
-- ¿Hay datos en producción local que deban migrarse sin `migrate:fresh`?
-- ¿Requiere backfill o seeder nuevo?
+(Modelos Eloquent a tocar y relaciones nuevas o cambiadas, o "ninguno / N/A".)
 
-## Modelo y relaciones
+## Datos existentes (opcional)
 
-Modelos Eloquent afectados (`app/Models/...`) y relaciones (`belongsTo`, `hasMany`, etc.).
+(Si aplica: migración de datos, seeder o backfill; si no, "N/A".)
 
-## Referencia
+## Definición de hecho
 
-Enlace o sección de `docs/base_de_datos.md` o diagrama acordado.
-
-## Verificación
-
-- [ ] `php artisan migrate` (y rollback si aplica) probado en local
-- [ ] Índices y FK acordes al volumen esperado (cédulas, búsquedas frecuentes)
+- [ ] `migrate` probado en local; `rollback` si el cambio lo permite
+- [ ] Modelos y relaciones coherentes con el esquema
