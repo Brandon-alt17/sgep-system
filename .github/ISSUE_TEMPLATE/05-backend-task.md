@@ -1,32 +1,25 @@
 ---
 name: "Tarea back-end"
-about: "Controladores, validaciones, servicios, rutas o lógica de dominio en Laravel."
+about: "Rutas, controladores, validación, servicios o dominio en Laravel."
 title: "[Back] "
 labels: ["backend"]
 ---
 
-## Objetivo técnico
+## Objetivo
 
-Qué debe hacer el servidor (reglas, persistencia, respuesta HTTP).
+(Qué regla de negocio o comportamiento del servidor debe cumplirse.)
 
-## Área afectada (si ya la conoces)
+## Contrato
 
-- Rutas: `routes/web.php` (u otras)
-- Controladores: `app/Http/Controllers/...`
-- Requests / Rules: `app/Http/Requests`, `app/Rules`
-- Servicios / Actions: `app/Services`, `app/Actions`
+- **Entrada:** (método + ruta o acción, datos relevantes)
+- **Salida:** (vista, JSON, redirect, archivo, etc.)
+- **Efectos secundarios:** (BD, `storage`, colas, etc., o "ninguno")
 
-## Contrato esperado
+## Dependencias
 
-- **Entrada:** query/body/validaciones relevantes
-- **Salida:** vista, JSON, redirect, descarga de archivo, etc.
-- **Efectos:** BD, colas, archivos en `storage/`
+(Otro issue, RF, migración o dato necesario, o "ninguna".)
 
-## Seguridad y datos
+## Definición de hecho
 
-¿Datos sensibles, permisos futuros, validaciones de negocio? Enlaza RN o `docs/reglas_del_negocio.md` si aplica.
-
-## Verificación
-
-- [ ] `php artisan route:list` incluye las rutas nuevas o cambiadas
-- [ ] Prueba manual o `php artisan test` (si hay cobertura)
+- [ ] Comportamiento probado según el contrato (caso feliz mínimo)
+- [ ] Sin errores nuevos en logs en ese flujo

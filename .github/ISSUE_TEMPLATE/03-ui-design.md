@@ -1,33 +1,23 @@
 ---
 name: "Diseño / UI"
-about: "Mejoras visuales, layout, accesibilidad o consistencia con la guía SGEP."
+about: "Cambios de interfaz, layout o estilos."
 title: "[UI] "
 labels: ["ui", "enhancement"]
 ---
 
-## Pantalla o flujo
+## Qué hay que lograr
 
-Ruta o vista: p. ej. `resources/views/...`, URL relativa, captura actual.
+(Qué pantalla o flujo y qué problema de usabilidad o consistencia visual se resuelve.)
 
-## Objetivo de diseño
+## Ubicación
 
-Qué problema de usabilidad o marca se corrige (legibilidad, jerarquía, responsive, etc.).
+(Vista, ruta URL o referencia equivalente.)
 
-## Referencia visual
+## Referencia (opcional)
 
-- Enlace a mockup, Figma o imagen adjunta en el comentario del issue.
-- Colores / componentes existentes: ¿se reutiliza algo de `resources/views/components` o tokens Tailwind (`sena-*`)?
+(Mockup, enlace o imagen adjunta en un comentario.)
 
-## Comportamiento en distintos tamaños
+## Definición de hecho
 
-- **Móvil:** 
-- **Tablet / escritorio:** 
-
-## Accesibilidad (opcional)
-
-Contraste, foco de teclado, textos alternativos, `aria-*` si aplica.
-
-## Criterios de “hecho”
-
-- [ ] Coherente con el layout base (`layouts/app` o el que use el módulo)
-- [ ] Sin romper formularios ni validaciones visuales existentes
+- [ ] Comportamiento y apariencia acordados con el equipo
+- [ ] Verificado en navegador en el alcance acordado (p. ej. tamaños de pantalla relevantes)

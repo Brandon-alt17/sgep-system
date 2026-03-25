@@ -1,17 +1,13 @@
 ---
 name: "Reporte de bug"
-about: "Algo no funciona como se espera (error, regresión o bloqueo)."
+about: "Comportamiento incorrecto, error o regresión."
 title: "[Bug] "
 labels: ["bug"]
 ---
 
-## Comportamiento esperado
+## Qué falla
 
-Qué debería ocurrir según reglas de negocio o documentación.
-
-## Comportamiento actual
-
-Qué ocurre en su lugar (incluye mensaje de error si lo hay).
+(En una frase: qué se rompe o qué mensaje aparece.)
 
 ## Pasos para reproducir
 
@@ -19,17 +15,26 @@ Qué ocurre en su lugar (incluye mensaje de error si lo hay).
 2. 
 3. 
 
-## Entorno (marca lo que aplique)
+## Comportamiento esperado
 
-- **SO:** Windows / macOS / otro
-- **Navegador:** Chrome / Firefox / Edge (versión aproximada)
-- **Entorno local:** WAMP / MAMP / XAMPP / `php artisan serve`
-- **Rama o versión:** p. ej. `dev` @ commit / tag
+(Qué debería ocurrir.)
+
+## Comportamiento actual
+
+(Qué ocurre en su lugar.)
+
+## Entorno
+
+- **SO:** (Windows / macOS / Linux)
+- **Navegador:** (si aplica)
+- **Cómo ejecutas la app:** (p. ej. `php artisan serve`, WAMP, MAMP)
+- **Rama o versión:** (si aplica)
 
 ## Evidencia (opcional)
 
-Captura de pantalla, fragmento de `storage/logs/laravel.log` (sin datos sensibles), respuesta de red en DevTools.
+(Captura, mensaje de error o fragmento de log **sin datos sensibles**.)
 
-## Posible causa (opcional)
+## Definición de hecho (para quien cierre)
 
-Si ya tienes una hipótesis, descríbela brevemente.
+- [ ] Causa entendida o corregida
+- [ ] Pasos de reproducción ya no aplican o quedan documentados como comportamiento esperado

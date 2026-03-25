@@ -1,31 +1,27 @@
 ---
 name: "Tarea front-end"
-about: "Trabajo concreto en Blade, Tailwind, Vite, Alpine o assets."
+about: "Blade, Tailwind, Vite o assets del cliente."
 title: "[Front] "
 labels: ["frontend"]
 ---
 
-## Objetivo técnico
+## Objetivo
 
-Qué debe cambiar en la UI o en el bundle (una frase).
+(Qué debe hacer o mostrar la UI al cerrar el issue.)
 
-## Archivos o área (si ya los conoces)
+## Alcance
 
-- Vistas: `resources/views/...`
-- CSS/JS: `resources/css`, `resources/js`, `vite.config.js`
-- Componentes Blade: `resources/views/components/...`
+(Archivos, carpeta `resources/views/...` o módulo; si aún no se sabe, describir la pantalla.)
 
 ## Comportamiento esperado
 
-Interacción del usuario: estados loading, errores `@error`, responsive, etc.
+(Qué ve o hace el usuario; estados de error o carga si aplican.)
 
-## Dependencias de API / back-end
+## Dependencias
 
-¿Ya existen la ruta, el controlador y los datos? Si falta algo, enlaza el issue o RF correspondiente.
+(Otro issue, RF o back-end que deba existir antes, o "ninguna".)
 
-## Verificación local
+## Definición de hecho
 
-Comandos o checks que usarás al cerrar:
-
-- [ ] `npm run dev` o `npm run build` sin errores
-- [ ] Vista probada en el navegador (rutas afectadas)
+- [ ] Build del front sin errores (`npm run build` o el comando que use el equipo)
+- [ ] Probado en navegador en la ruta o flujo indicado

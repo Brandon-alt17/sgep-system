@@ -1,32 +1,34 @@
 ---
-name: "RF / Nueva funcionalidad"
-about: "Propuesta alineada a un requerimiento funcional (RF) o mejora de producto."
+name: "RF / Requisito funcional"
+about: "Nueva funcionalidad o cambio alineado a un requisito del producto."
 title: "[RF] "
 labels: ["enhancement"]
 ---
 
-## Contexto y problema
+## Objetivo
 
-¿Qué necesidad del instructor o del proceso resuelve esto? (negocio / usuario)
+(Qué debe poder hacer el usuario o el sistema al cerrar el issue.)
 
-## RF o referencia
+## Referencia
 
-- **ID RF (si aplica):** p. ej. `RF-12`
-- **Documentación:** enlace o sección en `/docs` (p. ej. `modulos.md`, `reglas_del_negocio.md`)
+- **ID RF (si aplica):** p. ej. `RF-12`, o "N/A"
+- **Fuente:** SRS, acta, `/docs`, u otra referencia acordada (enlace o sección)
 
-## Alcance esperado
+## Alcance
 
-Describe qué debe hacer el sistema cuando esté listo (lista corta y verificable).
+(Qué entra en esta entrega; una línea de "fuera de alcance" si ayuda a acotar.)
 
-## Criterios de aceptación
+## Dependencias
 
-- [ ] 
-- [ ] 
+(Otro issue o RF que deba resolverse antes, o "ninguna".)
 
-## Fuera de alcance (opcional)
+## Definición de hecho
 
-Qué **no** debe incluirse en esta entrega para evitar creep.
+- [ ] Comportamiento verificable según el objetivo
+- [ ] Prueba o demo acordada con el equipo (pasos mínimos descritos abajo)
 
-## Notas adicionales
+## Cómo probar (breve)
 
-Mockups, CSV de ejemplo, reglas de negocio dudosas, dependencias de otros issues.
+1. 
+2. 
+3. (Resultado esperado)
