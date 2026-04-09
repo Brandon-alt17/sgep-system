@@ -25,7 +25,7 @@ Sistema de Gestión de Etapa Productiva para SENA CDITI, migrado a PHP puro con 
 
 ## Estructura clave
 
-- `index.php` y `router.php`: front controller y ruteo.
+- `public/index.php` y `router.php`: front controller y ruteo (el `index.php` en la raíz solo delega a `public/` por compatibilidad).
 - `app/controllers`: controladores HTTP.
 - `app/models`: modelos con consultas PDO.
 - `app/views`: vistas PHP.
