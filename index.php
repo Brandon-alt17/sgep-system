@@ -8,6 +8,8 @@ define('BASE_PATH', __DIR__);
 
 if (file_exists(BASE_PATH . '/vendor/autoload.php')) {
     require BASE_PATH . '/vendor/autoload.php';
+} elseif (!function_exists('env')) {
+    require_once BASE_PATH . '/app/helpers/helpers.php';
 }
 
 if (class_exists(Dotenv::class) && file_exists(BASE_PATH . '/.env')) {
@@ -15,7 +17,6 @@ if (class_exists(Dotenv::class) && file_exists(BASE_PATH . '/.env')) {
 }
 
 require BASE_PATH . '/config/app.php';
-require BASE_PATH . '/app/helpers/helpers.php';
 
 set_exception_handler(static function (Throwable $e): void {
     http_response_code(500);
