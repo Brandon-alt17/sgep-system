@@ -1,0 +1,16 @@
+CREATE TABLE IF NOT EXISTS empresas (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(200) NOT NULL,
+    nit VARCHAR(40) NULL,
+    direccion VARCHAR(180) NULL,
+    ciudad VARCHAR(80) NULL,
+    correo_org VARCHAR(150) NULL,
+    nombre_jefe VARCHAR(160) NULL,
+    cargo_jefe VARCHAR(120) NULL,
+    correo_jefe VARCHAR(150) NULL,
+    telefono_jefe VARCHAR(30) NULL,
+    nombre_contacto2 VARCHAR(160) NULL,
+    correo_contacto2 VARCHAR(150) NULL,
+    created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);

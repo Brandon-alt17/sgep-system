@@ -1,0 +1,22 @@
+SGEP - Reglas del negocio v3.0
+
+Este documento en TXT reemplaza al antiguo documento markdown eliminado.
+Fuente oficial: SGEP_Reglas_del_Negocio_v3.0 (1).txt
+
+Reglas RN-01 a RN-28:
+- Se mantiene la misma logica de negocio de v2.0.
+- Cambia solo la implementacion tecnica a PHP puro con PDO.
+
+Bloques de reglas:
+1) Datos del aprendiz e importacion (RN-01..RN-06)
+2) Momentos F-023 (RN-07..RN-15)
+3) Generacion documental (RN-16..RN-22)
+4) Estados del aprendiz (RN-23..RN-25)
+5) Reporte maestro (RN-26..RN-28)
+
+Puntos criticos:
+- Cedula unica por aprendiz (RN-03).
+- M1, M2 y M3 son unicos; EX es repetible (RN-07..RN-10).
+- M3 cambia estado automaticamente con transaccion atomica (RN-24).
+- F-023 debe conservar estructura oficial (RN-16, RN-17).
+- Reporte Excel debe mantener 58 columnas y orden oficial (RN-28).
