@@ -1,0 +1,42 @@
+SGEP - Requisitos funcionales v3.0 (resumen operativo)
+
+Fuente oficial: SGEP_SRS_v3.0_Requisitos.txt
+Stack de implementacion: PHP puro + PDO + MySQL + Tailwind + JavaScript
+
+Modulo 1 - Importacion y normalizacion
+- RF-01 Importar Excel/CSV.
+- RF-02 Mapeo fijo de 32 columnas.
+- RF-03 Normalizacion automatica.
+- RF-04 Duplicados por cedula.
+- RF-05 Formulario en una o dos etapas.
+- RF-06 Ingreso manual por instructor.
+- RF-07 Edicion libre del perfil.
+- RF-08 Campos pendientes del instructor.
+
+Modulo 2 - Gestion de aprendices
+- RF-09 Perfil completo del aprendiz.
+- RF-10 Estados con transiciones controladas.
+- RF-11 Historial de momentos.
+- RF-12 Listado con filtros.
+- RF-13 Dashboard con alertas.
+
+Modulo 3 - Evaluacion F-023
+- RF-14 Momento 1 unico.
+- RF-15 Momento 2 unico.
+- RF-16 Momento 3 unico y cierre.
+- RF-17 Momento extraordinario repetible.
+- RF-18 Edicion de momentos sin restriccion.
+- RF-19 Autocompletado desde perfil.
+- RF-20 Contador y limite de caracteres.
+
+Modulo 4 - Documentos
+- RF-21 Generar F-023 con fidelidad oficial.
+- RF-22 Seleccionar partes a incluir.
+- RF-23 Exportar Word/PDF.
+- RF-24 Historial de documentos.
+
+Modulo 5 - Reporte maestro
+- RF-25 Autocompletado maximo del reporte.
+- RF-26 Edicion lateral por aprendiz.
+- RF-27 Filtros por ficha/estado/programa.
+- RF-28 Exportacion Excel estructura exacta.

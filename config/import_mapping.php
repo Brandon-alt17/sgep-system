@@ -1,0 +1,38 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    0 => 'fecha_formulario',
+    1 => 'nombre_completo',
+    2 => 'tipo_documento',
+    3 => 'numero_documento',
+    4 => 'telefono',
+    5 => 'correo_personal',
+    6 => 'correo_institucional',
+    7 => 'programa_formacion',
+    8 => 'ficha',
+    9 => 'modalidad_etapa',
+    10 => 'alternativa_etapa',
+    11 => 'fecha_inicio_etapa',
+    12 => 'fecha_fin_etapa',
+    13 => 'estado',
+    14 => 'nombre_empresa',
+    15 => 'nit_empresa',
+    16 => 'direccion_empresa',
+    17 => 'ciudad_empresa',
+    18 => 'correo_organizacional',
+    19 => 'nombre_jefe',
+    20 => 'cargo_jefe',
+    21 => 'correo_jefe',
+    22 => 'telefono_jefe',
+    23 => 'nombre_contacto_2',
+    24 => 'correo_contacto_2',
+    25 => 'arl',
+    26 => 'observaciones_iniciales',
+    27 => 'sofia_registro',
+    28 => 'tipo_asistencia',
+    29 => 'ficha_instructor',
+    30 => 'jefe_grupo',
+    31 => 'coordinacion',
+];
