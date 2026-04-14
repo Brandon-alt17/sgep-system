@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?= e(APP_NAME) ?></title>
-    <link rel="stylesheet" href="<?= e(APP_BASE_PATH) ?>/public/css/app.css">
+    <link rel="stylesheet" href="<?= e(APP_BASE_PATH) ?>/css/app.css">
 </head>
 <body>
 <header>
@@ -18,6 +18,6 @@
 <main>
     <?php require $viewPath; ?>
 </main>
-<script src="<?= e(APP_BASE_PATH) ?>/public/js/app.js"></script>
+<script src="<?= e(APP_BASE_PATH) ?>/js/app.js"></script>
 </body>
 </html>
