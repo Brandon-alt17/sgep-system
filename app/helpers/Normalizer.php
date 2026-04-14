@@ -14,11 +14,10 @@ class Normalizer
         if (!empty($row['nombre_completo'])) {
             $row['nombre_completo'] = ucwords(strtolower((string) $row['nombre_completo']));
         }
-        if (!empty($row['correo_personal'])) {
-            $row['correo_personal'] = strtolower((string) $row['correo_personal']);
-        }
-        if (!empty($row['correo_institucional'])) {
-            $row['correo_institucional'] = strtolower((string) $row['correo_institucional']);
+        foreach (['correo_personal', 'correo_institucional', 'correo_electronico_personal', 'correo_electronico_institucional'] as $emailKey) {
+            if (!empty($row[$emailKey])) {
+                $row[$emailKey] = strtolower((string) $row[$emailKey]);
+            }
         }
         if (!empty($row['nit_empresa'])) {
             $row['nit_empresa'] = preg_replace('/\.\d+$/', '', (string) $row['nit_empresa']);

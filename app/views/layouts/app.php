@@ -12,7 +12,8 @@
         <a href="<?= e(APP_BASE_PATH) ?>/dashboard">Dashboard</a> |
         <a href="<?= e(APP_BASE_PATH) ?>/aprendices">Aprendices</a> |
         <a href="<?= e(APP_BASE_PATH) ?>/importar">Importar</a> |
-        <a href="<?= e(APP_BASE_PATH) ?>/reportes/maestro">Reporte maestro</a>
+        <a href="<?= e(APP_BASE_PATH) ?>/reportes/maestro">Reportes</a> |
+        <a href="<?= e(APP_BASE_PATH) ?>/documentos/generar">Configuraciones</a> |
     </nav>
 </header>
 <main>
