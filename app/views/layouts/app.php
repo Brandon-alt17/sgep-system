@@ -26,7 +26,7 @@ $currentUserName = (string) ($_SESSION['user_name'] ?? 'Usuario no registrado');
 ?>
 <?php partial('components/icons'); ?>
 <?php partial('components/ui'); ?>
-<div class="grid min-h-screen md:grid-cols-[248px_1fr]">
+<div class="grid min-h-screen md:grid-cols-[260px_1fr]">
     <?php partial('components/sidebar', ['currentPath' => $currentPath]); ?>
     <div class="grid grid-rows-[56px_1fr]">
         <?php partial('components/topbar', ['title' => $pageTitle, 'userName' => $currentUserName]); ?>

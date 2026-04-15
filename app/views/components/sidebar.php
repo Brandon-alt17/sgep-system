@@ -11,12 +11,12 @@ $items = [
 ];
 ?>
 <aside class="hidden border-r border-app-border bg-app-sidebar md:flex md:flex-col">
-    <div class="border-b border-app-border px-[18px] py-4 font-bold text-app-brand">SGEP</div>
-    <nav class="grid gap-0.5 p-2" aria-label="Navegación principal">
+    <div class="border-b border-app-border px-[24px] py-[18.5px] text-lg font-bold leading-none text-app-brand">SGEP</div>
+    <nav class="grid gap-1 p-2" aria-label="Navegación principal">
         <?php foreach ($items as $item): ?>
             <?php $active = str_starts_with((string) ($currentPath ?? ''), $item['path']); ?>
             <?php
-            $classes = 'flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm text-app-muted hover:bg-app-navHover hover:no-underline';
+            $classes = 'flex items-center gap-2.5 rounded-lg px-3 py-2.5 font-medium text-sm text-app-muted hover:bg-app-navHover hover:no-underline';
             if ($active) {
                 $classes .= ' bg-app-accentSoft font-semibold text-app-accentStrong';
             }

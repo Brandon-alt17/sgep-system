@@ -1016,7 +1016,7 @@ a:hover {
 
 .border-app-accent {
   --tw-border-opacity: 1;
-  border-color: rgb(15 159 143 / var(--tw-border-opacity, 1));
+  border-color: rgb(13 150 136 / var(--tw-border-opacity, 1));
 }
 
 .border-app-border {
@@ -1056,7 +1056,7 @@ a:hover {
 
 .bg-app-accent {
   --tw-bg-opacity: 1;
-  background-color: rgb(15 159 143 / var(--tw-bg-opacity, 1));
+  background-color: rgb(13 150 136 / var(--tw-bg-opacity, 1));
 }
 
 .bg-app-accentSoft {
@@ -1169,9 +1169,24 @@ a:hover {
   padding-bottom: 0.625rem;
 }
 
-.py-4 {
-  padding-top: 1rem;
-  padding-bottom: 1rem;
+.py-\[18\.5px\] {
+  padding-top: 18.5px;
+  padding-bottom: 18.5px;
+}
+
+.px-\[px\] {
+  padding-left: px;
+  padding-right: px;
+}
+
+.px-\[20px\] {
+  padding-left: 20px;
+  padding-right: 20px;
+}
+
+.px-\[24px\] {
+  padding-left: 24px;
+  padding-right: 24px;
 }
 
 .pl-5 {
@@ -1211,6 +1226,11 @@ a:hover {
   font-size: 15px;
 }
 
+.text-lg {
+  font-size: 1.125rem;
+  line-height: 1.75rem;
+}
+
 .text-sm {
   font-size: 0.875rem;
   line-height: 1.25rem;
@@ -1233,6 +1253,10 @@ a:hover {
   font-weight: 600;
 }
 
+.leading-none {
+  line-height: 1;
+}
+
 .text-app-accentStrong {
   --tw-text-opacity: 1;
   color: rgb(13 118 108 / var(--tw-text-opacity, 1));
@@ -1240,7 +1264,7 @@ a:hover {
 
 .text-app-brand {
   --tw-text-opacity: 1;
-  color: rgb(14 143 130 / var(--tw-text-opacity, 1));
+  color: rgb(13 150 136 / var(--tw-text-opacity, 1));
 }
 
 .text-app-link {
@@ -1343,8 +1367,8 @@ a:hover {
     grid-template-columns: 1fr 1fr auto;
   }
 
-  .md\:grid-cols-\[248px_1fr\] {
-    grid-template-columns: 248px 1fr;
+  .md\:grid-cols-\[260px_1fr\] {
+    grid-template-columns: 260px 1fr;
   }
 
   .md\:flex-col {
