@@ -1,22 +1,41 @@
-<h1>Nuevo aprendiz</h1>
+<?php partial('components/page_header', [
+    'title' => 'Nuevo aprendiz',
+    'subtitle' => 'Complete la información base para registrar un aprendiz.',
+]); ?>
+
 <?php if (!empty($errors)): ?>
-    <ul>
+    <ul class="mb-4 list-disc space-y-1 rounded-[10px] border border-rose-200 bg-rose-50 p-4 pl-8 text-sm text-rose-800">
         <?php foreach ($errors as $err): ?>
             <li><?= e((string) $err) ?></li>
         <?php endforeach; ?>
     </ul>
 <?php endif; ?>
 
-<form method="post" action="<?= e(APP_BASE_PATH) ?>/aprendices">
-    <label>Nombre completo <input type="text" name="nombre_completo" required></label><br>
-    <label>Tipo documento <input type="text" name="tipo_documento" value="CC" required></label><br>
-    <label>Número documento <input type="text" name="numero_documento" required></label><br>
-    <label>Teléfono <input type="text" name="telefono"></label><br>
-    <label>Correo personal <input type="email" name="correo_personal"></label><br>
-    <label>Correo institucional <input type="email" name="correo_institucional"></label><br>
-    <label>Ficha <input type="text" name="ficha"></label><br>
-    <label>Estado
-        <select name="estado">
+<form method="post" action="<?= e(APP_BASE_PATH) ?>/aprendices" class="<?= e(ui_card_classes()) ?>">
+    <div class="grid gap-4 md:grid-cols-2">
+        <label class="<?= e(ui_label_classes()) ?>">Nombre completo
+            <input type="text" name="nombre_completo" required class="<?= e(ui_input_classes()) ?>">
+        </label>
+        <label class="<?= e(ui_label_classes()) ?>">Tipo documento
+            <input type="text" name="tipo_documento" value="CC" required class="<?= e(ui_input_classes()) ?>">
+        </label>
+        <label class="<?= e(ui_label_classes()) ?>">Número documento
+            <input type="text" name="numero_documento" required class="<?= e(ui_input_classes()) ?>">
+        </label>
+        <label class="<?= e(ui_label_classes()) ?>">Teléfono
+            <input type="text" name="telefono" class="<?= e(ui_input_classes()) ?>">
+        </label>
+        <label class="<?= e(ui_label_classes()) ?>">Correo personal
+            <input type="email" name="correo_personal" class="<?= e(ui_input_classes()) ?>">
+        </label>
+        <label class="<?= e(ui_label_classes()) ?>">Correo institucional
+            <input type="email" name="correo_institucional" class="<?= e(ui_input_classes()) ?>">
+        </label>
+        <label class="<?= e(ui_label_classes()) ?>">Ficha
+            <input type="text" name="ficha" class="<?= e(ui_input_classes()) ?>">
+        </label>
+        <label class="<?= e(ui_label_classes()) ?>">Estado
+            <select name="estado" class="<?= e(ui_input_classes()) ?>">
             <option>Pendiente por iniciar</option>
             <option>En ejecución</option>
             <option>Aplazada</option>
@@ -25,6 +44,7 @@
             <option>Certificado</option>
             <option>Pendiente por comité</option>
         </select>
-    </label><br>
-    <button type="submit">Guardar</button>
+        </label>
+    </div>
+    <button type="submit" class="mt-4 <?= e(ui_button_primary_classes()) ?>">Guardar</button>
 </form>

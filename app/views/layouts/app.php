@@ -7,18 +7,33 @@
     <link rel="stylesheet" href="<?= e(APP_BASE_PATH) ?>/css/app.css">
 </head>
 <body>
-<header>
-    <nav>
-        <a href="<?= e(APP_BASE_PATH) ?>/dashboard">Dashboard</a> |
-        <a href="<?= e(APP_BASE_PATH) ?>/aprendices">Aprendices</a> |
-        <a href="<?= e(APP_BASE_PATH) ?>/importar">Importar</a> |
-        <a href="<?= e(APP_BASE_PATH) ?>/reportes/maestro">Reportes</a> |
-        <a href="<?= e(APP_BASE_PATH) ?>/documentos/generar">Configuraciones</a> |
-    </nav>
-</header>
-<main>
-    <?php require $viewPath; ?>
-</main>
+<?php
+// Contexto global de UI: ruta actual para resaltar el item activo del sidebar.
+$uri = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
+$base = rtrim((string) APP_BASE_PATH, '/');
+$currentPath = ($base !== '' && str_starts_with($uri, $base)) ? (substr($uri, strlen($base)) ?: '/') : $uri;
+$currentPath = $currentPath === '' ? '/' : $currentPath;
+
+$titles = [
+    '/dashboard' => 'Dashboard',
+    '/aprendices' => 'Aprendices',
+    '/importar' => 'Importar datos',
+    '/reportes/maestro' => 'Reportes',
+    '/documentos/generar' => 'Configuración',
+];
+$pageTitle = $titles[$currentPath] ?? 'SGEP';
+?>
+<?php partial('components/icons'); ?>
+<?php partial('components/ui'); ?>
+<div class="grid min-h-screen md:grid-cols-[248px_1fr]">
+    <?php partial('components/sidebar', ['currentPath' => $currentPath]); ?>
+    <div class="grid grid-rows-[56px_1fr]">
+        <?php partial('components/topbar', ['title' => $pageTitle]); ?>
+        <main class="p-5">
+            <?php require $viewPath; ?>
+        </main>
+    </div>
+</div>
 <script src="<?= e(APP_BASE_PATH) ?>/js/app.js"></script>
 </body>
 </html>
