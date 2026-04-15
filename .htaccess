@@ -8,6 +8,7 @@
 
     RewriteRule ^css/(.*)$ public/css/$1 [L]
     RewriteRule ^js/(.*)$ public/js/$1 [L]
+    RewriteRule ^templates/(.*)$ public/templates/$1 [L]
     RewriteRule ^favicon\.ico$ public/favicon.ico [L]
     RewriteRule ^robots\.txt$ public/robots.txt [L]
 

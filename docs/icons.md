@@ -32,15 +32,18 @@ El helper centralizado esta en:
 Uso recomendado:
 
 ```php
-<span class="inline-flex h-4 w-4 [&_svg]:h-4 [&_svg]:w-4 [&_svg]:fill-current">
+<span class="inline-flex h-4 w-4 [&_svg]:h-4 [&_svg]:w-4">
     <?= ui_icon('dashboard') ?>
 </span>
 ```
 
+No uses `[&_svg]:fill-current` en el contenedor si el icono es de **trazo** (`stroke`): el `fill` forzado rellena las formas cerradas y deforma el icono. En esos casos deja `fill="none"` y `stroke="currentColor"` en el `.svg`.
+
 ## Reglas de diseno recomendadas
 
 - `viewBox`: usar `0 0 24 24` para mantener escala uniforme.
-- Color: usar `fill="currentColor"` o path sin color fijo para heredar color por CSS/Tailwind.
+- Iconos de relleno: `fill="currentColor"` en el `<svg>` (o paths) para heredar el color del texto.
+- Iconos de trazo: `fill="none"` y `stroke="currentColor"`; el color sigue el `color` del padre (`text-*`).
 - Trazos simples: priorizar iconos pequenos y legibles.
 - Peso visual consistente entre iconos de una misma zona (sidebar, botones, etc).
 

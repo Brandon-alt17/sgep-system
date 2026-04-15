@@ -97,6 +97,20 @@ if (!function_exists('ui_badge_success_classes')) {
     }
 }
 
+if (!function_exists('ui_badge_warning_classes')) {
+    function ui_badge_warning_classes(): string
+    {
+        return 'rounded-full border border-app-borderWarning bg-app-warningBg px-2 py-0.5 text-[11px] font-semibold text-app-warningText';
+    }
+}
+
+if (!function_exists('ui_badge_error_classes')) {
+    function ui_badge_error_classes(): string
+    {
+        return 'rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[11px] font-semibold text-rose-700';
+    }
+}
+
 if (!function_exists('ui_warning_card_classes')) {
     function ui_warning_card_classes(): string
     {

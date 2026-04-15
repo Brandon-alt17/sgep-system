@@ -16,9 +16,23 @@ class AprendicesImport
         $mapping = require base_path('config/import_mapping.php');
         $sheet = IOFactory::load($path)->getActiveSheet();
         $rows = $sheet->toArray();
-        $results = ['inserted' => 0, 'updated' => 0, 'duplicates' => 0, 'errors' => []];
+        $results = [
+            'inserted' => 0,
+            'updated' => 0,
+            'duplicates' => 0,
+            'skipped' => 0,
+            'warnings' => [],
+            'errors' => [],
+            'inserted_rows' => [],
+            'updated_rows' => [],
+            'duplicate_rows' => [],
+        ];
 
         foreach (array_slice($rows, 1) as $index => $row) {
+            if ($this->isRowCompletelyEmpty($row)) {
+                // Optimización: ignora filas completamente vacías sin generar advertencias.
+                continue;
+            }
             try {
                 $assoc = [];
                 foreach ($mapping as $i => $field) {
@@ -29,7 +43,21 @@ class AprendicesImport
                 $doc = $this->normalizeDocumento($assoc['documento_identidad'] ?? null);
                 $nombre = isset($assoc['nombre_completo']) ? trim((string) $assoc['nombre_completo']) : '';
                 if ($doc === '' || $nombre === '') {
+                    $results['skipped']++;
+                    $faltantes = [];
+                    if ($doc === '') {
+                        $faltantes[] = 'documento_identidad';
+                    }
+                    if ($nombre === '') {
+                        $faltantes[] = 'nombre_completo';
+                    }
+                    $results['warnings'][] = 'Fila ' . ($index + 2) . ': omitida por campos requeridos vacíos (' . implode(', ', $faltantes) . ').';
                     continue;
+                }
+
+                $optionalMissing = $this->missingOptionalFields($assoc);
+                if ($optionalMissing !== []) {
+                    $results['warnings'][] = 'Fila ' . ($index + 2) . ': campos vacíos (' . implode(', ', $optionalMissing) . '). Se pueden completar luego en gestión de usuarios.';
                 }
 
                 $programaId = $this->findOrCreatePrograma(
@@ -45,9 +73,13 @@ class AprendicesImport
                     $this->updateAprendiz((int) $existing['id'], $payload);
                     $results['updated']++;
                     $results['duplicates']++;
+                    $rowSummary = $this->rowSummary($assoc, $doc);
+                    $results['updated_rows'][] = $rowSummary;
+                    $results['duplicate_rows'][] = $rowSummary;
                 } else {
                     $this->insertAprendiz($payload);
                     $results['inserted']++;
+                    $results['inserted_rows'][] = $this->rowSummary($assoc, $doc);
                 }
             } catch (\Throwable $e) {
                 $results['errors'][] = 'Fila ' . ($index + 2) . ': ' . $e->getMessage();
@@ -55,6 +87,61 @@ class AprendicesImport
         }
 
         return $results;
+    }
+
+    private function isRowCompletelyEmpty(array $row): bool
+    {
+        foreach ($row as $value) {
+            if ($value === null) {
+                continue;
+            }
+            if (is_string($value) && trim($value) === '') {
+                continue;
+            }
+            if (is_numeric($value) && (string) $value === '0') {
+                // "0" se considera dato válido.
+                return false;
+            }
+            if ((string) $value !== '') {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /** @return array<string, string> */
+    private function rowSummary(array $assoc, string $doc): array
+    {
+        return [
+            'nombre' => trim((string) ($assoc['nombre_completo'] ?? '')),
+            'identificacion' => $doc,
+            'ficha' => trim((string) ($assoc['numero_ficha'] ?? '')),
+            'programa' => trim((string) ($assoc['programa_formacion'] ?? '')),
+        ];
+    }
+
+    /** @return array<int, string> */
+    private function missingOptionalFields(array $assoc): array
+    {
+        $check = [
+            'tipo_documento',
+            'numero_celular',
+            'correo_electronico_personal',
+            'correo_electronico_institucional',
+            'programa_formacion',
+            'numero_ficha',
+            'empresa_entidad_coformadora',
+        ];
+        $missing = [];
+        foreach ($check as $field) {
+            $value = $assoc[$field] ?? null;
+            if ($value === null || trim((string) $value) === '') {
+                $missing[] = $field;
+            }
+        }
+
+        return $missing;
     }
 
     private function normalizeDocumento(mixed $value): string
@@ -345,7 +432,29 @@ class AprendicesImport
             updated_at = NOW()
             WHERE id = :id';
 
-        $data['id'] = $id;
-        Database::connection()->prepare($sql)->execute($data);
+        $bind = [
+            'id' => $id,
+            'nombre_completo' => $data['nombre_completo'] ?? '',
+            'tipo_documento' => $data['tipo_documento'] ?? '',
+            'telefono' => $data['telefono'] ?? '',
+            'correo_personal' => $data['correo_personal'] ?? '',
+            'correo_institucional' => $data['correo_institucional'] ?? '',
+            'ficha' => $data['ficha'] ?? '',
+            'programa_id' => $data['programa_id'] ?? null,
+            'empresa_id' => $data['empresa_id'] ?? null,
+            'fecha_hora_formulario' => $data['fecha_hora_formulario'] ?? null,
+            'direccion_domicilio' => $data['direccion_domicilio'] ?? '',
+            'ciudad_domicilio' => $data['ciudad_domicilio'] ?? '',
+            'alternativa_ep' => $data['alternativa_ep'] ?? '',
+            'fecha_sofia' => $data['fecha_sofia'] ?? null,
+            'nombre_instructor_seguimiento' => $data['nombre_instructor_seguimiento'] ?? '',
+            'telefono_instructor_seguimiento' => $data['telefono_instructor_seguimiento'] ?? '',
+            'tipo_asistencia' => $data['tipo_asistencia'] ?? '',
+            'sugerencias_comentarios' => $data['sugerencias_comentarios'] ?? '',
+            'ficha_curso' => $data['ficha_curso'] ?? '',
+            'jefe_grupo' => $data['jefe_grupo'] ?? '',
+            'coordinacion' => $data['coordinacion'] ?? '',
+        ];
+        Database::connection()->prepare($sql)->execute($bind);
     }
 }

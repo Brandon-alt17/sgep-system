@@ -5,7 +5,7 @@ declare(strict_types=1);
 $items = [
     ['label' => 'Dashboard', 'path' => '/dashboard', 'icon' => 'dashboard'],
     ['label' => 'Aprendices', 'path' => '/aprendices', 'icon' => 'aprendices'],
-    ['label' => 'Importar', 'path' => '/importar', 'icon' => 'importar'],
+    ['label' => 'Importar', 'path' => '/importar', 'icon' => 'upload'],
     ['label' => 'Reportes', 'path' => '/reportes/maestro', 'icon' => 'reportes'],
     ['label' => 'Configuración', 'path' => '/documentos/generar', 'icon' => 'config'],
 ];
@@ -22,7 +22,7 @@ $items = [
             }
             ?>
             <a class="<?= e($classes) ?>" href="<?= e(APP_BASE_PATH . $item['path']) ?>">
-                <span class="inline-flex h-4 w-4 [&_svg]:h-4 [&_svg]:w-4 [&_svg]:fill-current"><?= ui_icon($item['icon']) ?></span>
+                <span class="inline-flex h-4 w-4 [&_svg]:h-4 [&_svg]:w-4"><?= ui_icon($item['icon']) ?></span>
                 <span><?= e($item['label']) ?></span>
             </a>
         <?php endforeach; ?>

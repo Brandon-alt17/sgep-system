@@ -22,6 +22,7 @@ $routes = [
     ['GET', '/dashboard', [DashboardController::class, 'index']],
     ['GET', '/importar', [ImportacionController::class, 'upload']],
     ['POST', '/importar', [ImportacionController::class, 'process']],
+    ['GET', '/importar/resultado', [ImportacionController::class, 'showResult']],
     ['GET', '/aprendices', [AprendizController::class, 'index']],
     ['GET', '/aprendices/create', [AprendizController::class, 'create']],
     ['POST', '/aprendices', [AprendizController::class, 'store']],

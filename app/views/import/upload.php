@@ -7,18 +7,26 @@
     <article class="<?= e(ui_card_classes()) ?>">
         <h3 class="<?= e(ui_heading_sm_classes()) ?>">Cargar archivo</h3>
         <p class="<?= e(ui_text_muted_classes()) ?>">Formato aceptado: .xlsx - Máximo 5 MB</p>
-        <form method="post" action="<?= e(APP_BASE_PATH) ?>/importar" enctype="multipart/form-data">
+        <form method="post" action="<?= e(APP_BASE_PATH) ?>/importar" enctype="multipart/form-data" data-import-form>
             <input class="sr-only" data-import-input type="file" name="archivo" accept=".xlsx,.xls,.csv" required>
-            <div class="mt-3 grid min-h-[122px] place-items-center rounded-lg border border-dashed border-app-borderSoft bg-app-panelSoft p-2.5 text-center" data-import-dropzone>
+            <div class="mt-3 grid min-h-[122px] place-items-center rounded-lg border border-dashed border-app-borderSoft bg-app-panelSoft p-2.5 text-center">
                 <div>
-                    <div class="mx-auto mb-2 h-[22px] w-[22px] text-app-muted [&_svg]:h-[22px] [&_svg]:w-[22px] [&_svg]:fill-current"><?= ui_icon('upload') ?></div>
-                    <strong class="text-[13px]">Arrastre el archivo Excel aquí o haga clic para seleccionar</strong>
+                    <div class="mx-auto mb-2 h-[22px] w-[22px] text-app-muted [&_svg]:h-[22px] [&_svg]:w-[22px]"><?= ui_icon('upload') ?></div>
+                    <strong class="text-[13px]">Seleccione el archivo Excel con el botón de carga</strong>
                     <small class="mt-0.5 block text-[11px] text-app-mutedSoft">Solo archivos Excel (.xlsx, .xls, .csv)</small>
                     <button type="button" class="mt-2 <?= e(ui_button_small_classes()) ?>" data-import-trigger>Seleccionar archivo</button>
                     <small class="mt-0.5 block text-[11px] text-app-mutedSoft" data-import-filename>Sin archivo seleccionado</small>
                 </div>
             </div>
-            <button type="submit" class="mt-2 <?= e(ui_button_small_primary_classes()) ?>">Importar archivo</button>
+            <div class="mt-3 hidden" data-import-progress>
+                <div class="mb-1 flex items-center justify-between text-xs text-app-muted">
+                    <span data-import-progress-label>Preparando carga...</span>
+                    <span data-import-progress-value>0%</span>
+                </div>
+                <div class="h-1.5 w-full rounded bg-app-panelSubtle">
+                    <div class="h-full w-0 rounded bg-app-accent" data-import-progress-bar></div>
+                </div>
+            </div>
         </form>
     </article>
 
@@ -31,9 +39,19 @@
             <li>Revise el resumen de importación y confirme los registros.</li>
         </ol>
         <h3 class="mb-2 mt-4 text-[15px] font-semibold">Plantilla disponible:</h3>
-        <a class="<?= e(ui_button_small_classes()) ?> items-center gap-1" href="#" aria-disabled="true"><?= ui_icon('file') ?> Plantilla de seguimiento</a>
+        <?php if (!empty($templateAvailable)): ?>
+            <a class="<?= e(ui_button_small_classes()) ?> items-center gap-1" href="<?= e((string) ($templateUrl ?? '#')) ?>" download><?= ui_icon('file') ?> Plantilla de seguimiento</a>
+        <?php else: ?>
+            <span class="<?= e(ui_button_small_classes()) ?> items-center gap-1 opacity-60"><?= ui_icon('file') ?> Plantilla no cargada</span>
+        <?php endif; ?>
     </article>
 </section>
+
+<?php if (!empty($flashError)): ?>
+    <section class="mt-4 <?= e(ui_warning_card_classes()) ?>">
+        <?= e((string) $flashError) ?>
+    </section>
+<?php endif; ?>
 
 <section class="mt-4 <?= e(ui_card_classes()) ?>">
     <h3 class="<?= e(ui_heading_sm_classes()) ?>">Historial de importaciones</h3>
@@ -48,24 +66,35 @@
         </tr>
         </thead>
         <tbody>
-        <tr>
-            <td class="<?= e(ui_td_classes()) ?>">aprendices_ficha_2745623.xlsx</td>
-            <td class="<?= e(ui_td_classes()) ?>">2025-01-15</td>
-            <td class="<?= e(ui_td_classes()) ?>">12</td>
-            <td class="<?= e(ui_td_classes()) ?>"><span class="<?= e(ui_badge_success_classes()) ?>">Exitoso</span></td>
-        </tr>
-        <tr>
-            <td class="<?= e(ui_td_classes()) ?>">aprendices_ficha_28U1445.xlsx</td>
-            <td class="<?= e(ui_td_classes()) ?>">2025-02-03</td>
-            <td class="<?= e(ui_td_classes()) ?>">14</td>
-            <td class="<?= e(ui_td_classes()) ?>"><span class="<?= e(ui_badge_success_classes()) ?>">Exitoso</span></td>
-        </tr>
-        <tr>
-            <td class="<?= e(ui_td_classes()) ?>">aprendices_seguimiento_2025.xlsx</td>
-            <td class="<?= e(ui_td_classes()) ?>">2025-02-10</td>
-            <td class="<?= e(ui_td_classes()) ?>">8</td>
-            <td class="<?= e(ui_td_classes()) ?>"><span class="<?= e(ui_badge_success_classes()) ?>">Parcial</span></td>
-        </tr>
+        <?php if (!empty($history)): ?>
+            <?php foreach ($history as $row): ?>
+                <?php
+                $status = (string) ($row['status'] ?? 'Exitoso');
+                $badgeClass = ui_badge_success_classes();
+                if ($status === 'Parcial') {
+                    $badgeClass = ui_badge_warning_classes();
+                } elseif ($status === 'Fallido') {
+                    $badgeClass = ui_badge_error_classes();
+                }
+                ?>
+                <tr>
+                    <td class="<?= e(ui_td_classes()) ?>">
+                        <?php if (!empty($row['id'])): ?>
+                            <a class="font-medium text-app-link" href="<?= e(APP_BASE_PATH) ?>/importar/resultado?id=<?= e((string) $row['id']) ?>"><?= e((string) ($row['file_name'] ?? 'archivo.xlsx')) ?></a>
+                        <?php else: ?>
+                            <?= e((string) ($row['file_name'] ?? 'archivo.xlsx')) ?>
+                        <?php endif; ?>
+                    </td>
+                    <td class="<?= e(ui_td_classes()) ?>"><?= e((string) ($row['date'] ?? '')) ?></td>
+                    <td class="<?= e(ui_td_classes()) ?>"><?= e((string) ($row['records'] ?? 0)) ?></td>
+                    <td class="<?= e(ui_td_classes()) ?>"><span class="<?= e($badgeClass) ?>"><?= e($status) ?></span></td>
+                </tr>
+            <?php endforeach; ?>
+        <?php else: ?>
+            <tr>
+                <td class="<?= e(ui_td_classes()) ?>" colspan="4">Aún no hay importaciones registradas.</td>
+            </tr>
+        <?php endif; ?>
         </tbody>
     </table>
 </section>
