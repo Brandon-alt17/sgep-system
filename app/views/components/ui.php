@@ -13,24 +13,45 @@ if (!function_exists('ui_card_classes')) {
     }
 }
 
+if (!function_exists('ui_card_mt_classes')) {
+    function ui_card_mt_classes(): string
+    {
+        return 'mt-4 ' . ui_card_classes();
+    }
+}
+
 if (!function_exists('ui_label_classes')) {
     function ui_label_classes(): string
     {
-        return 'block text-sm font-medium text-gray-700';
+        return 'block text-sm font-medium text-app-textSubtle';
     }
 }
 
 if (!function_exists('ui_input_classes')) {
     function ui_input_classes(): string
     {
-        return 'mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm';
+        return 'mt-1 w-full rounded-lg border border-app-borderControlStrong px-3 py-2 text-sm';
     }
 }
 
 if (!function_exists('ui_button_primary_classes')) {
     function ui_button_primary_classes(): string
     {
-        return 'inline-flex rounded-md border border-app-accent bg-app-accent px-4 py-2 text-sm font-medium text-white no-underline hover:bg-[#0e8f82]';
+        return 'inline-flex rounded-md border border-app-accent bg-app-accent px-4 py-2 text-sm font-medium text-app-textOnBrand no-underline hover:bg-app-accentHover';
+    }
+}
+
+if (!function_exists('ui_button_small_classes')) {
+    function ui_button_small_classes(): string
+    {
+        return 'inline-flex rounded-md border border-app-borderControl bg-app-panelSubtle px-2.5 py-1.5 text-xs text-app-link no-underline hover:bg-app-panelHover';
+    }
+}
+
+if (!function_exists('ui_button_small_primary_classes')) {
+    function ui_button_small_primary_classes(): string
+    {
+        return 'cursor-pointer rounded-md border border-app-accent bg-app-accent px-2.5 py-1.5 text-xs text-app-textOnBrand hover:bg-app-accentHover';
     }
 }
 
@@ -52,5 +73,33 @@ if (!function_exists('ui_td_classes')) {
     function ui_td_classes(): string
     {
         return 'border-b border-app-border px-2 py-2.5 text-left text-xs';
+    }
+}
+
+if (!function_exists('ui_heading_sm_classes')) {
+    function ui_heading_sm_classes(): string
+    {
+        return 'mb-2 mt-0 text-[15px] font-semibold';
+    }
+}
+
+if (!function_exists('ui_text_muted_classes')) {
+    function ui_text_muted_classes(): string
+    {
+        return 'mb-2 mt-0 text-xs text-app-muted';
+    }
+}
+
+if (!function_exists('ui_badge_success_classes')) {
+    function ui_badge_success_classes(): string
+    {
+        return 'rounded-full border border-app-borderSuccess bg-app-successBg px-2 py-0.5 text-[11px] font-semibold text-app-successText';
+    }
+}
+
+if (!function_exists('ui_warning_card_classes')) {
+    function ui_warning_card_classes(): string
+    {
+        return 'rounded-[10px] border border-app-borderWarning bg-app-warningBg p-4 text-sm text-app-warningText';
     }
 }

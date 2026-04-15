@@ -9,7 +9,7 @@
   }
 
   a {
-    @apply text-teal-700 no-underline;
+    @apply text-app-link no-underline;
   }
 
   a:hover {
