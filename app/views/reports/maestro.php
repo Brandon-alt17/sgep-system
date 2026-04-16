@@ -1,31 +1,40 @@
-<h1>Reporte maestro</h1>
-<p><a href="<?= e(APP_BASE_PATH) ?>/reportes/exportar">Exportar a Excel</a></p>
-<table border="1" cellpadding="6">
-    <thead>
-    <tr>
-        <th>Documento</th>
-        <th>Nombre</th>
-        <th>Estado</th>
-        <th>Últ. edición reporte</th>
-        <th>Editar campo libre</th>
-    </tr>
-    </thead>
-    <tbody>
-    <?php foreach (($rows ?? []) as $row): ?>
+<?php partial('components/page_header', [
+    'title' => 'Reporte maestro',
+    'subtitle' => 'Consulte el consolidado y actualice campos libres de cada aprendiz.',
+]); ?>
+
+<p class="mb-3">
+    <a class="<?= e(ui_button_primary_classes()) ?>" href="<?= e(APP_BASE_PATH) ?>/reportes/exportar">Exportar a Excel</a>
+</p>
+
+<section class="<?= e(ui_card_classes()) ?>">
+    <table class="<?= e(ui_table_classes()) ?>">
+        <thead>
         <tr>
-            <td><?= e((string) $row['numero_documento']) ?></td>
-            <td><?= e((string) $row['nombre_completo']) ?></td>
-            <td><?= e((string) $row['estado']) ?></td>
-            <td><?= e((string) ($row['reporte_actualizado'] ?? '')) ?></td>
-            <td>
-                <form method="post" action="<?= e(APP_BASE_PATH) ?>/reportes/update">
-                    <input type="hidden" name="aprendiz_id" value="<?= (int) $row['id'] ?>">
-                    <input type="text" name="campo" placeholder="campo">
-                    <input type="text" name="valor" placeholder="valor">
-                    <button type="submit">Guardar</button>
-                </form>
-            </td>
+            <th class="<?= e(ui_th_classes()) ?>">Documento</th>
+            <th class="<?= e(ui_th_classes()) ?>">Nombre</th>
+            <th class="<?= e(ui_th_classes()) ?>">Estado</th>
+            <th class="<?= e(ui_th_classes()) ?>">Últ. edición reporte</th>
+            <th class="<?= e(ui_th_classes()) ?>">Editar campo libre</th>
         </tr>
-    <?php endforeach; ?>
-    </tbody>
-</table>
+        </thead>
+        <tbody>
+        <?php foreach (($rows ?? []) as $row): ?>
+            <tr>
+                <td class="<?= e(ui_td_classes()) ?>"><?= e((string) $row['numero_documento']) ?></td>
+                <td class="<?= e(ui_td_classes()) ?>"><?= e((string) $row['nombre_completo']) ?></td>
+                <td class="<?= e(ui_td_classes()) ?>"><?= e((string) $row['estado']) ?></td>
+                <td class="<?= e(ui_td_classes()) ?>"><?= e((string) ($row['reporte_actualizado'] ?? '')) ?></td>
+                <td class="<?= e(ui_td_classes()) ?>">
+                    <form method="post" action="<?= e(APP_BASE_PATH) ?>/reportes/update" class="grid gap-2 md:grid-cols-[1fr_1fr_auto] md:items-end">
+                        <input type="hidden" name="aprendiz_id" value="<?= (int) $row['id'] ?>">
+                        <input type="text" name="campo" placeholder="campo" class="w-full rounded-lg border border-app-borderControlStrong px-3 py-2 text-xs">
+                        <input type="text" name="valor" placeholder="valor" class="w-full rounded-lg border border-app-borderControlStrong px-3 py-2 text-xs">
+                        <button type="submit" class="<?= e(ui_button_primary_classes()) ?> px-3 py-2 text-xs">Guardar</button>
+                    </form>
+                </td>
+            </tr>
+        <?php endforeach; ?>
+        </tbody>
+    </table>
+</section>

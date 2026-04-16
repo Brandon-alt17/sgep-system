@@ -1,12 +1,48 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   content: [
-    "./resources/**/*.blade.php",
+    "./app/views/**/*.php",
     "./resources/**/*.js",
-    "./resources/**/*.vue",
   ],
   theme: {
-    extend: {},
+    extend: {
+      colors: {
+        app: {
+          bg: "#f8fafc",
+          panel: "#ffffff",
+          panelSoft: "#fbfcfd",
+          panelSubtle: "#f8fafb",
+          panelHover: "#eef3f6",
+          topbar: "#ffffff",
+          sidebar: "#ffffff",
+          navHover: "#e9eef2",
+          border: "#dde1e6",
+          borderSoft: "#d5dbe3",
+          borderControl: "#cfd6df",
+          borderControlStrong: "#cdd5df",
+          borderSuccess: "#d4ead7",
+          borderWarning: "#fcd34d",
+          text: "#1f2937",
+          muted: "#6b7280",
+          mutedSoft: "#9aa2af",
+          textSubtle: "#374151",
+          textOnBrand: "#ffffff",
+          accent: "#0d9688",
+          accentHover: "#0e8f82",
+          accentStrong: "#0d766c",
+          brand: "#0d9688",
+          accentSoft: "#dff4f1",
+          successBg: "#e9f8ef",
+          successText: "#237a43",
+          warningBg: "#fffbeb",
+          warningText: "#92400e",
+          link: "#0f766e",
+        },
+      },
+      boxShadow: {
+        xsSoft: "0 1px 2px rgba(16, 24, 40, 0.06)",
+      },
+    },
   },
   plugins: [
     require('@tailwindcss/forms'),

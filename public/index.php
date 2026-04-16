@@ -12,8 +12,12 @@ if (file_exists(BASE_PATH . '/vendor/autoload.php')) {
     require_once BASE_PATH . '/app/helpers/helpers.php';
 }
 
-if (class_exists(Dotenv::class) && file_exists(BASE_PATH . '/.env')) {
-    Dotenv::createImmutable(BASE_PATH)->safeLoad();
+if (class_exists(Dotenv::class) && is_readable(BASE_PATH . '/.env')) {
+    try {
+        Dotenv::createImmutable(BASE_PATH)->load();
+    } catch (\Throwable $e) {
+        log_error('Dotenv: ' . $e->getMessage() . ' @ ' . $e->getFile() . ':' . $e->getLine());
+    }
 }
 
 require BASE_PATH . '/config/app.php';

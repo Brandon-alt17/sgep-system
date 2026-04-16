@@ -10,8 +10,14 @@ if (file_exists(BASE_PATH . '/vendor/autoload.php')) {
 } elseif (!function_exists('env')) {
     require_once BASE_PATH . '/app/helpers/helpers.php';
 }
-if (class_exists(Dotenv::class) && file_exists(BASE_PATH . '/.env')) {
-    Dotenv::createImmutable(BASE_PATH)->safeLoad();
+if (class_exists(Dotenv::class) && is_readable(BASE_PATH . '/.env')) {
+    try {
+        // safeLoad() solo oculta "archivo no encontrado"; un .env mal formado igual lanza excepción
+        Dotenv::createImmutable(BASE_PATH)->load();
+    } catch (\Throwable $e) {
+        fwrite(STDERR, 'No se pudo cargar .env: ' . $e->getMessage() . PHP_EOL);
+        fwrite(STDERR, 'Se usarán los valores por defecto de config/database.php si aplican.' . PHP_EOL);
+    }   
 }
 require BASE_PATH . '/config/app.php';
 
@@ -26,6 +32,20 @@ foreach ($files as $file) {
     if ($sql === false) {
         continue;
     }
-    $pdo->exec($sql);
+    $sql = preg_replace('/^\s*--.*$/m', '', $sql);
+    /** @var array<int, string> $parts */
+    $parts = array_filter(array_map('trim', explode(';', $sql)), static fn (string $s): bool => $s !== '');
+    foreach ($parts as $stmt) {
+        try {
+            $pdo->exec($stmt);
+        } catch (\PDOException $e) {
+            $driverCode = (int) ($e->errorInfo[1] ?? 0);
+            // MySQL/MariaDB: 1060 = columna duplicada
+            if ($driverCode === 1060) {
+                continue;
+            }
+            throw $e;
+        }
+    }
     echo 'Ejecutado: ' . basename($file) . PHP_EOL;
 }
