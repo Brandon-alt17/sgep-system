@@ -785,6 +785,22 @@ a:hover {
   position: static;
 }
 
+.absolute {
+  position: absolute;
+}
+
+.relative {
+  position: relative;
+}
+
+.left-0 {
+  left: 0px;
+}
+
+.top-1\/2 {
+  top: 50%;
+}
+
 .m-0 {
   margin: 0px;
 }
@@ -906,6 +922,10 @@ a:hover {
   width: 0px;
 }
 
+.w-1 {
+  width: 0.25rem;
+}
+
 .w-4 {
   width: 1rem;
 }
@@ -924,6 +944,11 @@ a:hover {
 
 .border-collapse {
   border-collapse: collapse;
+}
+
+.-translate-y-1\/2 {
+  --tw-translate-y: -50%;
+  transform: translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y));
 }
 
 .cursor-pointer {
@@ -1014,6 +1039,11 @@ a:hover {
   border-radius: 0.375rem;
 }
 
+.rounded-l {
+  border-top-left-radius: 0.25rem;
+  border-bottom-left-radius: 0.25rem;
+}
+
 .border {
   border-width: 1px;
 }
@@ -1036,7 +1066,7 @@ a:hover {
 
 .border-app-accent {
   --tw-border-opacity: 1;
-  border-color: rgb(13 150 136 / var(--tw-border-opacity, 1));
+  border-color: rgb(10 139 129 / var(--tw-border-opacity, 1));
 }
 
 .border-app-border {
@@ -1076,12 +1106,17 @@ a:hover {
 
 .bg-app-accent {
   --tw-bg-opacity: 1;
-  background-color: rgb(13 150 136 / var(--tw-bg-opacity, 1));
+  background-color: rgb(10 139 129 / var(--tw-bg-opacity, 1));
 }
 
 .bg-app-accentSoft {
   --tw-bg-opacity: 1;
-  background-color: rgb(223 244 241 / var(--tw-bg-opacity, 1));
+  background-color: rgb(232 253 251 / var(--tw-bg-opacity, 1));
+}
+
+.bg-app-accentStrong {
+  --tw-bg-opacity: 1;
+  background-color: rgb(13 150 136 / var(--tw-bg-opacity, 1));
 }
 
 .bg-app-panel {
@@ -1283,7 +1318,7 @@ a:hover {
 
 .text-app-accentStrong {
   --tw-text-opacity: 1;
-  color: rgb(13 118 108 / var(--tw-text-opacity, 1));
+  color: rgb(13 150 136 / var(--tw-text-opacity, 1));
 }
 
 .text-app-brand {
@@ -1355,6 +1390,20 @@ a:hover {
   box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
 }
 
+.transition-colors {
+  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+
+.duration-200 {
+  transition-duration: 200ms;
+}
+
+.ease-out {
+  transition-timing-function: cubic-bezier(0, 0, 0.2, 1);
+}
+
 .hover\:bg-app-accentHover:hover {
   --tw-bg-opacity: 1;
   background-color: rgb(14 143 130 / var(--tw-bg-opacity, 1));
@@ -1373,6 +1422,26 @@ a:hover {
 .hover\:bg-app-panelHover:hover {
   --tw-bg-opacity: 1;
   background-color: rgb(238 243 246 / var(--tw-bg-opacity, 1));
+}
+
+.hover\:bg-app-accentSoft:hover {
+  --tw-bg-opacity: 1;
+  background-color: rgb(232 253 251 / var(--tw-bg-opacity, 1));
+}
+
+.hover\:text-app-accentStrong:hover {
+  --tw-text-opacity: 1;
+  color: rgb(13 150 136 / var(--tw-text-opacity, 1));
+}
+
+.hover\:text-app-accent:hover {
+  --tw-text-opacity: 1;
+  color: rgb(10 139 129 / var(--tw-text-opacity, 1));
+}
+
+.hover\:text-app-text:hover {
+  --tw-text-opacity: 1;
+  color: rgb(31 41 55 / var(--tw-text-opacity, 1));
 }
 
 .hover\:no-underline:hover {
