@@ -1442,7 +1442,3 @@ a:hover {
 .\[\&_svg\]\:w-\[22px\] svg {
   width: 22px;
 }
-
-.\[\&_svg\]\:fill-current svg {
-  fill: currentColor;
-}
