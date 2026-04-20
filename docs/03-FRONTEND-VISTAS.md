@@ -1,36 +1,29 @@
-## Vistas y front-end — Blade + Tailwind
+## Vistas y front-end — PHP + Tailwind
 
-Convenciones para vistas Blade, componentes y estilos en el SGEP.
+Convenciones para vistas PHP, componentes y estilos en el SGEP.
 
-### Estructura de `resources/views`
+### Estructura de `app/views`
 
 ```text
-resources/views/
-├── layouts/
-│   └── app.blade.php              # Layout base
-├── components/                    # Componentes reutilizables
-│   ├── alert.blade.php
-│   ├── modal.blade.php
-│   ├── badge.blade.php
-│   └── form/
-│       ├── input.blade.php
-│       ├── select.blade.php
-│       └── textarea.blade.php
-├── dashboard.blade.php
-├── apprentices/
-│   ├── index.blade.php
-│   ├── create.blade.php
-│   ├── edit.blade.php
-│   └── show.blade.php
-├── evaluations/
-│   ├── moment1.blade.php
-│   ├── moment2.blade.php
-│   └── moment3.blade.php
+app/views/
+├── components/
+│   ├── icons.php
+│   ├── page_header.php
+│   ├── sidebar.php
+│   └── ui.php
+├── dashboard.php
+├── aprendices/
+│   ├── index.php
+│   ├── create.php
+│   ├── edit.php
+│   └── show.php
+├── momentos/
+│   └── create.php
 ├── import/
-│   ├── upload.blade.php
-│   └── mapping.blade.php
+│   ├── upload.php
+│   └── preview.php
 └── reports/
-    └── maestro.blade.php
+    └── maestro.php
 ```
 
 ### Colores del sistema (Tailwind)
@@ -60,7 +53,7 @@ module.exports = {
 - [ ] Revisar si ya existe un componente reutilizable.
 - [ ] Alinear con back-end: qué datos y rutas se necesitan.
 - [ ] Definir estructura HTML con Tailwind.
-- [ ] Incluir validaciones visuales (`@error`, mensajes).
+- [ ] Incluir validaciones visuales y mensajes de error.
 - [ ] Probar responsive (móvil, tablet, escritorio).
 
 ### Antes de hacer commit

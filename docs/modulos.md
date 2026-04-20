@@ -63,10 +63,10 @@ Tabla de resultados: exitosos / errores por fila
 ### Clase principal
 
 ```php
-// app/Imports/ApprendicesImport.php
-class ApprendicesImport implements ToModel, WithHeadingRow, SkipsOnError
+// app/imports/AprendicesImport.php
+class AprendicesImport
 {
-    public function model(array $row): ?Aprendiz
+    public function importRow(array $row): ?array
     {
         // Normalización + detección de duplicados
     }
@@ -227,18 +227,16 @@ if ($aprendiz->momentos()->where('tipo', 'M2')->exists()) {
 }
 ```
 
-### Componente Blade reutilizable
+### Componente reutilizable
 
-```blade
-{{-- resources/views/componentes/factor-row.blade.php --}}
-{{-- Usado 8 veces para técnicos + 5 para actitudinales --}}
+```php
+<!-- app/views/components/factor_row.php -->
+<!-- Usado 8 veces para técnicos + 5 para actitudinales -->
 <div class="factor-row">
-    <span>{{ $nombre }}</span>
-    <label><input type="radio" name="factores[{{ $index }}][valoracion]" value="S"> Satisfactorio</label>
-    <label><input type="radio" name="factores[{{ $index }}][valoracion]" value="PM"> Por mejorar</label>
-    <textarea name="factores[{{ $index }}][observacion]" maxlength="{{ $limite }}"
-              x-on:input="contador = $el.value.length"></textarea>
-    <span x-text="contador + '/{{ $limite }}'"></span>
+    <span><?= e($nombre) ?></span>
+    <label><input type="radio" name="factores[<?= (int) $index ?>][valoracion]" value="S"> Satisfactorio</label>
+    <label><input type="radio" name="factores[<?= (int) $index ?>][valoracion]" value="PM"> Por mejorar</label>
+    <textarea name="factores[<?= (int) $index ?>][observacion]" maxlength="<?= (int) $limite ?>"></textarea>
 </div>
 ```
 

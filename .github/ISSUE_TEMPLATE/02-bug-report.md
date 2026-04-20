@@ -27,7 +27,7 @@ labels: ["bug"]
 
 - **SO:** (Windows / macOS / Linux)
 - **Navegador:** (si aplica)
-- **Cómo ejecutas la app:** (p. ej. `php artisan serve`, WAMP, MAMP)
+- **Cómo ejecutas la app:** (p. ej. WAMP, MAMP o `php -S localhost:8000 -t public`)
 - **Rama o versión:** (si aplica)
 
 ## Evidencia (opcional)

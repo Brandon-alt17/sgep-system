@@ -99,7 +99,7 @@ Catálogo de programas de formación del SENA.
 | `created_at` | `timestamp` | No | — |
 | `updated_at` | `timestamp` | No | — |
 
-> Los programas se precargan con seeders. En el MVP no hay interfaz CRUD para esta tabla.
+> Los programas se pueden precargar con scripts SQL. En el MVP no hay interfaz CRUD para esta tabla.
 
 ---
 
@@ -202,80 +202,51 @@ Campos que el instructor edita manualmente en el reporte maestro que no se puede
 
 ---
 
-## Relaciones Eloquent
+## Relaciones del dominio
 
-```php
-// Aprendiz
-class Aprendiz extends Model {
-    public function empresa(): BelongsTo
-    public function programa(): BelongsTo
-    public function momentos(): HasMany          // ordenados por fecha_visita
-    public function momentoUno(): HasOne         // tipo = 'M1'
-    public function momentoTres(): HasOne        // tipo = 'M3'
-    public function documentos(): HasMany
-    public function reporteCampos(): HasOne
-}
-
-// Momento
-class Momento extends Model {
-    public function aprendiz(): BelongsTo
-    public function factores(): HasMany          // ordenados por tipo + indice
-    public function factoresTecnicos(): HasMany  // tipo = 'tecnico'
-    public function factoresActitudinales(): HasMany // tipo = 'actitudinal'
-}
+```text
+Aprendiz 1 --- N Momentos
+Aprendiz 1 --- N DocumentosGenerados
+Aprendiz 1 --- 1 ReporteCampos
+Empresa  1 --- N Aprendices
+Programa 1 --- N Aprendices
+Momento  1 --- N FactoresValoracion
 ```
 
 ---
 
-## Queries frecuentes
+## Queries frecuentes (SQL)
 
-```php
-// Dashboard: aprendices con visita próxima en los siguientes 30 días
-Momento::whereNotNull('proxima_visita')
-    ->where('proxima_visita', '<=', now()->addDays(30))
-    ->where('proxima_visita', '>=', now())
-    ->with('aprendiz')
-    ->orderBy('proxima_visita')
-    ->get();
-
-// Perfil completo con todos los datos relacionados
-Aprendiz::with(['empresa', 'programa', 'momentos.factores', 'documentos'])
-    ->findOrFail($id);
-
-// Listado con filtros
-Aprendiz::with('empresa')
-    ->when($ficha, fn($q) => $q->where('ficha', $ficha))
-    ->when($estado, fn($q) => $q->where('estado', $estado))
-    ->when($busqueda, fn($q) => $q->where(function($q) use ($busqueda) {
-        $q->where('nombre', 'like', "%$busqueda%")
-          ->orWhere('numero_documento', 'like', "%$busqueda%");
-    }))
-    ->paginate(25);
+```sql
+-- Próximas visitas en 30 días
+SELECT m.*, a.nombre
+FROM momentos m
+JOIN aprendices a ON a.id = m.aprendiz_id
+WHERE m.proxima_visita IS NOT NULL
+  AND m.proxima_visita BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY)
+ORDER BY m.proxima_visita ASC;
 ```
 
 ---
 
 ## Migraciones
 
-```
+```text
 database/migrations/
-├── 2026_xx_xx_create_programas_table.php
-├── 2026_xx_xx_create_empresas_table.php
-├── 2026_xx_xx_create_aprendices_table.php
-├── 2026_xx_xx_create_momentos_table.php
-├── 2026_xx_xx_create_factores_valoracion_table.php
-├── 2026_xx_xx_create_documentos_generados_table.php
-└── 2026_xx_xx_create_reporte_campos_table.php
+├── 001_*.sql
+├── 002_*.sql
+├── 003_*.sql
+└── ...
 ```
 
 Correr todas las migraciones:
 ```bash
-php artisan migrate
+php database/run_migrations.php
 ```
 
-Correr con seeders (412 aprendices del CDITI + programas del catálogo):
+Carga de datos iniciales (si hay script):
 ```bash
-php artisan migrate --seed
+mysql -u root -p sgep < database/seeds/aprendices_sample.sql
 ```
 
 ---

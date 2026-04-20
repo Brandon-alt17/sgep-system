@@ -27,7 +27,7 @@ El SGEP es una aplicación web **100% local**. No requiere internet para funcion
 |-----------|-----------|-----------------|
 | **WAMP** (Windows) | PHP 8.3+, MySQL 8.0+, Apache | El directivo, una sola vez |
 | **MAMP** (macOS) | PHP 8.3+, MySQL 8.0+, Apache | El directivo, una sola vez |
-| **Carpeta del SGEP** | Laravel + dependencias + código | El equipo, en cada versión |
+| **Carpeta del SGEP** | Código PHP + dependencias + assets | El equipo, en cada versión |
 | **Base de datos MySQL** | Tablas vacías o con datos | El script de instalación o migraciones |
 
 ---
@@ -47,15 +47,12 @@ npm install
 npm run build
 ```
 
-> Esto genera la carpeta `vendor/` con Laravel y todas las librerías, y `public/build/` con los assets CSS compilados. El directivo no necesita Composer ni Node.js.
+> Esto genera `vendor/` con librerías PHP y `public/build/` con assets compilados. El directivo no necesita Composer ni Node.js.
 
-### Paso 2 — Optimizar para producción
+### Paso 2 — Verificar configuración
 
-```bash
-php artisan config:cache
-php artisan route:cache
-php artisan view:cache
-```
+- Confirmar que `.env.example` tiene variables correctas.
+- Confirmar que `database/run_migrations.php` existe en el paquete.
 
 ### Paso 3 — Preparar el archivo `.env.example`
 
@@ -64,7 +61,7 @@ Verificar que `.env.example` tiene los valores correctos para WAMP:
 ```env
 APP_NAME=SGEP
 APP_ENV=local
-APP_KEY=                    # Se genera con artisan key:generate
+APP_KEY=
 APP_DEBUG=false
 APP_URL=http://localhost/sgep/public
 
@@ -75,9 +72,6 @@ DB_DATABASE=sgep
 DB_USERNAME=root
 DB_PASSWORD=                # Vacío en WAMP por defecto
 
-SESSION_DRIVER=file
-CACHE_STORE=file
-QUEUE_CONNECTION=sync
 ```
 
 ### Paso 4 — Crear el script de instalación
@@ -104,12 +98,16 @@ echo [1/3] Configurando variables de entorno...
 copy .env.example .env >nul
 echo      .env creado correctamente.
 
-echo [2/3] Generando clave de aplicacion...
-php artisan key:generate --force
-echo      Clave generada correctamente.
+echo [2/3] Ejecutando migraciones...
+php database/run_migrations.php
+if %errorlevel% neq 0 (
+  echo ERROR: Fallaron las migraciones.
+  pause
+  exit /b 1
+)
+echo      Base de datos lista.
 
-echo [3/3] Creando base de datos...
-php artisan migrate --force
+echo [3/3] Finalizando instalacion...
 echo      Base de datos lista.
 
 echo.
@@ -128,12 +126,9 @@ pause
 echo Actualizando SGEP...
 
 echo [1/2] Aplicando cambios en base de datos...
-php artisan migrate --force
+php database/run_migrations.php
 
-echo [2/2] Limpiando cache...
-php artisan config:clear
-php artisan config:cache
-php artisan view:clear
+echo [2/2] Finalizando...
 
 echo.
 echo Actualizacion completada. Recargue el navegador.
@@ -150,12 +145,13 @@ SGEP_v1.0.zip
 │   ├── app/
 │   ├── database/
 │   ├── public/
-│   ├── resources/
-│   ├── routes/
+│   ├── config/
+│   ├── docs/
 │   ├── storage/
-│   ├── vendor/                 ← INCLUIDA (Laravel + dependencias)
+│   ├── vendor/                 ← INCLUIDA (dependencias PHP)
 │   ├── .env.example
-│   └── artisan
+│   ├── router.php
+│   └── database/run_migrations.php
 ├── instalar.bat                ← Script de primera instalación
 ├── actualizar.bat              ← Script de actualizaciones
 └── INSTRUCCIONES.pdf           ← Guía de 1 página para el directivo
@@ -228,9 +224,8 @@ cd /Applications/MAMP/htdocs/sgep
 cp .env.example .env
 # Editar .env: APP_URL=http://localhost:8888/sgep/public (ajusta la ruta si cambia el puerto)
 
-# 4. Generar clave y migrar
-php artisan key:generate
-php artisan migrate --force
+# 4. Ejecutar migraciones
+php database/run_migrations.php
 
 # 5. Abrir en el navegador (ejemplo con puerto 8888):
 # http://localhost:8888/sgep/public
@@ -260,12 +255,10 @@ Cuando el equipo lanza una nueva versión del SGEP:
 rsync -av --exclude='.env' nueva-version/ /Applications/MAMP/htdocs/sgep/
 
 cd /Applications/MAMP/htdocs/sgep
-php artisan migrate
-
-php artisan config:clear && php artisan config:cache
+php database/run_migrations.php
 ```
 
-> Los datos ya guardados (aprendices, momentos, evaluaciones) se conservan intactos. `php artisan migrate` solo aplica las tablas o columnas nuevas.
+> Los datos ya guardados se conservan. `php database/run_migrations.php` aplica migraciones SQL nuevas.
 
 ---
 
@@ -287,46 +280,26 @@ npm run dev
 npm run build
 
 # Correr migraciones
-php artisan migrate
-
-# Correr migraciones + seeders
-php artisan migrate --seed
-
-# Revertir última migración
-php artisan migrate:rollback
-
-# Ver estado de migraciones
-php artisan migrate:status
-
-# Refrescar todo (borra todos los datos)
-php artisan migrate:fresh --seed
+php database/run_migrations.php
 ```
 
 ### Primera instalación (en PC del directivo)
 
 ```bash
 copy .env.example .env               # Crear archivo de configuración
-php artisan key:generate             # Generar clave única
-php artisan migrate --force          # Crear tablas en MySQL
+php database/run_migrations.php      # Crear/actualizar tablas en MySQL
 ```
 
 ### Actualizaciones
 
 ```bash
-php artisan migrate                  # Aplicar migraciones nuevas
-php artisan config:clear             # Limpiar caché de configuración
-php artisan config:cache             # Regenerar caché
-php artisan route:cache              # Regenerar caché de rutas
-php artisan view:clear               # Limpiar caché de vistas
+php database/run_migrations.php      # Aplicar migraciones nuevas
 ```
 
 ### Debugging (solo en desarrollo)
 
 ```bash
-php artisan tinker                   # REPL interactivo de Laravel
-php artisan route:list               # Ver todas las rutas registradas
-php artisan about                    # Información del entorno
-tail -f storage/logs/laravel.log     # Ver logs en tiempo real
+php -S localhost:8000 -t public
 ```
 
 ---
@@ -347,16 +320,15 @@ Solución: Clic derecho en el ícono WAMP → Apache → httpd.conf
 
 ```
 Causa: Error de PHP o configuración incorrecta.
-Solución: Revisar storage/logs/laravel.log para ver el error exacto.
-          Asegurarse de que el .env tiene APP_KEY generada.
+Solución: Revisar logs de PHP/Apache (WAMP o MAMP) y validar el archivo .env.
 ```
 
-### "php artisan" no se reconoce como comando (Windows)
+### "php" no se reconoce como comando (Windows)
 
 ```
 Causa: PHP no está en el PATH del sistema.
 Solución: Abrir la terminal desde la carpeta de WAMP:
-          C:\wamp64\bin\php\php8.3.x\php.exe artisan migrate
+          C:\wamp64\bin\php\php8.3.x\php.exe database\run_migrations.php
           O agregar PHP al PATH del sistema.
 ```
 

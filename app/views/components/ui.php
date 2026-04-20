@@ -79,7 +79,7 @@ if (!function_exists('ui_td_classes')) {
 if (!function_exists('ui_heading_sm_classes')) {
     function ui_heading_sm_classes(): string
     {
-        return 'mb-2 mt-0 text-[15px] font-semibold';
+        return 'mb-2 mt-0 text-[18px] font-semibold';
     }
 }
 

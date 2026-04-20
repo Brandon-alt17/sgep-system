@@ -1,6 +1,6 @@
 ---
 name: "Tarea back-end"
-about: "Rutas, controladores, validación, servicios o dominio en Laravel."
+about: "Rutas, controladores, validación, servicios o dominio."
 title: "[Back] "
 labels: ["backend"]
 ---

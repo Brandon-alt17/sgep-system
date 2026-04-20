@@ -40,7 +40,7 @@
         </ol>
         <h3 class="mb-2 mt-4 text-[15px] font-semibold">Plantilla disponible:</h3>
         <?php if (!empty($templateAvailable)): ?>
-            <a class="<?= e(ui_button_small_classes()) ?> items-center gap-1" href="<?= e((string) ($templateUrl ?? '#')) ?>" download><?= ui_icon('file') ?> Plantilla de seguimiento</a>
+            <a class="<?= e(ui_button_small_classes()) ?> items-center gap-1" href="<?= e((string) ($templateUrl ?? '#')) ?>" download><?= ui_icon('download') ?> Plantilla de seguimiento</a>
         <?php else: ?>
             <span class="<?= e(ui_button_small_classes()) ?> items-center gap-1 opacity-60"><?= ui_icon('file') ?> Plantilla no cargada</span>
         <?php endif; ?>

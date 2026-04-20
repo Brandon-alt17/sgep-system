@@ -47,26 +47,19 @@ npm run build
 
 ### 4. Ejecución y pruebas
 
-**Servidor de desarrollo Laravel:**
+**Servidor local (opciones):**
+
+- Con Apache (recomendado): `http://localhost/sgep/public`
+- Con servidor embebido:
 
 ```bash
-php artisan serve
+php -S localhost:8000 -t public
 ```
 
-**Si los cambios no se reflejan** (`.env`, rutas, vistas):
+**Migraciones cuando cambie BD:**
 
 ```bash
-php artisan config:clear
-php artisan route:clear
-php artisan view:clear
-php artisan cache:clear
-```
-
-**Rutas y tests:**
-
-```bash
-php artisan route:list
-php artisan test
+php database/run_migrations.php
 ```
 
 ### 5. Guardar progreso (WIP)
@@ -81,12 +74,8 @@ git push origin feature/RF-01-importar-csv
 
 ### Consejos rápidos
 
-- **Detener procesos:** `Ctrl + C` en `php artisan serve` y en `npm run dev`.
-- **Limpieza general:** si algo se comporta de forma extraña, suele ayudar:
-
-```bash
-php artisan optimize:clear
-```
+- **Detener procesos:** `Ctrl + C` en `php -S ...` y en `npm run dev`.
+- **Si no ves cambios de frontend:** volver a ejecutar `npm run build` o mantener `npm run dev` activo.
 
 ### Documentación relacionada
 

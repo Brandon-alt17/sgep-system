@@ -2,14 +2,13 @@
 
 ### Requisitos previos
 
-- **PHP 8.3+** (verificar con `php -v`)
-- **Composer 2.x** (verificar con `composer --version`)
-- **Node.js 18+ y NPM 9+** (verificar con `node -v` y `npm -v`)
-- **MySQL 8.0+** (incluido en WAMP/MAMP o XAMPP)
-- **WAMP** (Windows) o **MAMP** (macOS) instalado
+- **PHP 8.2+** (`php -v`)
+- **Composer 2.x** (`composer --version`)
+- **Node.js 18+ y NPM 9+** (`node -v` y `npm -v`)
+- **MySQL 8.0+**
+- **WAMP** (Windows) o **MAMP** (macOS)
 
-> **Nota:** Entorno recomendado oficial: **WAMP (Windows)** y **MAMP (macOS)**.  
-> **XAMPP** puede usarse como alternativa opcional.
+> Entorno recomendado: **WAMP** en Windows y **MAMP** en macOS.
 
 ### Pasos de instalación
 
@@ -20,20 +19,15 @@ git clone https://github.com/Brandon-alt17/sgep-system.git
 cd sgep-system
 ```
 
-2. **Instalar dependencias PHP**
+2. **Instalar dependencias**
 
 ```bash
 composer install
-```
-
-3. **Instalar dependencias JavaScript**
-
-```bash
 npm install
 npm run build
 ```
 
-4. **Configurar variables de entorno**
+3. **Crear archivo `.env`**
 
 ```bash
 # Windows
@@ -43,15 +37,7 @@ copy .env.example .env
 cp .env.example .env
 ```
 
-5. **Generar clave de aplicación**
-
-```bash
-php artisan key:generate
-```
-
-6. **Configurar base de datos en `.env`**
-
-Editar el archivo `.env` y configurar:
+4. **Configurar base de datos en `.env`**
 
 ```env
 DB_CONNECTION=mysql
@@ -62,52 +48,44 @@ DB_USERNAME=root
 DB_PASSWORD=
 ```
 
-7. **Crear base de datos**
+5. **Crear base de datos `sgep`**
 
 Desde phpMyAdmin:
 - Abrir `http://localhost/phpmyadmin`
-- Click en **Nueva**
-- Nombre: `sgep`
-- Collation: `utf8mb4_unicode_ci`
-- Click en **Crear**
+- Crear base de datos `sgep`
+- Collation `utf8mb4_unicode_ci`
 
-8. **Ejecutar migraciones**
+6. **Ejecutar migraciones SQL**
 
 ```bash
-php artisan migrate
+php database/run_migrations.php
 ```
 
-9. **Iniciar el servidor**
+7. **Iniciar la aplicación**
+
+- Con Apache (WAMP/MAMP): abrir `http://localhost/sgep/public`
+- Opcional con servidor embebido PHP:
 
 ```bash
-php artisan serve
+php -S localhost:8000 -t public
 ```
 
-10. **Acceder al sistema**
+### Verificación rápida
 
-- Opcion A: Usando Laravel (recomendado) -> `http://localhost:8000`
-- Opcion B: Usando WAMP/MAMP/XAMPP -> `http://localhost/sgep-system/public`
-
-### Documentación adicional
-
-- Ver carpeta `/docs` para documentacion tecnica
-- Ver `README.md` para informacion general del proyecto
+- `composer install` finaliza sin errores.
+- `php database/run_migrations.php` ejecuta los scripts de `database/migrations`.
+- La URL local abre correctamente.
 
 ### Solución de problemas comunes
 
-- **Error: "PHP version does not satisfy"**
-  - Verifica que tengas PHP 8.3+ instalado
-  - Configura WAMP para usar PHP 8.3 (`PHP -> Version -> 8.3.x`)
-- **Error: "npm run build falla"**
-  - Asegurate de tener Node.js 18+
-  - Ejecuta: `npm cache clean --force` y luego `npm install`
-- **Error: "Table already exists"**
-  - Ejecuta: `php artisan migrate:fresh`
+- **Error de versión de PHP**
+  - Verificar que sea 8.2+ y seleccionar esa versión en WAMP/MAMP.
+- **Falla `npm run build`**
+  - Ejecutar `npm install` y repetir build.
+- **Error de conexión a MySQL**
+  - Revisar `.env` (`DB_HOST`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`).
 
-### Verificación de instalación
+### Documentación adicional
 
-Despues de instalar, verifica:
-- `php artisan --version` muestra Laravel 10.x
-- `npm list` muestra `tailwindcss`, `alpinejs`, `vite`
-- `public/build/manifest.json` existe
-- El servidor inicia sin errores en `http://localhost:8000`
+- `README.md` para visión general.
+- Carpeta `docs/` para guías técnicas.
