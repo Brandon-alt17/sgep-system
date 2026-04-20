@@ -37,21 +37,21 @@ if (!function_exists('ui_input_classes')) {
 if (!function_exists('ui_button_primary_classes')) {
     function ui_button_primary_classes(): string
     {
-        return 'inline-flex rounded-md border border-app-accent bg-app-accent px-4 py-2 text-sm font-medium text-app-textOnBrand no-underline hover:bg-app-accentHover';
+        return 'font-app inline-flex rounded-md border border-app-accent bg-app-accent px-4 py-2 text-sm font-medium text-app-text no-underline hover:bg-app-accentHover';
     }
 }
 
 if (!function_exists('ui_button_small_classes')) {
     function ui_button_small_classes(): string
     {
-        return 'inline-flex rounded-md border border-app-borderControl bg-app-panelSubtle px-2.5 py-1.5 text-xs text-app-link no-underline hover:bg-app-panelHover';
+        return 'font-app inline-flex rounded-md border border-app-borderControl bg-app-panelSubtle px-[18px] py-2 text-sm font-medium text-app-muted no-underline hover:bg-app-accentSoft hover:text-app-accent';
     }
 }
 
 if (!function_exists('ui_button_small_primary_classes')) {
     function ui_button_small_primary_classes(): string
     {
-        return 'cursor-pointer rounded-md border border-app-accent bg-app-accent px-2.5 py-1.5 text-xs text-app-textOnBrand hover:bg-app-accentHover';
+        return 'font-app cursor-pointer rounded-md border border-app-accent bg-app-accent px-2.5 py-1.5 text-xs text-app-textOnBrand hover:bg-app-accentHover';
     }
 }
 
@@ -79,14 +79,14 @@ if (!function_exists('ui_td_classes')) {
 if (!function_exists('ui_heading_sm_classes')) {
     function ui_heading_sm_classes(): string
     {
-        return 'mb-2 mt-0 text-[18px] font-semibold';
+        return 'font-app mb-2 mt-0 text-[18px] font-semibold';
     }
 }
 
 if (!function_exists('ui_text_muted_classes')) {
     function ui_text_muted_classes(): string
     {
-        return 'mb-2 mt-0 text-xs text-app-muted';
+        return 'mb-2 mt-0 text-sm text-app-muted';
     }
 }
 

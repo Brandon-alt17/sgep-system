@@ -756,7 +756,7 @@ body {
   font-family: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
   --tw-text-opacity: 1;
   color: rgb(31 41 55 / var(--tw-text-opacity, 1));
-  font-family: "Inter", "Segoe UI", Arial, sans-serif;
+  font-family: "Inter", system-ui, sans-serif;
 }
 
 a {
@@ -767,6 +767,29 @@ a {
 
 a:hover {
   text-decoration-line: underline;
+}
+
+.font-app {
+  font-family: "Inter", system-ui, sans-serif;
+}
+
+.upload-dropzone-dashed {
+  position: relative;
+  border: 0;
+  border-radius: 0.5rem;
+}
+
+.upload-dropzone-dashed::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background:
+      repeating-linear-gradient(90deg, #d5dbe3 0 8px, transparent 8px 12px) top / 100% 2px no-repeat,
+      repeating-linear-gradient(90deg, #d5dbe3 0 8px, transparent 8px 12px) bottom / 100% 2px no-repeat,
+      repeating-linear-gradient(180deg, #d5dbe3 0 8px, transparent 8px 12px) left / 2px 100% no-repeat,
+      repeating-linear-gradient(180deg, #d5dbe3 0 8px, transparent 8px 12px) right / 2px 100% no-repeat;
 }
 
 .sr-only {
@@ -902,6 +925,10 @@ a:hover {
   height: 22px;
 }
 
+.h-\[40px\] {
+  height: 40px;
+}
+
 .h-full {
   height: 100%;
 }
@@ -932,6 +959,10 @@ a:hover {
 
 .w-\[22px\] {
   width: 22px;
+}
+
+.w-\[40px\] {
+  width: 40px;
 }
 
 .w-full {
@@ -1007,6 +1038,10 @@ a:hover {
   gap: 1rem;
 }
 
+.gap-6 {
+  gap: 1.5rem;
+}
+
 .space-y-1 > :not([hidden]) ~ :not([hidden]) {
   --tw-space-y-reverse: 0;
   margin-top: calc(0.25rem * calc(1 - var(--tw-space-y-reverse)));
@@ -1060,10 +1095,6 @@ a:hover {
   border-top-width: 1px;
 }
 
-.border-dashed {
-  border-style: dashed;
-}
-
 .border-app-accent {
   --tw-border-opacity: 1;
   border-color: rgb(10 139 129 / var(--tw-border-opacity, 1));
@@ -1082,11 +1113,6 @@ a:hover {
 .border-app-borderControlStrong {
   --tw-border-opacity: 1;
   border-color: rgb(205 213 223 / var(--tw-border-opacity, 1));
-}
-
-.border-app-borderSoft {
-  --tw-border-opacity: 1;
-  border-color: rgb(213 219 227 / var(--tw-border-opacity, 1));
 }
 
 .border-app-borderSuccess {
@@ -1124,11 +1150,6 @@ a:hover {
   background-color: rgb(255 255 255 / var(--tw-bg-opacity, 1));
 }
 
-.bg-app-panelSoft {
-  --tw-bg-opacity: 1;
-  background-color: rgb(251 252 253 / var(--tw-bg-opacity, 1));
-}
-
 .bg-app-panelSubtle {
   --tw-bg-opacity: 1;
   background-color: rgb(248 250 251 / var(--tw-bg-opacity, 1));
@@ -1163,10 +1184,6 @@ a:hover {
   padding: 0.25rem;
 }
 
-.p-2\.5 {
-  padding: 0.625rem;
-}
-
 .p-3 {
   padding: 0.75rem;
 }
@@ -1177,6 +1194,14 @@ a:hover {
 
 .p-5 {
   padding: 1.25rem;
+}
+
+.p-6 {
+  padding: 1.5rem;
+}
+
+.p-7 {
+  padding: 1.75rem;
 }
 
 .px-2 {
@@ -1239,12 +1264,26 @@ a:hover {
   padding-bottom: 18.5px;
 }
 
+.px-5 {
+  padding-left: 1.25rem;
+  padding-right: 1.25rem;
+}
+
+.px-\[1px\] {
+  padding-left: 1px;
+  padding-right: 1px;
+}
+
 .pl-5 {
   padding-left: 1.25rem;
 }
 
 .pl-8 {
   padding-left: 2rem;
+}
+
+.pt-4 {
+  padding-top: 1rem;
 }
 
 .text-left {
@@ -1273,12 +1312,16 @@ a:hover {
   font-size: 11px;
 }
 
-.text-\[13px\] {
-  font-size: 13px;
-}
-
 .text-\[15px\] {
   font-size: 15px;
+}
+
+.text-\[16px\] {
+  font-size: 16px;
+}
+
+.text-\[18px\] {
+  font-size: 18px;
 }
 
 .text-lg {
@@ -1425,6 +1468,11 @@ a:hover {
   background-color: rgb(238 243 246 / var(--tw-bg-opacity, 1));
 }
 
+.hover\:bg-app-link:hover {
+  --tw-bg-opacity: 1;
+  background-color: rgb(15 118 110 / var(--tw-bg-opacity, 1));
+}
+
 .hover\:text-app-accentStrong:hover {
   --tw-text-opacity: 1;
   color: rgb(13 150 136 / var(--tw-text-opacity, 1));
@@ -1433,6 +1481,11 @@ a:hover {
 .hover\:text-app-text:hover {
   --tw-text-opacity: 1;
   color: rgb(31 41 55 / var(--tw-text-opacity, 1));
+}
+
+.hover\:text-app-accent:hover {
+  --tw-text-opacity: 1;
+  color: rgb(10 139 129 / var(--tw-text-opacity, 1));
 }
 
 .hover\:no-underline:hover {
@@ -1491,14 +1544,14 @@ a:hover {
   height: 1rem;
 }
 
-.\[\&_svg\]\:h-\[22px\] svg {
-  height: 22px;
+.\[\&_svg\]\:h-\[40px\] svg {
+  height: 40px;
 }
 
 .\[\&_svg\]\:w-4 svg {
   width: 1rem;
 }
 
-.\[\&_svg\]\:w-\[22px\] svg {
-  width: 22px;
+.\[\&_svg\]\:w-\[40px\] svg {
+  width: 40px;
 }

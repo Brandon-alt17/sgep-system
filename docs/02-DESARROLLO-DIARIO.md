@@ -17,12 +17,12 @@ git pull origin dev
 
 No trabajes directamente sobre `dev`. Crea una rama por tarea o historia.
 
-**Estándar de nombres:** `feature/RF-XX-descripcion-corta`
+**Estándar de nombres:** `feature/descripcion-corta`
 
-**Ejemplo:** `feature/RF-01-importar-csv`
+**Ejemplo:** `feature/importar-csv`
 
 ```bash
-git checkout -b feature/RF-01-importar-csv
+git checkout -b feature/importar-csv
 ```
 
 ### 3. Preparación del entorno
@@ -68,8 +68,8 @@ Si cierras la jornada sin terminar la tarea, deja el avance subido:
 
 ```bash
 git add .
-git commit -m "wip(RF-01): avanzar en validación de CSV"
-git push origin feature/RF-01-importar-csv
+git commit -m "wip(modulo): avanzar en validación de CSV"
+git push origin feature/importar-csv
 ```
 
 ### Consejos rápidos
