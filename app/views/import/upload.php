@@ -9,13 +9,13 @@
         <p class="<?= e(ui_text_muted_classes()) ?>">Formato aceptado: .xlsx - Máximo 5 MB</p>
         <form method="post" action="<?= e(APP_BASE_PATH) ?>/importar" enctype="multipart/form-data" data-import-form>
             <input class="sr-only" data-import-input type="file" name="archivo" accept=".xlsx,.xls,.csv" required>
-            <div class="upload-dropzone-dashed mt-4 grid min-h-[122px] place-items-center rounded-lg bg-app-panel p-7 text-center">
+            <div class="upload-dropzone-dashed mt-4 grid min-h-[122px] place-items-center rounded-lg bg-app-panel p-10 text-center">
                 <div>
                     <div class="mx-auto mb-3 h-[40px] w-[40px] text-app-muted [&_svg]:h-[40px] [&_svg]:w-[40px]"><?= ui_icon('upload') ?></div>
                     <strong class="text-sm font-medium">Seleccione el archivo Excel con el botón de carga</strong>
-                    <small class="mt-0.5 block text-[11px] text-app-mutedSoft">Solo archivos Excel (.xlsx, .xls, .csv)</small>
+                    <small class="mt-0.5 block text-xs text-app-mutedSoft">Solo archivos Excel (.xlsx, .xls, .csv)</small>
                     <button type="button" class="mt-2 <?= e(ui_button_small_classes()) ?> text-app-text" data-import-trigger>Seleccionar archivo</button>
-                    <small class="mt-0.5 block text-[11px] text-app-mutedSoft" data-import-filename>Sin archivo seleccionado</small>
+                    <small class="mt-0.5 block text- text-app-mutedSoft" data-import-filename>Sin archivo seleccionado</small>
                 </div>
             </div>
             <div class="mt-3 hidden" data-import-progress>
@@ -30,7 +30,7 @@
         </form>
     </article>
 
-    <article class="<?= e(ui_card_classes()) ?> p-6">
+    <article class="<?= e(ui_card_classes()) ?> p-6 ">
         <h3 class="<?= e(ui_heading_sm_classes()) ?> ">Instrucciones</h3>
         <ol class="m-0 list-decimal space-y-1 text-sm text-app-muted">
             <p>1. Descargue la plantilla oficial de seguimiento de aprendices.</p>
@@ -41,7 +41,7 @@
         </ol>
         <h3 class="mb-2 mt-4 text-[15px] font-semibold border-t border-app-border pt-4">Plantilla disponible:</h3>
         <?php if (!empty($templateAvailable)): ?>
-            <a class="<?= e(ui_button_small_classes()) ?> items-center gap-1 w-full" href="<?= e((string) ($templateUrl ?? '#')) ?>" download><?= ui_icon('download') ?> Plantilla de seguimiento</a>
+            <a class="<?= e(ui_button_small_classes()) ?> items-center gap-1 w-full" href="<?= e((string) ($templateUrl ?? '#')) ?>" download><span class="inline-flex h-4 w-4 shrink-0 items-center justify-center [&_svg]:h-4 [&_svg]:w-4 mr-1"><?= ui_icon('download') ?></span> Plantilla de seguimiento</a>
         <?php else: ?>
             <span class="<?= e(ui_button_small_classes()) ?> items-center gap-1 opacity-60"><?= ui_icon('file') ?> Plantilla no cargada</span>
         <?php endif; ?>

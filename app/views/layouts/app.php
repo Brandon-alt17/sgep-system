@@ -4,6 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?= e(APP_NAME) ?></title>
+    <?php partial('components/inter_font_faces'); ?>
     <link rel="stylesheet" href="<?= e(APP_BASE_PATH) ?>/css/app.css">
 </head>
 <body>
