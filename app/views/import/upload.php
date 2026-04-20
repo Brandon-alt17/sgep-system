@@ -3,18 +3,18 @@
     'subtitle' => 'Cargue el archivo Excel con la información de seguimiento de aprendices en etapa productiva.',
 ]); ?>
 
-<section class="grid gap-4 lg:grid-cols-[2fr_1fr]">
-    <article class="<?= e(ui_card_classes()) ?>">
+<section class="grid gap-6 lg:grid-cols-[2fr_1fr]">
+    <article class="<?= e(ui_card_classes()) ?> p-6">
         <h3 class="<?= e(ui_heading_sm_classes()) ?>">Cargar archivo</h3>
         <p class="<?= e(ui_text_muted_classes()) ?>">Formato aceptado: .xlsx - Máximo 5 MB</p>
         <form method="post" action="<?= e(APP_BASE_PATH) ?>/importar" enctype="multipart/form-data" data-import-form>
             <input class="sr-only" data-import-input type="file" name="archivo" accept=".xlsx,.xls,.csv" required>
-            <div class="mt-3 grid min-h-[122px] place-items-center rounded-lg border border-dashed border-app-borderSoft bg-app-panelSoft p-2.5 text-center">
+            <div class="upload-dropzone-dashed mt-4 grid min-h-[122px] place-items-center rounded-lg bg-app-panel p-7 text-center">
                 <div>
-                    <div class="mx-auto mb-2 h-[22px] w-[22px] text-app-muted [&_svg]:h-[22px] [&_svg]:w-[22px]"><?= ui_icon('upload') ?></div>
-                    <strong class="text-[13px]">Seleccione el archivo Excel con el botón de carga</strong>
+                    <div class="mx-auto mb-3 h-[40px] w-[40px] text-app-muted [&_svg]:h-[40px] [&_svg]:w-[40px]"><?= ui_icon('upload') ?></div>
+                    <strong class="text-sm font-medium">Seleccione el archivo Excel con el botón de carga</strong>
                     <small class="mt-0.5 block text-[11px] text-app-mutedSoft">Solo archivos Excel (.xlsx, .xls, .csv)</small>
-                    <button type="button" class="mt-2 <?= e(ui_button_small_classes()) ?>" data-import-trigger>Seleccionar archivo</button>
+                    <button type="button" class="mt-2 <?= e(ui_button_small_classes()) ?> text-app-text" data-import-trigger>Seleccionar archivo</button>
                     <small class="mt-0.5 block text-[11px] text-app-mutedSoft" data-import-filename>Sin archivo seleccionado</small>
                 </div>
             </div>
@@ -30,17 +30,18 @@
         </form>
     </article>
 
-    <article class="<?= e(ui_card_classes()) ?>">
-        <h3 class="<?= e(ui_heading_sm_classes()) ?>">Instrucciones</h3>
-        <ol class="m-0 list-decimal space-y-1 pl-5 text-sm text-app-textSubtle">
-            <li>Descargue la plantilla oficial de seguimiento de aprendices.</li>
-            <li>Complete la plantilla con los datos de los aprendices en etapa productiva.</li>
-            <li>Cargue el archivo en el área de importación.</li>
-            <li>Revise el resumen de importación y confirme los registros.</li>
+    <article class="<?= e(ui_card_classes()) ?> p-6">
+        <h3 class="<?= e(ui_heading_sm_classes()) ?> ">Instrucciones</h3>
+        <ol class="m-0 list-decimal space-y-1 text-sm text-app-muted">
+            <p>1. Descargue la plantilla oficial de seguimiento de aprendices.</p>
+            <p>2. Complete la plantilla con los datos de los aprendices en etapa productiva.</p>
+            <p>3. Cargue el archivo en el área de importación.</p>
+            <p>4. Revise la vista previa con los registros nuevos, actualizados y duplicados.</p>
+            <p>5. Confirme la importación para guardar los cambios.</p>
         </ol>
-        <h3 class="mb-2 mt-4 text-[15px] font-semibold">Plantilla disponible:</h3>
+        <h3 class="mb-2 mt-4 text-[15px] font-semibold border-t border-app-border pt-4">Plantilla disponible:</h3>
         <?php if (!empty($templateAvailable)): ?>
-            <a class="<?= e(ui_button_small_classes()) ?> items-center gap-1" href="<?= e((string) ($templateUrl ?? '#')) ?>" download><?= ui_icon('download') ?> Plantilla de seguimiento</a>
+            <a class="<?= e(ui_button_small_classes()) ?> items-center gap-1 w-full" href="<?= e((string) ($templateUrl ?? '#')) ?>" download><?= ui_icon('download') ?> Plantilla de seguimiento</a>
         <?php else: ?>
             <span class="<?= e(ui_button_small_classes()) ?> items-center gap-1 opacity-60"><?= ui_icon('file') ?> Plantilla no cargada</span>
         <?php endif; ?>
@@ -53,7 +54,7 @@
     </section>
 <?php endif; ?>
 
-<section class="mt-4 <?= e(ui_card_classes()) ?>">
+<section class="mt-6 p-6  <?= e(ui_card_classes()) ?>">
     <h3 class="<?= e(ui_heading_sm_classes()) ?>">Historial de importaciones</h3>
     <p class="<?= e(ui_text_muted_classes()) ?>">Últimas cargas realizadas en el sistema</p>
     <table class="<?= e(ui_table_classes()) ?>">
