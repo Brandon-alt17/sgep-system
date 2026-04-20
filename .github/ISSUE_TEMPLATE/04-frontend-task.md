@@ -1,6 +1,6 @@
 ---
 name: "Tarea front-end"
-about: "Blade, Tailwind, Vite o assets del cliente."
+about: "Vistas PHP, Tailwind, Vite o assets del cliente."
 title: "[Front] "
 labels: ["frontend"]
 ---
@@ -11,7 +11,7 @@ labels: ["frontend"]
 
 ## Alcance
 
-(Archivos, carpeta `resources/views/...` o módulo; si aún no se sabe, describir la pantalla.)
+(Archivos, carpeta `app/views/...` o módulo; si aún no se sabe, describir la pantalla.)
 
 ## Comportamiento esperado
 

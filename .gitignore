@@ -1,4 +1,4 @@
-# --- Laravel / PHP ---
+# --- PHP ---
 /.phpunit.cache
 .phpunit.result.cache
 /vendor

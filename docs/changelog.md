@@ -18,7 +18,7 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es/1.0.0/).
 - Módulo 2: Dashboard con alertas de próximas visitas (30 días)
 - Módulo 2: Gestión de estados del aprendiz con transiciones controladas
 - Módulo 3: Formulario del Momento 2 — visita de seguimiento única por aprendiz (~3 meses)
-- Módulo 3: Componente Blade reutilizable `factor-row` para los 13 factores
+- Módulo 3: Componente reutilizable `factor-row` para los 13 factores
 - Módulo 3: Formulario del Momento 1 — planeación con plan de trabajo
 - Módulo 3: Autocompletado de datos del perfil en todos los momentos
 

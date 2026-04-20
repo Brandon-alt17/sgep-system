@@ -1163,10 +1163,6 @@ a:hover {
   padding: 0.25rem;
 }
 
-.p-2 {
-  padding: 0.5rem;
-}
-
 .p-2\.5 {
   padding: 0.625rem;
 }
@@ -1409,6 +1405,11 @@ a:hover {
   background-color: rgb(14 143 130 / var(--tw-bg-opacity, 1));
 }
 
+.hover\:bg-app-accentSoft:hover {
+  --tw-bg-opacity: 1;
+  background-color: rgb(232 253 251 / var(--tw-bg-opacity, 1));
+}
+
 .hover\:bg-app-navHover:hover {
   --tw-bg-opacity: 1;
   background-color: rgb(233 238 242 / var(--tw-bg-opacity, 1));
@@ -1424,19 +1425,9 @@ a:hover {
   background-color: rgb(238 243 246 / var(--tw-bg-opacity, 1));
 }
 
-.hover\:bg-app-accentSoft:hover {
-  --tw-bg-opacity: 1;
-  background-color: rgb(232 253 251 / var(--tw-bg-opacity, 1));
-}
-
 .hover\:text-app-accentStrong:hover {
   --tw-text-opacity: 1;
   color: rgb(13 150 136 / var(--tw-text-opacity, 1));
-}
-
-.hover\:text-app-accent:hover {
-  --tw-text-opacity: 1;
-  color: rgb(10 139 129 / var(--tw-text-opacity, 1));
 }
 
 .hover\:text-app-text:hover {
