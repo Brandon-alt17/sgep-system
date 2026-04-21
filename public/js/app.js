@@ -14,10 +14,17 @@ var fileName = document.querySelector("[data-import-filename]");
 var trigger = document.querySelector("[data-import-trigger]");
 var form = document.querySelector("[data-import-form]");
 var progress = document.querySelector("[data-import-progress]");
+var dropzone = document.querySelector("[data-import-dropzone]");
 
 if (fileInput && trigger && form) {
   var openPicker = function () { fileInput.click(); };
   trigger.addEventListener("click", openPicker);
+  if (dropzone) {
+    dropzone.addEventListener("click", function (event) {
+      if (event.target && event.target.closest("[data-import-trigger]")) return;
+      openPicker();
+    });
+  }
 
   var sendImport = function () {
     var xhr = new XMLHttpRequest();
@@ -85,4 +92,44 @@ if (fileInput && trigger && form) {
       sendImport();
     }
   });
+
+  if (dropzone) {
+    var dragDepth = 0;
+    var activateDropzone = function () {
+      dropzone.classList.add("bg-app-panelHover");
+    };
+    var deactivateDropzone = function () {
+      dropzone.classList.remove("bg-app-panelHover");
+    };
+
+    dropzone.addEventListener("dragenter", function (event) {
+      event.preventDefault();
+      dragDepth += 1;
+      activateDropzone();
+    });
+
+    dropzone.addEventListener("dragover", function (event) {
+      event.preventDefault();
+      event.dataTransfer.dropEffect = "copy";
+      activateDropzone();
+    });
+
+    dropzone.addEventListener("dragleave", function (event) {
+      event.preventDefault();
+      dragDepth = Math.max(0, dragDepth - 1);
+      if (dragDepth === 0) deactivateDropzone();
+    });
+
+    dropzone.addEventListener("drop", function (event) {
+      event.preventDefault();
+      dragDepth = 0;
+      deactivateDropzone();
+
+      var files = event.dataTransfer && event.dataTransfer.files ? event.dataTransfer.files : null;
+      if (!files || !files.length) return;
+
+      fileInput.files = files;
+      fileInput.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+  }
 }

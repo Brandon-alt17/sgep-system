@@ -14,10 +14,10 @@
         <div class="<?= e(ui_card_body_classes()) ?>">
             <form method="post" action="<?= e(APP_BASE_PATH) ?>/importar" enctype="multipart/form-data" data-import-form>
                 <input class="sr-only" data-import-input type="file" name="archivo" accept=".xlsx,.xls,.csv" required>
-                <div class="upload-dropzone-dashed grid min-h-[122px] place-items-center rounded-lg bg-app-panel p-10 text-center">
+                <div class="upload-dropzone-dashed grid min-h-[122px] place-items-center rounded-lg bg-app-panel p-10 text-center transition-colors duration-150" data-import-dropzone>
                     <div>
                         <div class="mx-auto mb-3 h-[40px] w-[40px] text-app-muted [&_svg]:h-[40px] [&_svg]:w-[40px]"><?= ui_icon('upload') ?></div>
-                        <strong class="text-sm font-medium">Seleccione el archivo Excel con el botón de carga</strong>
+                        <strong class="text-sm font-medium">Arrastre el archivo Excel aquí o haga clic para seleccionar</strong>
                         <small class="mt-0.5 block text-xs text-app-mutedSoft">Solo archivos Excel (.xlsx, .xls, .csv)</small>
                         <button type="button" class="mt-2 <?= e(ui_button_small_classes()) ?> text-app-text" data-import-trigger>Seleccionar archivo</button>
                         <small class="mt-0.5 block text-xs text-app-mutedSoft" data-import-filename>Sin archivo seleccionado</small>
@@ -95,10 +95,11 @@
                         $badgeClass = ui_badge_error_classes();
                     }
                     ?>
-                    <tr>
+                    <?php $detailUrl = !empty($row['id']) ? (APP_BASE_PATH . '/importar/resultado?id=' . (string) $row['id']) : ''; ?>
+                    <tr<?= $detailUrl !== '' ? ' class="cursor-pointer" role="link" tabindex="0" onclick="window.location.href=\'' . e($detailUrl) . '\'" onkeydown="if(event.key===\'Enter\' || event.key===\' \'){event.preventDefault();window.location.href=\'' . e($detailUrl) . '\';}"' : '' ?>>
                         <td class="<?= e(ui_td_classes()) ?>">
                             <?php if (!empty($row['id'])): ?>
-                                <a class="font-medium text-app-link" href="<?= e(APP_BASE_PATH) ?>/importar/resultado?id=<?= e((string) $row['id']) ?>"><?= e((string) ($row['file_name'] ?? 'archivo.xlsx')) ?></a>
+                                <a class="font-medium text-app-link no-underline hover:no-underline" href="<?= e($detailUrl) ?>"><?= e((string) ($row['file_name'] ?? 'archivo.xlsx')) ?></a>
                             <?php else: ?>
                                 <?= e((string) ($row['file_name'] ?? 'archivo.xlsx')) ?>
                             <?php endif; ?>

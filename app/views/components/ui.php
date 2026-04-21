@@ -106,7 +106,7 @@ if (!function_exists('ui_button_small_primary_classes')) {
 if (!function_exists('ui_table_classes')) {
     function ui_table_classes(): string
     {
-        return 'mt-2.5 w-full border-collapse';
+        return 'mt-2.5 w-full border-collapse [&>tbody>tr:hover>td]:bg-app-panelHover';
     }
 }
 
@@ -114,21 +114,21 @@ if (!function_exists('ui_table_classes')) {
 if (!function_exists('ui_table_in_card_classes')) {
     function ui_table_in_card_classes(): string
     {
-        return 'w-full border-collapse';
+        return 'w-full border-collapse [&>tbody>tr:hover>td]:bg-app-panelHover';
     }
 }
 
 if (!function_exists('ui_th_classes')) {
     function ui_th_classes(): string
     {
-        return 'border-b border-app-border px-2 py-2.5 text-left text-xs font-semibold text-app-muted';
+        return 'h-[50px] border-b border-app-border px-2 text-left text-sm font-semibold text-app-muted align-middle transition-colors duration-200 ';
     }
 }
 
 if (!function_exists('ui_td_classes')) {
     function ui_td_classes(): string
     {
-        return 'border-b border-app-border px-2 py-2.5 text-left text-xs';
+        return 'h-[50px] border-b border-app-borderSoft px-2 text-left text-sm align-middle transition-colors duration-200 ease-in-out';
     }
 }
 
