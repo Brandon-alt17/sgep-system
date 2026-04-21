@@ -20,6 +20,54 @@ if (!function_exists('ui_card_mt_classes')) {
     }
 }
 
+/**
+ * Card con cabecera y cuerpo separados (borde inferior en el header).
+ * Uso: surface → header (+ stack opcional) → body.
+ */
+if (!function_exists('ui_card_surface_classes')) {
+    function ui_card_surface_classes(): string
+    {
+        return 'overflow-hidden rounded-[10px] border border-app-border bg-app-panel shadow-xsSoft';
+    }
+}
+
+if (!function_exists('ui_card_header_classes')) {
+    function ui_card_header_classes(): string
+    {
+        return 'border-b border-app-border px-6 pt-6 pb-4';
+    }
+}
+
+if (!function_exists('ui_card_header_stack_classes')) {
+    function ui_card_header_stack_classes(): string
+    {
+        return 'flex flex-col gap-1.5';
+    }
+}
+
+if (!function_exists('ui_card_body_classes')) {
+    function ui_card_body_classes(): string
+    {
+        return 'p-6';
+    }
+}
+
+/** Título dentro del header de card (sin margen inferior; el stack define el ritmo). */
+if (!function_exists('ui_card_title_classes')) {
+    function ui_card_title_classes(): string
+    {
+        return 'font-app m-0 text-[18px] font-semibold text-app-text';
+    }
+}
+
+/** Subtítulo / descripción bajo el título en el header de card. */
+if (!function_exists('ui_card_description_classes')) {
+    function ui_card_description_classes(): string
+    {
+        return 'm-0 text-sm text-app-muted';
+    }
+}
+
 if (!function_exists('ui_label_classes')) {
     function ui_label_classes(): string
     {
@@ -59,6 +107,14 @@ if (!function_exists('ui_table_classes')) {
     function ui_table_classes(): string
     {
         return 'mt-2.5 w-full border-collapse';
+    }
+}
+
+/** Tabla dentro del body de una card (sin margen superior; el padding del body alinea). */
+if (!function_exists('ui_table_in_card_classes')) {
+    function ui_table_in_card_classes(): string
+    {
+        return 'w-full border-collapse';
     }
 }
 

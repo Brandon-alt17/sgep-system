@@ -1,3 +1,5 @@
+/* Inter @font-face: ver partial inter_font_faces.php (rutas con APP_BASE_PATH) */
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
