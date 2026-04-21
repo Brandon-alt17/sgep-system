@@ -15,7 +15,9 @@ class AprendicesImport
     {
         $mapping = require base_path('config/import_mapping.php');
         $sheet = IOFactory::load($path)->getActiveSheet();
-        $rows = $sheet->toArray();
+        $highestDataRow = $sheet->getHighestDataRow();
+        $highestDataColumn = $sheet->getHighestDataColumn();
+        $rows = $sheet->rangeToArray('A1:' . $highestDataColumn . $highestDataRow, null, true, true, false);
         $results = [
             'inserted' => 0,
             'updated' => 0,
