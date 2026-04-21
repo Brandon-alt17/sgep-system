@@ -66,7 +66,7 @@
     </section>
 <?php endif; ?>
 
-<section class="<?= e(ui_card_surface_classes()) ?> mt-6">
+<section id="historial-importaciones" class="<?= e(ui_card_surface_classes()) ?> mt-6">
     <div class="<?= e(ui_card_header_classes()) ?>">
         <div class="<?= e(ui_card_header_stack_classes()) ?>">
             <h3 class="<?= e(ui_card_title_classes()) ?>">Historial de importaciones</h3>
@@ -99,9 +99,15 @@
                     <tr<?= $detailUrl !== '' ? ' class="cursor-pointer" role="link" tabindex="0" onclick="window.location.href=\'' . e($detailUrl) . '\'" onkeydown="if(event.key===\'Enter\' || event.key===\' \'){event.preventDefault();window.location.href=\'' . e($detailUrl) . '\';}"' : '' ?>>
                         <td class="<?= e(ui_td_classes()) ?>">
                             <?php if (!empty($row['id'])): ?>
-                                <a class="font-medium text-app-link no-underline hover:no-underline" href="<?= e($detailUrl) ?>"><?= e((string) ($row['file_name'] ?? 'archivo.xlsx')) ?></a>
+                                <a class="inline-flex items-center gap-2 font-medium text-app-link no-underline hover:no-underline" href="<?= e($detailUrl) ?>">
+                                    <span class="inline-flex h-4 w-4 text-app-muted [&_svg]:h-4 [&_svg]:w-4"><?= ui_icon('file') ?></span>
+                                    <span><?= e((string) ($row['file_name'] ?? 'archivo.xlsx')) ?></span>
+                                </a>
                             <?php else: ?>
-                                <?= e((string) ($row['file_name'] ?? 'archivo.xlsx')) ?>
+                                <span class="inline-flex items-center gap-2">
+                                    <span class="inline-flex h-4 w-4 text-app-muted [&_svg]:h-4 [&_svg]:w-4"><?= ui_icon('file') ?></span>
+                                    <span><?= e((string) ($row['file_name'] ?? 'archivo.xlsx')) ?></span>
+                                </span>
                             <?php endif; ?>
                         </td>
                         <td class="<?= e(ui_td_classes()) ?>"><?= e((string) ($row['date'] ?? '')) ?></td>
@@ -116,5 +122,22 @@
             <?php endif; ?>
             </tbody>
         </table>
+        <?php if (($historyTotalPages ?? 1) > 1): ?>
+            <nav class="mt-4 flex items-center justify-center gap-2 text-sm" aria-label="Paginación de historial">
+                <?php $currentPage = (int) ($historyPage ?? 1); ?>
+                <?php $totalPages = (int) ($historyTotalPages ?? 1); ?>
+                <?php if ($currentPage > 1): ?>
+                    <a class="<?= e(ui_button_icon_classes()) ?>" href="<?= e(APP_BASE_PATH) ?>/importar?page=<?= e((string) ($currentPage - 1)) ?>#historial-importaciones" aria-label="Página anterior">
+                        <span class="inline-flex h-4 w-4 [&_svg]:h-4 [&_svg]:w-4"><?= ui_icon('arrow') ?></span>
+                    </a>
+                <?php endif; ?>
+                <span class="text-app-muted">Página <?= e((string) $currentPage) ?> de <?= e((string) $totalPages) ?></span>
+                <?php if ($currentPage < $totalPages): ?>
+                    <a class="<?= e(ui_button_icon_classes()) ?>" href="<?= e(APP_BASE_PATH) ?>/importar?page=<?= e((string) ($currentPage + 1)) ?>#historial-importaciones" aria-label="Página siguiente">
+                        <span class="inline-flex h-4 w-4 -scale-x-100 [&_svg]:h-4 [&_svg]:w-4"><?= ui_icon('arrow') ?></span>
+                    </a>
+                <?php endif; ?>
+            </nav>
+        <?php endif; ?>
     </div>
 </section>

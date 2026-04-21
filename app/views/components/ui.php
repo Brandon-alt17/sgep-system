@@ -96,6 +96,13 @@ if (!function_exists('ui_button_small_classes')) {
     }
 }
 
+if (!function_exists('ui_button_icon_classes')) {
+    function ui_button_icon_classes(): string
+    {
+        return 'font-app inline-flex h-10 w-10 items-center justify-center rounded-md border border-app-borderControl bg-app-panelSubtle text-app-muted no-underline hover:bg-app-accentSoft hover:text-app-accent';
+    }
+}
+
 if (!function_exists('ui_button_small_primary_classes')) {
     function ui_button_small_primary_classes(): string
     {

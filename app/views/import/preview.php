@@ -41,11 +41,10 @@ $activeRows = (array) $tabs[$activeTab]['rows'];
 ?>
 
 <section class="bg-app-bg flex flex-row items-start gap-2">
-    <a class="<?= e(ui_button_small_classes()) ?> mt-2.5 self-start px-3 py-2" href="<?= e(APP_BASE_PATH) ?>/importar" aria-label="Volver a importaciones">
+    <a class="<?= e(ui_button_icon_classes()) ?> mt-2.5 self-start" href="<?= e(APP_BASE_PATH) ?>/importar" aria-label="Volver a importaciones">
         <span class="inline-flex h-3.5 w-3.5 [&_svg]:h-3.5 [&_svg]:w-3.5 "><?= ui_icon('arrow') ?></span>
     </a>
-    <div class="mb-3 flex flex-col gap-2 pl-4">
-        
+    <div class="mb-3 flex flex-col gap-2 pl-4">    
         <h2 class="m-0 text-2xl font-semibold text-app-text">Detalle de importación</h2>
         <p class="m-0 text-sm text-app-muted">
         <span class="inline-flex h-4 w-4 [&_svg]:h-4 [&_svg]:w-4"><?= ui_icon('file') ?></span>
@@ -53,24 +52,40 @@ $activeRows = (array) $tabs[$activeTab]['rows'];
         &mdash;
         <?= e((string) ($entry['date'] ?? '')) ?>
         &mdash;
+        <?= e((string) ($entry['status'] ?? '')) ?>
+        &mdash;
         <?= e((string) $processed) ?> registros procesados
     </p>
     </div>
-    
 </section>
 
 <section class="mt-4 grid gap-4 md:grid-cols-3">
     <article class="<?= e(ui_card_classes()) ?>">
-        <p class="m-0 text-3xl font-bold text-app-text"><?= e((string) ($resultado['inserted'] ?? 0)) ?></p>
-        <p class="m-0 text-sm text-app-muted">Nuevos registros</p>
+        <div class="flex items-center gap-3">
+            <span class="inline-flex h-9 w-9 items-center justify-center rounded-md bg-app-accentSoft text-app-accent [&_svg]:h-4 [&_svg]:w-4"><?= ui_icon('user-plus') ?></span>
+            <div>
+                <p class="m-0 text-2xl font-bold text-app-text"><?= e((string) ($resultado['inserted'] ?? 0)) ?></p>
+                <p class="m-0 text-xs text-app-muted">Nuevos registros</p>
+            </div>
+        </div>
     </article>
     <article class="<?= e(ui_card_classes()) ?>">
-        <p class="m-0 text-3xl font-bold text-app-text"><?= e((string) ($resultado['updated'] ?? 0)) ?></p>
-        <p class="m-0 text-sm text-app-muted">Actualizados</p>
+        <div class="flex items-center gap-3">
+            <span class="inline-flex h-9 w-9 items-center justify-center rounded-md bg-blue-50 text-blue-600 [&_svg]:h-4 [&_svg]:w-4"><?= ui_icon('refresh-cw') ?></span>
+            <div>
+                <p class="m-0 text-2xl font-bold text-app-text"><?= e((string) ($resultado['updated'] ?? 0)) ?></p>
+                <p class="m-0 text-xs text-app-muted">Actualizados</p>
+            </div>
+        </div>
     </article>
     <article class="<?= e(ui_card_classes()) ?>">
-        <p class="m-0 text-3xl font-bold text-app-text"><?= e((string) ($resultado['duplicates'] ?? 0)) ?></p>
-        <p class="m-0 text-sm text-app-muted">Duplicados (omitidos)</p>
+        <div class="flex items-center gap-3">
+            <span class="inline-flex h-9 w-9 items-center justify-center rounded-md bg-amber-50 text-amber-600 [&_svg]:h-4 [&_svg]:w-4"><?= ui_icon('copy') ?></span>
+            <div>
+                <p class="m-0 text-2xl font-bold text-app-text"><?= e((string) ($resultado['duplicates'] ?? 0)) ?></p>
+                <p class="m-0 text-xs text-app-muted">Duplicados (omitidos)</p>
+            </div>
+        </div>
     </article>
 </section>
 
@@ -115,50 +130,6 @@ $activeRows = (array) $tabs[$activeTab]['rows'];
             </tbody>
         </table>
     </div>
-</section>
-
-<section class="mt-4 <?= e(ui_card_classes()) ?>">
-    <div class="grid gap-3 md:grid-cols-4">
-        <div>
-            <p class="m-0 text-xs text-app-muted">ID</p>
-            <p class="m-0 text-sm font-medium"><?= e((string) ($entry['id'] ?? '')) ?></p>
-        </div>
-        <div>
-            <p class="m-0 text-xs text-app-muted">Archivo</p>
-            <p class="m-0 text-sm font-medium"><?= e((string) ($entry['file_name'] ?? '')) ?></p>
-        </div>
-        <div>
-            <p class="m-0 text-xs text-app-muted">Fecha</p>
-            <p class="m-0 text-sm font-medium"><?= e((string) ($entry['date'] ?? '')) ?></p>
-        </div>
-        <div>
-            <p class="m-0 text-xs text-app-muted">Estado</p>
-            <p class="m-0 text-sm font-medium"><?= e((string) ($entry['status'] ?? '')) ?></p>
-        </div>
-    </div>
-</section>
-
-<section class="mt-4 <?= e(ui_card_classes()) ?>">
-    <table class="<?= e(ui_table_classes()) ?>">
-        <tbody>
-        <tr>
-            <th class="<?= e(ui_th_classes()) ?>">Insertados</th>
-            <td class="<?= e(ui_td_classes()) ?>"><?= e((string) ($resultado['inserted'] ?? 0)) ?></td>
-        </tr>
-        <tr>
-            <th class="<?= e(ui_th_classes()) ?>">Actualizados</th>
-            <td class="<?= e(ui_td_classes()) ?>"><?= e((string) ($resultado['updated'] ?? 0)) ?></td>
-        </tr>
-        <tr>
-            <th class="<?= e(ui_th_classes()) ?>">Duplicados detectados</th>
-            <td class="<?= e(ui_td_classes()) ?>"><?= e((string) ($resultado['duplicates'] ?? 0)) ?></td>
-        </tr>
-        <tr>
-            <th class="<?= e(ui_th_classes()) ?>">Omitidos por requeridos vacíos</th>
-            <td class="<?= e(ui_td_classes()) ?>"><?= e((string) ($resultado['skipped'] ?? 0)) ?></td>
-        </tr>
-        </tbody>
-    </table>
 </section>
 
 <?php if (!empty($resultado['warnings'])): ?>

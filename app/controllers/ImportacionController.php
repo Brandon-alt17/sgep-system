@@ -9,10 +9,15 @@ use App\Imports\AprendicesImport;
 
 class ImportacionController
 {
+    private const HISTORY_PER_PAGE = 10;
+
     public function upload(): void
     {
+        $historyState = $this->historyPaginationState();
         view('import/upload', [
-            'history' => ImportHistory::all(),
+            'history' => $historyState['items'],
+            'historyPage' => $historyState['page'],
+            'historyTotalPages' => $historyState['totalPages'],
             'templateUrl' => $this->templateUrl(),
             'templateAvailable' => $this->templateAvailable(),
         ]);
@@ -26,8 +31,11 @@ class ImportacionController
                 $this->jsonResponse(['ok' => false, 'message' => $errorMessage], 422);
                 return;
             }
+            $historyState = $this->historyPaginationState();
             view('import/upload', [
-                'history' => ImportHistory::all(),
+                'history' => $historyState['items'],
+                'historyPage' => $historyState['page'],
+                'historyTotalPages' => $historyState['totalPages'],
                 'templateUrl' => $this->templateUrl(),
                 'templateAvailable' => $this->templateAvailable(),
                 'flashError' => $errorMessage,
@@ -93,6 +101,23 @@ class ImportacionController
     {
         $requestedWith = strtolower((string) ($_SERVER['HTTP_X_REQUESTED_WITH'] ?? ''));
         return $requestedWith === 'xmlhttprequest';
+    }
+
+    /** @return array{items: array<int, array<string, mixed>>, page: int, totalPages: int} */
+    private function historyPaginationState(): array
+    {
+        $allHistory = ImportHistory::all();
+        $totalItems = count($allHistory);
+        $totalPages = max(1, (int) ceil($totalItems / self::HISTORY_PER_PAGE));
+        $requestedPage = (int) ($_GET['page'] ?? 1);
+        $page = min(max(1, $requestedPage), $totalPages);
+        $offset = ($page - 1) * self::HISTORY_PER_PAGE;
+
+        return [
+            'items' => array_slice($allHistory, $offset, self::HISTORY_PER_PAGE),
+            'page' => $page,
+            'totalPages' => $totalPages,
+        ];
     }
 
     /** @param array<string, mixed> $payload */
