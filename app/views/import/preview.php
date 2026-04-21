@@ -105,27 +105,33 @@ $activeRows = (array) $tabs[$activeTab]['rows'];
 
     <div id="<?= e($activeTab) ?>">
         <h3 class="<?= e(ui_heading_sm_classes()) ?>"><?= e((string) $tabs[$activeTab]['label']) ?></h3>
-        <table class="<?= e(ui_table_classes()) ?>">
+        <table class="<?= e(ui_table_classes()) ?> table-fixed">
+            <colgroup>
+                <col class="w-[38%]">
+                <col class="w-[16%]">
+                <col class="w-[14%]">
+                <col class="w-[32%]">
+            </colgroup>
             <thead>
             <tr>
-                <th class="<?= e(ui_th_classes()) ?>">Nombre</th>
-                <th class="<?= e(ui_th_classes()) ?>">Identificación</th>
-                <th class="<?= e(ui_th_classes()) ?>">Ficha</th>
-                <th class="<?= e(ui_th_classes()) ?>">Programa</th>
+                <th class="<?= e(ui_th_classes()) ?> px-1">Nombre</th>
+                <th class="<?= e(ui_th_classes()) ?> px-1">Identificación</th>
+                <th class="<?= e(ui_th_classes()) ?> px-1">Ficha</th>
+                <th class="<?= e(ui_th_classes()) ?> px-1">Programa</th>
             </tr>
             </thead>
             <tbody>
             <?php if ($activeRows !== []): ?>
                 <?php foreach ($activeRows as $row): ?>
                     <tr>
-                        <td class="<?= e(ui_td_classes()) ?>"><?= e((string) ($row['nombre'] ?? '')) ?></td>
-                        <td class="<?= e(ui_td_classes()) ?>"><?= e((string) ($row['identificacion'] ?? '')) ?></td>
-                        <td class="<?= e(ui_td_classes()) ?>"><?= e((string) ($row['ficha'] ?? '')) ?></td>
-                        <td class="<?= e(ui_td_classes()) ?>"><?= e((string) ($row['programa'] ?? '')) ?></td>
+                        <td class="<?= e(ui_td_classes()) ?> px-4"><?= e((string) ($row['nombre'] ?? '')) ?></td>
+                        <td class="<?= e(ui_td_classes()) ?> px-4"><?= e((string) ($row['identificacion'] ?? '')) ?></td>
+                        <td class="<?= e(ui_td_classes()) ?> px-4"><?= e((string) ($row['ficha'] ?? '')) ?></td>
+                        <td class="<?= e(ui_td_classes()) ?> px-4"><?= e((string) ($row['programa'] ?? '')) ?></td>
                     </tr>
                 <?php endforeach; ?>
             <?php else: ?>
-                <tr><td class="<?= e(ui_td_classes()) ?>" colspan="4"><?= e((string) $tabs[$activeTab]['empty']) ?></td></tr>
+                <tr><td class="<?= e(ui_td_classes()) ?> px-4" colspan="4"><?= e((string) $tabs[$activeTab]['empty']) ?></td></tr>
             <?php endif; ?>
             </tbody>
         </table>

@@ -1009,12 +1009,32 @@ a:hover {
   width: 2.25rem;
 }
 
+.w-\[14\%\] {
+  width: 14%;
+}
+
+.w-\[16\%\] {
+  width: 16%;
+}
+
+.w-\[32\%\] {
+  width: 32%;
+}
+
+.w-\[38\%\] {
+  width: 38%;
+}
+
 .max-w-\[720px\] {
   max-width: 720px;
 }
 
 .shrink-0 {
   flex-shrink: 0;
+}
+
+.table-fixed {
+  table-layout: fixed;
 }
 
 .border-collapse {
@@ -1370,6 +1390,16 @@ a:hover {
 .py-3 {
   padding-top: 0.75rem;
   padding-bottom: 0.75rem;
+}
+
+.px-8 {
+  padding-left: 2rem;
+  padding-right: 2rem;
+}
+
+.px-1 {
+  padding-left: 0.25rem;
+  padding-right: 0.25rem;
 }
 
 .pb-4 {

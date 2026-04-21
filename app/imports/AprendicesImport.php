@@ -44,6 +44,7 @@ class AprendicesImport
 
                 $doc = $this->normalizeDocumento($assoc['documento_identidad'] ?? null);
                 $nombre = isset($assoc['nombre_completo']) ? trim((string) $assoc['nombre_completo']) : '';
+                $usuarioLabel = $this->usuarioLabel($nombre, $doc);
                 if ($doc === '' || $nombre === '') {
                     $results['skipped']++;
                     $faltantes = [];
@@ -53,13 +54,13 @@ class AprendicesImport
                     if ($nombre === '') {
                         $faltantes[] = 'nombre_completo';
                     }
-                    $results['warnings'][] = 'Fila ' . ($index + 2) . ': omitida por campos requeridos vacíos (' . implode(', ', $faltantes) . ').';
+                    $results['warnings'][] = $usuarioLabel . ': omitido por campos requeridos vacíos (' . implode(', ', $faltantes) . ').';
                     continue;
                 }
 
                 $optionalMissing = $this->missingOptionalFields($assoc);
                 if ($optionalMissing !== []) {
-                    $results['warnings'][] = 'Fila ' . ($index + 2) . ': campos vacíos (' . implode(', ', $optionalMissing) . '). Se pueden completar luego en gestión de usuarios.';
+                    $results['warnings'][] = $usuarioLabel . ': campos vacíos (' . implode(', ', $optionalMissing) . '). Se pueden completar luego en gestión de usuarios.';
                 }
 
                 $programaId = $this->findOrCreatePrograma(
@@ -155,6 +156,21 @@ class AprendicesImport
         $s = preg_replace('/\s+/', '', $s) ?? $s;
 
         return $s;
+    }
+
+    private function usuarioLabel(string $nombre, string $doc): string
+    {
+        $nombreLimpio = trim($nombre);
+        if ($nombreLimpio === '') {
+            $nombreLimpio = 'Usuario sin nombre';
+        }
+
+        $docLimpio = trim($doc);
+        if ($docLimpio === '') {
+            return $nombreLimpio . ' (documento sin registrar)';
+        }
+
+        return $nombreLimpio . ' (documento ' . $docLimpio . ')';
     }
 
     private function buildAprendizPayload(array $assoc, string $doc, ?int $programaId, ?int $empresaId): array
