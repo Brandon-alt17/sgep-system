@@ -90,6 +90,9 @@ class AprendicesImport
                         $results['updated_rows'][] = $rowSummary;
                     }
                 } else {
+                    if ($this->isEmptyValue($payload['tipo_documento'] ?? null)) {
+                        $payload['tipo_documento'] = 'CC';
+                    }
                     $aprendizId = $this->insertAprendiz($payload);
                     $results['inserted']++;
                     $results['inserted_rows'][] = $rowSummary;
@@ -204,7 +207,7 @@ class AprendicesImport
                 continue;
             }
 
-            if ($this->areEquivalentValues($current, $incoming)) {
+            if ($this->areEquivalentValues($current, $incoming, $field)) {
                 continue;
             }
 
@@ -234,13 +237,43 @@ class AprendicesImport
         return false;
     }
 
-    private function areEquivalentValues(mixed $current, mixed $incoming): bool
+    private function areEquivalentValues(mixed $current, mixed $incoming, string $field = ''): bool
     {
         if ((is_numeric($current) || is_string($current)) && (is_numeric($incoming) || is_string($incoming))) {
-            return trim((string) $current) === trim((string) $incoming);
+            $left = $this->normalizeComparableValue((string) $current, $field);
+            $right = $this->normalizeComparableValue((string) $incoming, $field);
+            return $left === $right;
         }
 
         return $current === $incoming;
+    }
+
+    private function normalizeComparableValue(string $value, string $field): string
+    {
+        $normalized = preg_replace('/\s+/', ' ', trim($value)) ?? trim($value);
+        $normalized = mb_strtolower($normalized);
+        $normalized = str_replace(
+            ['á', 'é', 'í', 'ó', 'ú', 'ü'],
+            ['a', 'e', 'i', 'o', 'u', 'u'],
+            $normalized
+        );
+
+        if ($field === 'tipo_documento') {
+            if (str_starts_with($normalized, 'cedula de')) {
+                return 'cedula de';
+            }
+            if (str_starts_with($normalized, 'tarjeta de')) {
+                return 'tarjeta de';
+            }
+            if ($normalized === 'cc') {
+                return 'cedula de';
+            }
+            if ($normalized === 'ti') {
+                return 'tarjeta de';
+            }
+        }
+
+        return $normalized;
     }
 
     private function stringifyValue(mixed $value): string
@@ -295,7 +328,7 @@ class AprendicesImport
 
         return [
             'nombre_completo' => trim((string) ($assoc['nombre_completo'] ?? '')),
-            'tipo_documento' => $this->stringOrNull($assoc['tipo_documento'] ?? null) ?? 'CC',
+            'tipo_documento' => $this->stringOrNull($assoc['tipo_documento'] ?? null),
             'numero_documento' => $doc,
             'telefono' => $this->stringOrNull($assoc['numero_celular'] ?? null),
             'correo_personal' => $this->stringOrNull($assoc['correo_electronico_personal'] ?? null),

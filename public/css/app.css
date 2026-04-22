@@ -1782,3 +1782,7 @@ a:hover {
 .modal-panel--lg {
   max-width: 56rem;
 }
+
+.modal-panel--conflict {
+  max-width: 650px;
+}

@@ -53,6 +53,12 @@ $pendingPage = (int) ($_GET['pending_page'] ?? 1);
 $pendingPage = min(max(1, $pendingPage), $pendingTotalPages);
 $pendingOffset = ($pendingPage - 1) * $perPage;
 $pendingPageItems = array_slice($pendingRows, $pendingOffset, $perPage);
+
+$conflictTotalPages = max(1, (int) ceil(count($conflictRows) / $perPage));
+$conflictPage = (int) ($_GET['conflict_page'] ?? 1);
+$conflictPage = min(max(1, $conflictPage), $conflictTotalPages);
+$conflictOffset = ($conflictPage - 1) * $perPage;
+$conflictPageItems = array_slice($conflictRows, $conflictOffset, $perPage);
 $pendingFieldLabels = [
     'fecha_hora_formulario' => 'Fecha y hora del formulario',
     'documento_identidad' => 'Documento de identidad',
@@ -138,75 +144,6 @@ $pendingFieldLabels = [
     </article>
 </section>
 
-<?php if ($conflictRows !== []): ?>
-    <section class="mt-4 <?= e(ui_card_classes()) ?>">
-        <div class="flex flex-wrap items-center justify-between gap-3">
-            <div>
-                <h3 class="<?= e(ui_heading_sm_classes()) ?> mb-1">Conflictos detectados</h3>
-                <p class="m-0 text-sm text-app-muted">Se detectaron <?= e((string) count($conflictRows)) ?> registros con cambios sobre datos ya existentes. No se actualizaron automáticamente.</p>
-            </div>
-            <button
-                type="button"
-                class="<?= e(ui_button_small_classes()) ?>"
-                data-modal-open="conflicts"
-                aria-haspopup="dialog"
-                aria-controls="modal-conflicts"
-            >
-                Ver conflictos
-            </button>
-        </div>
-    </section>
-<?php endif; ?>
-
-<!-- Modal de conflictos -->
-<?php if ($conflictRows !== []): ?>
-    <div id="modal-conflicts" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="conflicts-modal-title" data-modal-overlay="conflicts">
-        <div class="modal-panel modal-panel--lg bg-app-panel">
-            <div class="mb-3 flex items-center justify-between gap-3">
-                <h3 id="conflicts-modal-title" class="m-0 text-lg font-semibold text-app-text">Conflictos de importación</h3>
-                <button type="button" class="<?= e(ui_button_icon_classes()) ?>" data-modal-close="conflicts" aria-label="Cerrar modal de conflictos">
-                    <span class="inline-flex h-4 w-4 [&_svg]:h-4 [&_svg]:w-4"><?= ui_icon('x') ?></span>
-                </button>
-            </div>
-
-            <div class="max-h-[70vh] overflow-auto rounded border border-app-border">
-                <table class="<?= e(ui_table_classes()) ?> table-fixed">
-                    <colgroup>
-                        <col class="w-[25%]">
-                        <col class="w-[20%]">
-                        <col class="w-[20%]">
-                        <col class="w-[35%]">
-                    </colgroup>
-                    <thead>
-                    <tr>
-                        <th class="<?= e(ui_th_classes()) ?> px-1">Aprendiz</th>
-                        <th class="<?= e(ui_th_classes()) ?> px-1">Campo</th>
-                        <th class="<?= e(ui_th_classes()) ?> px-1">Actual</th>
-                        <th class="<?= e(ui_th_classes()) ?> px-1">Nuevo archivo</th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    <?php foreach ($conflictRows as $conflictRow): ?>
-                        <?php
-                        $conflicts = (array) ($conflictRow['conflicts'] ?? []);
-                        $aprendizLabel = trim((string) ($conflictRow['nombre'] ?? '')) . ' - ' . trim((string) ($conflictRow['identificacion'] ?? ''));
-                        ?>
-                        <?php foreach ($conflicts as $conflict): ?>
-                            <tr>
-                                <td class="<?= e(ui_td_classes()) ?> px-4"><?= e($aprendizLabel) ?></td>
-                                <td class="<?= e(ui_td_classes()) ?> px-4"><?= e((string) ($conflict['field'] ?? '')) ?></td>
-                                <td class="<?= e(ui_td_classes()) ?> px-4"><?= e((string) ($conflict['actual'] ?? '')) ?></td>
-                                <td class="<?= e(ui_td_classes()) ?> px-4"><?= e((string) ($conflict['nuevo'] ?? '')) ?></td>
-                            </tr>
-                        <?php endforeach; ?>
-                    <?php endforeach; ?>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-<?php endif; ?>
-
 <!-- Tablas de importación -->
 <section class="mt-4 <?= e(ui_card_classes()) ?>">
     <div class="mb-5 inline-flex rounded-md border border-app-border bg-app-panelSubtle p-1 text-sm">
@@ -214,7 +151,7 @@ $pendingFieldLabels = [
             <?php $isActive = $activeTab === $key; ?>
             <a
                 class="<?= e('inline-flex items-center gap-1.5 rounded px-3 py-1.5 font-medium no-underline transition-colors duration-200 ' . ($isActive ? $tab['active'] : 'text-app-muted hover:bg-app-panel hover:text-app-text')) ?>"
-                href="<?= e($detailBaseUrl . '&tab=' . urlencode((string) $key) . '&rows_page=1&pending_page=' . urlencode((string) $pendingPage)) ?>"
+                href="<?= e($detailBaseUrl . '&tab=' . urlencode((string) $key) . '&rows_page=1&pending_page=' . urlencode((string) $pendingPage) . '&conflict_page=' . urlencode((string) $conflictPage)) ?>"
             >
                 <span class="<?= e('inline-flex h-4 w-4 [&_svg]:h-4 [&_svg]:w-4 ' . ($isActive ? '' : $tab['iconColor'])) ?>"><?= ui_icon((string) $tab['icon']) ?></span>
                 <?= e((string) $tab['label']) ?> (<?= e((string) $tab['count']) ?>)
@@ -222,7 +159,7 @@ $pendingFieldLabels = [
         <?php endforeach; ?>
     </div>
 
-    <div id="<?= e($activeTab) ?>">
+    <div id="tabla-importacion-<?= e($activeTab) ?>">
         <h3 class="<?= e(ui_heading_sm_classes()) ?>"><?= e((string) $tabs[$activeTab]['label']) ?></h3>
         <table class="<?= e(ui_table_classes()) ?> table-fixed">
             <colgroup>
@@ -254,28 +191,158 @@ $pendingFieldLabels = [
             <?php endif; ?>
             </tbody>
         </table>
-        <?php if ($activeRowsTotalPages > 1): ?>
-            <nav class="mt-4 flex items-center justify-center gap-2 text-sm" aria-label="Paginación de tabla de importación">
-                <?php if ($activeRowsPage > 1): ?>
-                    <a class="<?= e(ui_button_icon_classes()) ?>" href="<?= e($detailBaseUrl . '&tab=' . urlencode((string) $activeTab) . '&rows_page=' . urlencode((string) ($activeRowsPage - 1)) . '&pending_page=' . urlencode((string) $pendingPage)) ?>" aria-label="Página anterior">
-                        <span class="inline-flex h-4 w-4 [&_svg]:h-4 [&_svg]:w-4"><?= ui_icon('arrow') ?></span>
-                    </a>
-                <?php endif; ?>
-                <span class="text-app-muted">Página <?= e((string) $activeRowsPage) ?> de <?= e((string) $activeRowsTotalPages) ?></span>
-                <?php if ($activeRowsPage < $activeRowsTotalPages): ?>
-                    <a class="<?= e(ui_button_icon_classes()) ?>" href="<?= e($detailBaseUrl . '&tab=' . urlencode((string) $activeTab) . '&rows_page=' . urlencode((string) ($activeRowsPage + 1)) . '&pending_page=' . urlencode((string) $pendingPage)) ?>" aria-label="Página siguiente">
-                        <span class="inline-flex h-4 w-4 -scale-x-100 [&_svg]:h-4 [&_svg]:w-4"><?= ui_icon('arrow') ?></span>
-                    </a>
-                <?php endif; ?>
-            </nav>
-        <?php endif; ?>
+        <?php
+        ui_render_pagination(
+            $activeRowsPage,
+            $activeRowsTotalPages,
+            $detailBaseUrl . '&tab=' . urlencode((string) $activeTab) . '&rows_page=%d&pending_page=' . urlencode((string) $pendingPage) . '&conflict_page=' . urlencode((string) $conflictPage),
+            'Paginación de tabla de importación',
+            'tabla-importacion-' . $activeTab
+        );
+        ?>
     </div>
 </section>
 
+<!-- Conflictos -->
+<?php if ($conflictRows !== []): ?>
+    <section id="tabla-conflictos" class="mt-4 <?= e(ui_card_classes()) ?>">
+        <div class="mb-3 flex items-center gap-2">
+            <span class="inline-flex h-4 w-4 shrink-0 items-center justify-center text-rose-700 leading-none [&_svg]:h-4 [&_svg]:w-4"><?= ui_icon('circle-alert') ?></span>
+            <h3 class="<?= e(ui_heading_sm_classes()) ?> m-0 text-rose-700">Conflictos detectados</h3>
+        </div>
+        <p class="mb-3 mt-0 text-sm text-app-muted">Se detectaron <?= e((string) count($conflictRows)) ?> registros con cambios sobre datos ya existentes. No se actualizaron automáticamente.</p>
+        <table class="<?= e(ui_table_classes()) ?> table-fixed">
+            <colgroup>
+                <col class="w-[56%]">
+                <col class="w-[22%]">
+                <col class="w-[22%]">
+            </colgroup>
+            <thead>
+            <tr>
+                <th class="<?= e(ui_th_classes()) ?> px-1">Aprendiz</th>
+                <th class="<?= e(ui_th_classes()) ?> px-1">Identificación</th>
+                <th class="<?= e(ui_th_classes()) ?> px-1">Número de conflictos</th>
+            </tr>
+            </thead>
+            <tbody>
+            <?php foreach ($conflictPageItems as $conflictRow): ?>
+                <?php
+                $conflictAprendizId = (int) ($conflictRow['aprendiz_id'] ?? 0);
+                $conflictCount = count((array) ($conflictRow['conflicts'] ?? []));
+                ?>
+                <tr
+                    class="cursor-pointer hover:bg-app-panelSubtle"
+                    data-modal-open="conflict-<?= e((string) $conflictAprendizId) ?>"
+                    tabindex="0"
+                    role="button"
+                    onkeydown="if(event.key==='Enter' || event.key===' '){event.preventDefault();openModal('conflict-<?= e((string) $conflictAprendizId) ?>');}"
+                >
+                    <td class="<?= e(ui_td_classes()) ?> px-4"><?= e((string) ($conflictRow['nombre'] ?? '')) ?></td>
+                    <td class="<?= e(ui_td_classes()) ?> px-4"><?= e((string) ($conflictRow['identificacion'] ?? '')) ?></td>
+                    <td class="<?= e(ui_td_classes()) ?> px-4">
+                        <span class="inline-flex items-center rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-xs font-semibold text-rose-700"><?= e((string) $conflictCount) ?> conflictos</span>
+                    </td>
+                </tr>
+            <?php endforeach; ?>
+            </tbody>
+        </table>
+        <?php
+        ui_render_pagination(
+            $conflictPage,
+            $conflictTotalPages,
+            $detailBaseUrl . '&tab=' . urlencode((string) $activeTab) . '&rows_page=' . urlencode((string) $activeRowsPage) . '&pending_page=' . urlencode((string) $pendingPage) . '&conflict_page=%d',
+            'Paginación de conflictos',
+            'tabla-conflictos'
+        );
+        ?>
+    </section>
+
+    <?php foreach ($conflictPageItems as $conflictRow): ?>
+        <?php
+        $conflictAprendizId = (int) ($conflictRow['aprendiz_id'] ?? 0);
+        $conflicts = (array) ($conflictRow['conflicts'] ?? []);
+        $conflictName = trim((string) ($conflictRow['nombre'] ?? ''));
+        $conflictDoc = trim((string) ($conflictRow['identificacion'] ?? ''));
+        ?>
+        <div id="modal-conflict-<?= e((string) $conflictAprendizId) ?>" class="modal-overlay hidden " data-modal-overlay="conflict-<?= e((string) $conflictAprendizId) ?>">
+            <div class="modal-panel modal-panel--conflict bg-app-panel " role="dialog" aria-modal="true" aria-labelledby="conflict-modal-title-<?= e((string) $conflictAprendizId) ?>">
+                <div class="mb-3 flex items-center justify-between gap-3">
+                    <div>
+                        <h3 id="conflict-modal-title-<?= e((string) $conflictAprendizId) ?>" class="m-0 text-lg font-semibold text-app-text">Resolución de conflictos</h3>
+                        <p class="mt-1 inline-flex items-center gap-1.5 text-sm text-app-muted">
+                            <span class="inline-flex h-5 w-5 shrink-0 items-center justify-center [&_svg]:h-5 [&_svg]:w-5"><?= ui_icon('user') ?></span>
+                            <span><?= e($conflictName) ?> &mdash; <?= e($conflictDoc) ?></span>
+                        </p>
+                    </div>
+                    <button type="button" class="<?= e(ui_button_icon_classes()) ?>" data-modal-close="conflict-<?= e((string) $conflictAprendizId) ?>" aria-label="Cerrar modal de conflictos">
+                        <span class="inline-flex h-4 w-4 [&_svg]:h-4 [&_svg]:w-4"><?= ui_icon('x') ?></span>
+                    </button>
+                </div>
+                <p class="mb-3 mt-0 text-sm text-app-muted">Estos cambios están en conflicto y no se actualizaron automáticamente. Selecciona si conservar el valor actual o tomar el nuevo por cada campo.</p>
+                <div class="max-h-[70vh] overflow-auto rounded border border-app-border">
+                    <table class="<?= e(ui_table_classes()) ?> table-fixed">
+                        <colgroup>
+                            <col class="w-[22%]">
+                            <col class="w-[26%]">
+                            <col class="w-[28%]">
+                            <col class="w-[24%]">
+                        </colgroup>
+                        <thead>
+                        <tr>
+                            <th class="<?= e(ui_th_classes()) ?> px-1">Campo</th>
+                            <th class="<?= e(ui_th_classes()) ?> px-1">Actual</th>
+                            <th class="<?= e(ui_th_classes()) ?> px-1">Nuevo archivo</th>
+                            <th class="<?= e(ui_th_classes()) ?> px-1">Acción</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <?php foreach ($conflicts as $index => $conflict): ?>
+                            <?php $fieldKey = (string) ($conflict['field'] ?? ''); ?>
+                            <?php
+                            $actualConflictValue = (string) ($conflict['actual'] ?? '');
+                            $newConflictValue = (string) ($conflict['nuevo'] ?? '');
+                            if ($fieldKey === 'tipo_documento') {
+                                $actualConflictValue = ui_document_type_label($actualConflictValue);
+                                $newConflictValue = ui_document_type_label($newConflictValue);
+                            }
+                            ?>
+                            <tr>
+                                <td class="<?= e(ui_td_classes()) ?> px-4 py-3"><?= e((string) ($pendingFieldLabels[$fieldKey] ?? $fieldKey)) ?></td>
+                                <td class="<?= e(ui_td_classes()) ?> px-4 py-3" data-conflict-current-text><?= e($actualConflictValue) ?></td>
+                                <td class="<?= e(ui_td_classes()) ?> px-4 py-3" data-conflict-new-text><?= e($newConflictValue) ?></td>
+                                <td class="<?= e(ui_td_classes()) ?> px-4 py-3">
+                                    <?php
+                                    $conflictField = (string) ($conflict['field'] ?? '');
+                                    $newValue = (string) ($conflict['nuevo'] ?? '');
+                                    $encodedNewValue = rawurlencode($newValue);
+                                    ?>
+                                    <div class="inline-flex flex-wrap items-center gap-1.5" data-conflict-row data-conflict-modal="conflict-<?= e((string) $conflictAprendizId) ?>" data-aprendiz-id="<?= e((string) $conflictAprendizId) ?>" data-conflict-field="<?= e($conflictField) ?>" data-conflict-value="<?= e($encodedNewValue) ?>">
+                                        <button type="button" class="inline-flex rounded-md border border-rose-200 bg-rose-50 px-2.5 py-1 text-xs font-medium text-rose-700 hover:bg-rose-100" data-conflict-action-button="current">Mantener actual</button>
+                                        <button type="button" class="inline-flex rounded-md border border-app-accent bg-app-accent px-2.5 py-1 text-xs font-medium text-app-textOnBrand hover:bg-app-accentHover" data-conflict-action-button="new">Aceptar nuevo</button>
+                                        <span class="text-[11px] text-app-muted" data-conflict-status></span>
+                                    </div>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="mt-4 flex flex-wrap items-center justify-end gap-2">
+                    <button type="button" class="inline-flex rounded-md border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-medium text-rose-700 hover:bg-rose-100" data-conflict-bulk="current" data-conflict-modal="conflict-<?= e((string) $conflictAprendizId) ?>">Rechazar todos</button>
+                    <button type="button" class="inline-flex rounded-md border border-app-accent bg-app-accent px-4 py-2 text-sm font-medium text-app-textOnBrand hover:bg-app-accentHover" data-conflict-bulk="new" data-conflict-modal="conflict-<?= e((string) $conflictAprendizId) ?>">Aceptar todos los nuevos</button>
+                </div>
+            </div>
+        </div>
+    <?php endforeach; ?>
+<?php endif; ?>
+
 <!-- Pendientes -->
 <?php if ($pendingRows !== []): ?>
-    <section class="mt-4 <?= e(ui_card_classes()) ?>">
-        <h3 class="<?= e(ui_heading_sm_classes()) ?>">Pendientes</h3>
+    <section id="tabla-pendientes" class="mt-4 <?= e(ui_card_classes()) ?>">
+        <div class="mb-2 flex items-center gap-2">
+            <span class="inline-flex h-4 w-4 shrink-0 items-center justify-center text-amber-600 leading-none [&_svg]:h-4 [&_svg]:w-4"><?= ui_icon('clock') ?></span>
+            <h3 class="<?= e(ui_heading_sm_classes()) ?> m-0 text-amber-600">Pendientes</h3>
+        </div>
         <p class="mb-3 mt-0 text-sm text-app-muted">Aprendices con datos faltantes para completar el perfil en esta importación.</p>
         <table class="<?= e(ui_table_classes()) ?> table-fixed">
             <colgroup>
@@ -296,9 +363,7 @@ $pendingFieldLabels = [
                 $aprendizId = (int) ($pending['aprendiz_id'] ?? 0);
                 $faltantes = (array) ($pending['faltantes'] ?? []);
                 $pendingCount = count($faltantes);
-                $badgeClasses = $pendingCount > 5
-                    ? 'bg-rose-100 text-rose-700 border-rose-200'
-                    : 'bg-amber-100 text-amber-700 border-amber-200';
+                $badgeClasses = 'bg-amber-100 text-amber-700 border-amber-200';
                 ?>
                 <tr
                     class="cursor-pointer hover:bg-app-panelSubtle"
@@ -323,21 +388,15 @@ $pendingFieldLabels = [
             <?php endforeach; ?>
             </tbody>
         </table>
-        <?php if ($pendingTotalPages > 1): ?>
-            <nav class="mt-4 flex items-center justify-center gap-2 text-sm" aria-label="Paginación de pendientes">
-                <?php if ($pendingPage > 1): ?>
-                    <a class="<?= e(ui_button_icon_classes()) ?>" href="<?= e($detailBaseUrl . '&tab=' . urlencode((string) $activeTab) . '&rows_page=' . urlencode((string) $activeRowsPage) . '&pending_page=' . urlencode((string) ($pendingPage - 1))) ?>" aria-label="Página anterior">
-                        <span class="inline-flex h-4 w-4 [&_svg]:h-4 [&_svg]:w-4"><?= ui_icon('arrow') ?></span>
-                    </a>
-                <?php endif; ?>
-                <span class="text-app-muted">Página <?= e((string) $pendingPage) ?> de <?= e((string) $pendingTotalPages) ?></span>
-                <?php if ($pendingPage < $pendingTotalPages): ?>
-                    <a class="<?= e(ui_button_icon_classes()) ?>" href="<?= e($detailBaseUrl . '&tab=' . urlencode((string) $activeTab) . '&rows_page=' . urlencode((string) $activeRowsPage) . '&pending_page=' . urlencode((string) ($pendingPage + 1))) ?>" aria-label="Página siguiente">
-                        <span class="inline-flex h-4 w-4 -scale-x-100 [&_svg]:h-4 [&_svg]:w-4"><?= ui_icon('arrow') ?></span>
-                    </a>
-                <?php endif; ?>
-            </nav>
-        <?php endif; ?>
+        <?php
+        ui_render_pagination(
+            $pendingPage,
+            $pendingTotalPages,
+            $detailBaseUrl . '&tab=' . urlencode((string) $activeTab) . '&rows_page=' . urlencode((string) $activeRowsPage) . '&pending_page=%d&conflict_page=' . urlencode((string) $conflictPage),
+            'Paginación de pendientes',
+            'tabla-pendientes'
+        );
+        ?>
     </section>
 
     <?php foreach ($pendingPageItems as $pending): ?>

@@ -5,6 +5,7 @@
 
 <section class="mb-4 <?= e(ui_card_classes()) ?>">
     <p class="m-0 text-sm"><strong>Nombre:</strong> <?= e((string) $aprendiz['nombre_completo']) ?></p>
+    <p class="m-0 mt-1 text-sm"><strong>Tipo de documento:</strong> <?= e(ui_document_type_label((string) ($aprendiz['tipo_documento'] ?? ''))) ?></p>
     <p class="m-0 mt-1 text-sm"><strong>Documento:</strong> <?= e((string) $aprendiz['numero_documento']) ?></p>
     <p class="m-0 mt-1 text-sm"><strong>Estado:</strong> <?= e((string) $aprendiz['estado']) ?></p>
 </section>

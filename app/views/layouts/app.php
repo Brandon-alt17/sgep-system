@@ -37,6 +37,7 @@ $currentUserName = (string) ($_SESSION['user_name'] ?? 'Usuario no registrado');
     </div>
 </div>
 <script src="<?= e(APP_BASE_PATH) ?>/js/app.js"></script>
+<script>window.APP_BASE_PATH = "<?= e((string) APP_BASE_PATH) ?>";</script>
 <script src="<?= e(APP_BASE_PATH) ?>/js/modal-manager.js"></script>
 </body>
 </html>
