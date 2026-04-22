@@ -1,6 +1,6 @@
 # Si el DocumentRoot apunta solo a public/, este archivo no se usa.
 # Si sirves desde la raíz del proyecto (p. ej. http://localhost/sgep/),
-# reescribe rutas de la app y los assets hacia public/.
+# reescribe rutas de la app y los assets hacia public/ (incl. fuentes self-hosted).
 
 <IfModule mod_rewrite.c>
     RewriteEngine On
@@ -8,6 +8,7 @@
 
     RewriteRule ^css/(.*)$ public/css/$1 [L]
     RewriteRule ^js/(.*)$ public/js/$1 [L]
+    RewriteRule ^fonts/(.*)$ public/fonts/$1 [L]
     RewriteRule ^templates/(.*)$ public/templates/$1 [L]
     RewriteRule ^favicon\.ico$ public/favicon.ico [L]
     RewriteRule ^robots\.txt$ public/robots.txt [L]

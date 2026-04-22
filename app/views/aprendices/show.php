@@ -61,7 +61,7 @@
             </section>
 
             <!-- 🟨 MOMENTOS -->
-            <section class="<?= e(ui_card_classes()) ?>">
+            <section class="mt-4 <?= e(ui_card_classes()) ?>">
                 <div class="flex justify-between items-center mb-4">
                     <h3 class="<?= e(ui_heading_sm_classes()) ?>">Momentos</h3>
                     <a href="<?= e(APP_BASE_PATH) ?>/momentos/create?aprendiz_id=<?= (int)$aprendiz['id'] ?>&tipo=EX"
@@ -101,13 +101,13 @@
             </section>
 
             <!-- 🟪 ACCIONES -->
-            <div class="flex gap-3">
-                <a href="<?= e(APP_BASE_PATH) ?>/documentos/generar?aprendiz_id=<?= (int)$aprendiz['id'] ?>"
+            <div class="mb:col-span-2 grid flex gap-3 mt-4">
+                <a href="mt-4 <?= e(APP_BASE_PATH) ?>/documentos/generar?aprendiz_id=<?= (int)$aprendiz['id'] ?>"
                    class="<?= e(ui_button_small_classes()) ?>">
                     Generar documento GFPI-F-023
                 </a>
-                <a href="<?= e(APP_BASE_PATH) ?>/reportes?highlight=<?= (int)$aprendiz['id'] ?>"
-                   class="text-sm text-app-accent hover:underline flex items-center">
+                <a href="align-center <?= e(APP_BASE_PATH) ?>/reportes?highlight=<?= (int)$aprendiz['id'] ?>"
+                   class="text-sm text-app-accent hover:underline flex ">
                     Ver en reporte general →
                 </a>
             </div>

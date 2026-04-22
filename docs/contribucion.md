@@ -21,9 +21,9 @@
 | Persona | Rol | Área principal |
 |---------|-----|----------------|
 | **A** | Backend | Controladores, lógica de negocio, validaciones |
-| **B** | Frontend | Vistas Blade, layout, formularios, componentes UI |
-| **C** | Base de datos | Migraciones, modelos Eloquent, relaciones, queries |
-| **D** | QA / Componentes | Testing con datos reales, componentes Blade repetitivos |
+| **B** | Frontend | Vistas PHP, layout, formularios, componentes UI |
+| **C** | Base de datos | Migraciones SQL, modelos PDO, relaciones, queries |
+| **D** | QA / Componentes | Testing con datos reales, componentes reutilizables |
 | **E** | Git / Demo | Gestión del repo, merges, instalación en campo, demo |
 | **F** | Backend | |
 | **G** | Frontend | |
@@ -95,7 +95,7 @@ class aprendizesController {}
 class ControladorAprendices {}
 ```
 
-### Métodos de controlador (recursos estándar Laravel)
+### Métodos de controlador (convención recomendada)
 
 ```php
 public function index()   // GET /aprendices          → lista
@@ -127,54 +127,51 @@ class Aprendiz extends Model {}
 class Momento extends Model {}
 class FactorValoracion extends Model {}
 
-// Nombres de tabla: snake_case plural (Laravel lo infiere automáticamente)
+// Nombres de tabla: snake_case plural
 // aprendices, momentos, factores_valoracion
 ```
 
-### Vistas Blade
+### Vistas PHP
 
 ```
-resources/views/
-├── layouts/
-│   └── app.blade.php           ← Layout base
+app/views/
 ├── aprendices/
-│   ├── index.blade.php         ← Listado
-│   ├── create.blade.php        ← Formulario nuevo
-│   ├── show.blade.php          ← Perfil
-│   └── edit.blade.php          ← Formulario edición
+│   ├── index.php               ← Listado
+│   ├── create.php              ← Formulario nuevo
+│   ├── show.php                ← Perfil
+│   └── edit.php                ← Formulario edición
 ├── momentos/
-│   ├── create.blade.php
-│   └── edit.blade.php
-├── dashboard/
-│   └── index.blade.php
-├── importar/
-│   └── index.blade.php
-└── componentes/
-    └── factor-row.blade.php    ← Componente reutilizable
+│   ├── create.php
+│   └── edit.php
+├── dashboard.php
+├── import/
+│   └── upload.php
+└── components/
+    └── page_header.php         ← Componente reutilizable
 ```
 
-### Variables en vistas
+### Variables en vistas PHP
 
 ```php
 // Correcto: camelCase para variables, snake_case para campos del modelo
-return view('aprendices.show', [
+view('aprendices/show', [
     'aprendiz' => $aprendiz,
-    'momentos' => $aprendiz->momentos,
+    'momentos' => $momentos,
     'proximas' => $proximasVisitas,
 ]);
 
 // En la vista:
-{{ $aprendiz->nombre }}
-{{ $aprendiz->numero_documento }}
+<?= e((string) $aprendiz['nombre']) ?>
+<?= e((string) $aprendiz['numero_documento']) ?>
 ```
 
 ### Mensajes al usuario
 
 ```php
 // Correcto: siempre en español
-session()->flash('success', 'Aprendiz registrado correctamente.');
-session()->flash('error', 'El número de documento ya está registrado.');
-session()->flash('warning', 'Se encontraron duplicados. Por favor revise.');
+flash('success', 'Aprendiz registrado correctamente.');
+flash('error', 'El número de documento ya está registrado.');
+flash('warning', 'Se encontraron duplicados. Por favor revise.');
 ```
 
 ---
@@ -250,10 +247,10 @@ public function index(Request $request)
 
 ### 3. Actualizar la vista
 
-```blade
-{{-- resources/views/aprendices/index.blade.php --}}
-<form method="GET" action="{{ route('aprendices.index') }}">
-    <input type="text" name="busqueda" value="{{ request('busqueda') }}"
+```php
+<!-- app/views/aprendices/index.php -->
+<form method="GET" action="/aprendices">
+    <input type="text" name="busqueda" value="<?= e((string) ($_GET['busqueda'] ?? '')) ?>"
            placeholder="Buscar por nombre o cédula...">
     <button type="submit">Buscar</button>
 </form>
@@ -295,7 +292,7 @@ Antes de pedir que se haga merge de tu rama a `dev`, verifica:
 - [ ] Sigo las convenciones de nombres (controladores, rutas, vistas)
 - [ ] No hay `var_dump()`, `dd()` ni `console.log()` olvidados
 - [ ] Los mensajes al usuario están en español
-- [ ] Los campos de formulario tienen validación en el backend (Form Request)
+- [ ] Los campos de formulario tienen validación en el backend
 
 ### Git
 - [ ] Hice `git pull origin dev` antes de crear la rama
@@ -303,8 +300,8 @@ Antes de pedir que se haga merge de tu rama a `dev`, verifica:
 - [ ] No subí archivos de configuración local (`.env`, `node_modules/`, `vendor/`)
 
 ### Base de datos
-- [ ] Si agregué una tabla o columna, creé la migración correspondiente
-- [ ] `php artisan migrate` corre sin errores en un entorno limpio
+- [ ] Si agregué una tabla o columna, creé la migración SQL correspondiente
+- [ ] `php database/run_migrations.php` corre sin errores en un entorno limpio
 
 ---
 
@@ -324,4 +321,4 @@ Thumbs.db               ← Metadatos de Windows
 
 ---
 
-*Ver también: [README.md](../README.md) · [ARQUITECTURA.md](./ARQUITECTURA.md)*
+*Ver también: [README.md](../README.md) · [architecture.md](./architecture.md)*

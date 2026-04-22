@@ -28,6 +28,54 @@ if (!function_exists('ui_card_mt_classes')) {
     }
 }
 
+/**
+ * Card con cabecera y cuerpo separados (borde inferior en el header).
+ * Uso: surface → header (+ stack opcional) → body.
+ */
+if (!function_exists('ui_card_surface_classes')) {
+    function ui_card_surface_classes(): string
+    {
+        return 'overflow-hidden rounded-[10px] border border-app-border bg-app-panel shadow-xsSoft';
+    }
+}
+
+if (!function_exists('ui_card_header_classes')) {
+    function ui_card_header_classes(): string
+    {
+        return 'border-b border-app-border px-6 pt-6 pb-4';
+    }
+}
+
+if (!function_exists('ui_card_header_stack_classes')) {
+    function ui_card_header_stack_classes(): string
+    {
+        return 'flex flex-col gap-1.5';
+    }
+}
+
+if (!function_exists('ui_card_body_classes')) {
+    function ui_card_body_classes(): string
+    {
+        return 'p-6';
+    }
+}
+
+/** Título dentro del header de card (sin margen inferior; el stack define el ritmo). */
+if (!function_exists('ui_card_title_classes')) {
+    function ui_card_title_classes(): string
+    {
+        return 'font-app m-0 text-[18px] font-semibold text-app-text';
+    }
+}
+
+/** Subtítulo / descripción bajo el título en el header de card. */
+if (!function_exists('ui_card_description_classes')) {
+    function ui_card_description_classes(): string
+    {
+        return 'm-0 text-sm text-app-muted';
+    }
+}
+
 if (!function_exists('ui_label_classes')) {
     function ui_label_classes(): string
     {
@@ -45,21 +93,21 @@ if (!function_exists('ui_input_classes')) {
 if (!function_exists('ui_button_primary_classes')) {
     function ui_button_primary_classes(): string
     {
-        return 'inline-flex rounded-md border border-app-accent bg-app-accent px-4 py-2 text-sm font-medium text-app-textOnBrand no-underline hover:bg-app-accentHover';
+        return 'font-app inline-flex rounded-md border border-app-accent bg-app-accent px-4 py-2 text-sm font-medium text-app-text no-underline hover:bg-app-accentHover';
     }
 }
 
 if (!function_exists('ui_button_small_classes')) {
     function ui_button_small_classes(): string
     {
-        return 'inline-flex rounded-md border border-app-borderControl bg-app-panelSubtle px-2.5 py-1.5 text-xs text-app-link no-underline hover:bg-app-panelHover';
+        return 'font-app inline-flex rounded-md border border-app-borderControl bg-app-panelSubtle px-[18px] py-2 text-sm font-medium text-app-muted no-underline hover:bg-app-accentSoft hover:text-app-accent';
     }
 }
 
 if (!function_exists('ui_button_small_primary_classes')) {
     function ui_button_small_primary_classes(): string
     {
-        return 'cursor-pointer rounded-md border border-app-accent bg-app-accent px-2.5 py-1.5 text-xs text-app-textOnBrand hover:bg-app-accentHover';
+        return 'font-app cursor-pointer rounded-md border border-app-accent bg-app-accent px-2.5 py-1.5 text-xs text-app-textOnBrand hover:bg-app-accentHover';
     }
 }
 
@@ -67,6 +115,14 @@ if (!function_exists('ui_table_classes')) {
     function ui_table_classes(): string
     {
         return 'mt-2.5 w-full border-collapse';
+    }
+}
+
+/** Tabla dentro del body de una card (sin margen superior; el padding del body alinea). */
+if (!function_exists('ui_table_in_card_classes')) {
+    function ui_table_in_card_classes(): string
+    {
+        return 'w-full border-collapse';
     }
 }
 
@@ -87,14 +143,14 @@ if (!function_exists('ui_td_classes')) {
 if (!function_exists('ui_heading_sm_classes')) {
     function ui_heading_sm_classes(): string
     {
-        return 'mb-2 mt-0 text-[15px] font-semibold';
+        return 'font-app mb-2 mt-0 text-[18px] font-semibold';
     }
 }
 
 if (!function_exists('ui_text_muted_classes')) {
     function ui_text_muted_classes(): string
     {
-        return 'mb-2 mt-0 text-xs text-app-muted';
+        return 'mb-2 mt-0 text-sm text-app-muted';
     }
 }
 

@@ -11,7 +11,7 @@ labels: ["database"]
 
 ## Modelos
 
-(Modelos Eloquent a tocar y relaciones nuevas o cambiadas, o "ninguno / N/A".)
+(Modelos a tocar y relaciones nuevas o cambiadas, o "ninguno / N/A".)
 
 ## Datos existentes (opcional)
 

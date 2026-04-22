@@ -1,3 +1,5 @@
+/* Inter @font-face: ver partial inter_font_faces.php (rutas con APP_BASE_PATH) */
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -5,7 +7,7 @@
 @layer base {
   body {
     @apply m-0 bg-app-bg font-sans text-app-text;
-    font-family: "Inter", "Segoe UI", Arial, sans-serif;
+    font-family: "Inter", system-ui, sans-serif;
   }
 
   a {
@@ -14,5 +16,30 @@
 
   a:hover {
     @apply underline;
+  }
+}
+
+@layer components {
+  .font-app {
+    font-family: "Inter", system-ui, sans-serif;
+  }
+
+  .upload-dropzone-dashed {
+    position: relative;
+    border: 0;
+    border-radius: 0.5rem;
+  }
+
+  .upload-dropzone-dashed::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    background:
+      repeating-linear-gradient(90deg, #d5dbe3 0 8px, transparent 8px 12px) top / 100% 2px no-repeat,
+      repeating-linear-gradient(90deg, #d5dbe3 0 8px, transparent 8px 12px) bottom / 100% 2px no-repeat,
+      repeating-linear-gradient(180deg, #d5dbe3 0 8px, transparent 8px 12px) left / 2px 100% no-repeat,
+      repeating-linear-gradient(180deg, #d5dbe3 0 8px, transparent 8px 12px) right / 2px 100% no-repeat;
   }
 }

@@ -4,6 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?= e(APP_NAME) ?></title>
+    <?php partial('components/inter_font_faces'); ?>
     <link rel="stylesheet" href="<?= e(APP_BASE_PATH) ?>/css/app.css">
 </head>
 <body>
@@ -30,7 +31,7 @@ $currentUserName = (string) ($_SESSION['user_name'] ?? 'Usuario no registrado');
     <?php partial('components/sidebar', ['currentPath' => $currentPath]); ?>
     <div class="grid grid-rows-[56px_1fr]">
         <?php partial('components/topbar', ['title' => $pageTitle, 'userName' => $currentUserName]); ?>
-        <main class="p-5">
+        <main class="p-6">
             <?php require $viewPath; ?>
         </main>
     </div>
