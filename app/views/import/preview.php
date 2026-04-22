@@ -3,6 +3,7 @@ $insertedRows = (array) ($resultado['inserted_rows'] ?? []);
 $updatedRows = (array) ($resultado['updated_rows'] ?? []);
 $duplicateRows = (array) ($resultado['duplicate_rows'] ?? []);
 $pendingRows = (array) ($resultado['pending_rows'] ?? []);
+$programaPendingRows = (array) ($resultado['programa_pending_rows'] ?? []);
 $conflictRows = (array) ($resultado['conflict_rows'] ?? []);
 $processed = (int) ($entry['records'] ?? ((int) ($resultado['inserted'] ?? 0) + (int) ($resultado['updated'] ?? 0)));
 $tabs = [
@@ -340,7 +341,7 @@ $pendingFieldLabels = [
 <?php if ($pendingRows !== []): ?>
     <section id="tabla-pendientes" class="mt-4 <?= e(ui_card_classes()) ?>">
         <div class="mb-2 flex items-center gap-2">
-            <span class="inline-flex h-4 w-4 shrink-0 items-center justify-center text-amber-600 leading-none [&_svg]:h-4 [&_svg]:w-4"><?= ui_icon('clock') ?></span>
+            <span class="inline-flex h-4 w-4 shrink-0 items-center justify-center text-amber-600 leading-none [&_svg]:h-4 [&_svg]:w-4" style="transform: translateY(-1px);"><?= ui_icon('clock') ?></span>
             <h3 class="<?= e(ui_heading_sm_classes()) ?> m-0 text-amber-600">Pendientes</h3>
         </div>
         <p class="mb-3 mt-0 text-sm text-app-muted">Aprendices con datos faltantes para completar el perfil en esta importación.</p>
@@ -431,6 +432,39 @@ $pendingFieldLabels = [
             </div>
         </div>
     <?php endforeach; ?>
+<?php endif; ?>
+
+<?php if ($programaPendingRows !== []): ?>
+    <section class="mt-4 <?= e(ui_warning_card_classes()) ?>">
+        <h3 class="<?= e(ui_heading_sm_classes()) ?> mb-1 mt-0">Programas pendientes por nivel</h3>
+        <p class="mb-3 mt-0 text-sm">Algunas filas no se vincularon a programa porque el nombre coincide con varios niveles y no llegó nivel en el archivo.</p>
+        <table class="<?= e(ui_table_classes()) ?> table-fixed">
+            <colgroup>
+                <col class="w-[34%]">
+                <col class="w-[20%]">
+                <col class="w-[24%]">
+                <col class="w-[22%]">
+            </colgroup>
+            <thead>
+            <tr>
+                <th class="<?= e(ui_th_classes()) ?> px-1">Aprendiz</th>
+                <th class="<?= e(ui_th_classes()) ?> px-1">Documento</th>
+                <th class="<?= e(ui_th_classes()) ?> px-1">Programa</th>
+                <th class="<?= e(ui_th_classes()) ?> px-1">Niveles candidatos</th>
+            </tr>
+            </thead>
+            <tbody>
+            <?php foreach ($programaPendingRows as $row): ?>
+                <tr>
+                    <td class="<?= e(ui_td_classes()) ?> px-4"><?= e((string) ($row['nombre'] ?? '')) ?></td>
+                    <td class="<?= e(ui_td_classes()) ?> px-4"><?= e((string) ($row['identificacion'] ?? '')) ?></td>
+                    <td class="<?= e(ui_td_classes()) ?> px-4"><?= e((string) ($row['programa'] ?? '')) ?></td>
+                    <td class="<?= e(ui_td_classes()) ?> px-4"><?= e(implode(', ', (array) ($row['candidatos'] ?? []))) ?></td>
+                </tr>
+            <?php endforeach; ?>
+            </tbody>
+        </table>
+    </section>
 <?php endif; ?>
 
 <?php if (!empty($resultado['errors'])): ?>

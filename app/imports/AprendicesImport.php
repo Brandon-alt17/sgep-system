@@ -30,6 +30,7 @@ class AprendicesImport
             'updated_rows' => [],
             'duplicate_rows' => [],
             'pending_rows' => [],
+            'programa_pending_rows' => [],
             'conflict_rows' => [],
         ];
 
@@ -61,14 +62,26 @@ class AprendicesImport
                     continue;
                 }
 
-                $programaId = $this->findOrCreatePrograma(
+                $programaResolution = $this->findOrCreatePrograma(
                     $assoc['programa_formacion'] ?? null,
                     $assoc['modalidad_formacion'] ?? null
                 );
+                $programaId = $programaResolution['id'];
                 $empresaId = $this->findOrCreateEmpresa($assoc);
 
                 $payload = $this->buildAprendizPayload($assoc, $doc, $programaId, $empresaId);
                 $rowSummary = $this->rowSummary($assoc, $doc);
+
+                if (($programaResolution['ambiguous'] ?? false) === true) {
+                    $results['warnings'][] = $usuarioLabel . ': programa ambiguo sin nivel (' . ($programaResolution['normalized_name'] ?? 'N/D') . ').';
+                    $results['programa_pending_rows'][] = [
+                        'nombre' => $rowSummary['nombre'],
+                        'identificacion' => $rowSummary['identificacion'],
+                        'programa' => (string) ($programaResolution['normalized_name'] ?? ''),
+                        'nivel_detectado' => (string) ($programaResolution['detected_level'] ?? ''),
+                        'candidatos' => (array) ($programaResolution['candidates'] ?? []),
+                    ];
+                }
 
                 $existing = $this->findByDocumento($doc);
                 if ($existing) {
@@ -411,32 +424,100 @@ class AprendicesImport
         return $stmt->fetch() ?: null;
     }
 
-    private function findOrCreatePrograma(mixed $nombrePrograma, mixed $modalidad): ?int
+    /** @return array{id: ?int, ambiguous: bool, normalized_name: string, detected_level: ?string, candidates: array<int, string>} */
+    private function findOrCreatePrograma(mixed $nombrePrograma, mixed $modalidad): array
     {
-        $nombre = $this->stringOrNull($nombrePrograma);
-        if ($nombre === null) {
-            return null;
+        $nombreRaw = $this->stringOrNull($nombrePrograma);
+        if ($nombreRaw === null) {
+            return [
+                'id' => null,
+                'ambiguous' => false,
+                'normalized_name' => '',
+                'detected_level' => null,
+                'candidates' => [],
+            ];
         }
+        $nombre = Normalizer::normalizeProgramaNombre($nombreRaw);
+        $nivel = Normalizer::extractProgramaNivel($nombreRaw);
+        $nombreKey = Normalizer::normalizeProgramComparableKey($nombre);
+        $nivelKey = Normalizer::normalizeProgramComparableKey((string) ($nivel ?? ''));
 
         $pdo = Database::connection();
-        $stmt = $pdo->prepare('SELECT id, modalidad FROM programas WHERE nombre = :n LIMIT 1');
-        $stmt->execute(['n' => $nombre]);
-        $row = $stmt->fetch();
-        if ($row) {
+        $rows = $pdo->query('SELECT id, nombre, nivel, modalidad FROM programas')->fetchAll();
+        $matched = [];
+        foreach ($rows as $row) {
+            $rowNombre = Normalizer::normalizeProgramaNombre((string) ($row['nombre'] ?? ''));
+            if (Normalizer::normalizeProgramComparableKey($rowNombre) !== $nombreKey) {
+                continue;
+            }
+            $matched[] = $row;
+        }
+
+        $selected = null;
+        if ($nivelKey !== '') {
+            foreach ($matched as $row) {
+                $rowNivelKey = Normalizer::normalizeProgramComparableKey((string) ($row['nivel'] ?? ''));
+                if ($rowNivelKey === $nivelKey || $rowNivelKey === '') {
+                    $selected = $row;
+                    break;
+                }
+            }
+        } elseif (count($matched) === 1) {
+            $selected = $matched[0];
+        }
+
+        if ($selected !== null) {
             $mod = $this->stringOrNull($modalidad);
-            if ($mod !== null && ($row['modalidad'] === null || $row['modalidad'] === '')) {
-                $pdo->prepare('UPDATE programas SET modalidad = :m WHERE id = :id')
-                    ->execute(['m' => $mod, 'id' => (int) $row['id']]);
+            $updates = [];
+            $params = ['id' => (int) $selected['id']];
+            if ($mod !== null && (($selected['modalidad'] ?? null) === null || trim((string) $selected['modalidad']) === '')) {
+                $updates[] = 'modalidad = :modalidad';
+                $params['modalidad'] = $mod;
+            }
+            if ($nivel !== null && (($selected['nivel'] ?? null) === null || trim((string) $selected['nivel']) === '')) {
+                $updates[] = 'nivel = :nivel';
+                $params['nivel'] = $nivel;
+            }
+            if ($updates !== []) {
+                $pdo->prepare('UPDATE programas SET ' . implode(', ', $updates) . ' WHERE id = :id')->execute($params);
             }
 
-            return (int) $row['id'];
+            return [
+                'id' => (int) $selected['id'],
+                'ambiguous' => false,
+                'normalized_name' => $nombre,
+                'detected_level' => $nivel,
+                'candidates' => [],
+            ];
+        }
+
+        if ($nivelKey === '' && count($matched) > 1) {
+            $candidates = [];
+            foreach ($matched as $m) {
+                $candidateNivel = trim((string) ($m['nivel'] ?? ''));
+                $candidates[] = $candidateNivel !== '' ? $candidateNivel : 'Sin nivel';
+            }
+            return [
+                'id' => null,
+                'ambiguous' => true,
+                'normalized_name' => $nombre,
+                'detected_level' => null,
+                'candidates' => array_values(array_unique($candidates)),
+            ];
         }
 
         $mod = $this->stringOrNull($modalidad);
-        $pdo->prepare('INSERT INTO programas (nombre, modalidad, created_at) VALUES (:nombre, :modalidad, NOW())')
-            ->execute(['nombre' => $nombre, 'modalidad' => $mod]);
+        $nivelDb = $nivel ?? '';
+        $pdo->prepare('INSERT INTO programas (nombre, nivel, modalidad, created_at) VALUES (:nombre, :nivel, :modalidad, NOW())')
+            ->execute(['nombre' => $nombre, 'nivel' => $nivelDb, 'modalidad' => $mod]);
 
-        return (int) $pdo->lastInsertId();
+        return [
+            'id' => (int) $pdo->lastInsertId(),
+            'ambiguous' => false,
+            'normalized_name' => $nombre,
+            'detected_level' => $nivel,
+            'candidates' => [],
+        ];
     }
 
     private function findOrCreateEmpresa(array $assoc): ?int
