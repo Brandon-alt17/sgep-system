@@ -3,9 +3,9 @@
     'subtitle' => '',
 ]); ?>
 
-<div class="space-y-6">
+<div class="space-y-6 md:col-span-2 grid gap-4">
     <!-- 🔙 VOLVER -->
-    <a href="md-4 <?= e(APP_BASE_PATH) ?>/aprendices"
+    <a href="<?= e(APP_BASE_PATH) ?>/aprendices"
        class="items-center text-sm text-app-link hover:underline">
         ← Listado
     </a>
@@ -13,12 +13,12 @@
     <!-- 🧩 GRID PRINCIPAL -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
         <!-- 🟢 PERFIL -->
-        <section class="md:col-span-1<?= e(ui_card_classes()) ?>">
+        <section class="<?= e(ui_card_classes()) ?>">
             <h2 class="text-lg font-semibold mb-4">
                 <?= e($aprendiz['nombre_completo']) ?>
             </h2>
 
-            <div class="space-y-3 text-sm">
+            <div class="space-y-3 text-sm md:col-span-2 grid gap-4">
                 <?php function infoRow($label, $value) { ?>
                     <div>
                         <p class="text-xs text-app-muted"><?= e($label) ?></p>
@@ -70,7 +70,7 @@
                     </a>
                 </div>
 
-                <div class="space-y-3">
+                <div class="space-y-3 md:col-span-2 grid gap-4">
                     <?php foreach ($momentos as $m): ?>
                         <?php
                         $badge = ui_badge_error_classes();
@@ -90,8 +90,8 @@
                                 <span class="<?= e($badge) ?>">
                                     <?= e($m['estado']) ?>
                                 </span>
-                                <a href="<?= e(APP_BASE_PATH) ?>/aprendices/<?= (int)$aprendiz['id'] ?>/evaluacion?momento=<?= e($m['id']) ?>"
-                                   class="<?= e(ui_button_small_classes()) ?>">
+                                <a href="<?= e(APP_BASE_PATH) ?>/momentos/create?aprendiz_id=<?= (int)$aprendiz['id'] ?>&tipo=<?= e($m['id']) ?>"
+                                    class="<?= e(ui_button_small_classes()) ?>">
                                     Editar
                                 </a>
                             </div>
@@ -101,15 +101,19 @@
             </section>
 
             <!-- 🟪 ACCIONES -->
-            <div class="mb:col-span-2 grid flex gap-3 mt-4">
-                <a href="mt-4 <?= e(APP_BASE_PATH) ?>/documentos/generar?aprendiz_id=<?= (int)$aprendiz['id'] ?>"
-                   class="<?= e(ui_button_small_classes()) ?>">
+           
+            <div class="grid mb:col-span-2 grid flex gap-3 mt-4">
+
+                <a href="<?= e(APP_BASE_PATH) ?>/documentos/generar?aprendiz_id=<?= (int)$aprendiz['id'] ?>"
+                class="<?= e(ui_button_small_classes()) ?> flex items-center justify-center text-center">
                     Generar documento GFPI-F-023
                 </a>
-                <a href="align-center <?= e(APP_BASE_PATH) ?>/reportes?highlight=<?= (int)$aprendiz['id'] ?>"
-                   class="text-sm text-app-accent hover:underline flex ">
+
+                <a href="<?= e(APP_BASE_PATH) ?>/reportes/maestro" 
+                class="text-sm text-app-accent hover:underline flex items-center justify-center text-center">
                     Ver en reporte general →
                 </a>
+
             </div>
         </div>
     </div>
