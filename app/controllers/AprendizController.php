@@ -41,7 +41,31 @@ class AprendizController
             view('errors/404', ['uri' => '/aprendices/show?id=' . $id]);
             return;
         }
-        view('aprendices/show', ['aprendiz' => $aprendiz]);
+        
+        $momentos = [
+            [
+                'id' => 'm1',
+                'label' => 'Momento 1 — Planeación',
+                'estado' => 'Completado',
+                'fecha' => '15/03/2025'
+            ],
+            [
+                'id' => 'm2',
+                'label' => 'Momento 2 — Seguimiento',
+                'estado' => 'Incompleto',
+                'fecha' => '10/04/2025'
+            ],
+            [
+                'id' => 'm3',
+                'label' => 'Momento 3 — Evaluación final',
+                'estado' => 'No iniciado'
+            ]
+        ];
+
+        view('aprendices/show', [
+            'aprendiz' => $aprendiz,
+            'momentos' => $momentos // 👈 AQUÍ ESTÁ LA CLAVE
+        ]);
     }
 
     public function update(): void
