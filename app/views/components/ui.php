@@ -9,7 +9,7 @@ declare(strict_types=1);
 if (!function_exists('ui_card_classes')) {
     function ui_card_classes(): string
     {
-        return 'rounded-[10px] border border-app-border bg-app-panel p-4 shadow-xsSoft';
+        return 'rounded-[10px] border border-app-border bg-app-panel p-4 mp-4 shadow-xsSoft';
     }
 }
 
@@ -24,7 +24,7 @@ if (!function_exists('ui_select_classes')) {
 if (!function_exists('ui_card_mt_classes')) {
     function ui_card_mt_classes(): string
     {
-        return 'mt-4 ' . ui_card_classes();
+        return 'mt-4' . ui_card_classes();
     }
 }
 
