@@ -5,8 +5,8 @@
 
 <div class="space-y-6">
     <!-- 🔙 VOLVER -->
-    <a href="<?= e(APP_BASE_PATH) ?>/aprendices"
-       class="flex items-center gap-2 text-sm text-app-link hover:underline">
+    <a href="md-4 <?= e(APP_BASE_PATH) ?>/aprendices"
+       class="items-center text-sm text-app-link hover:underline">
         ← Listado
     </a>
 
@@ -77,7 +77,7 @@
                         if ($m['estado'] === 'Completado') $badge = ui_badge_success_classes();
                         elseif ($m['estado'] === 'Incompleto') $badge = ui_badge_warning_classes();
                         ?>
-                        <div class="flex items-center justify-between rounded-lg border border-app-border p-4">
+                        <div class="flex items-center justify-between rounded-lg border border-app-border p-4 gap-3">
                             <span class="text-sm font-medium">
                                 <?= e($m['label']) ?>
                             </span>
