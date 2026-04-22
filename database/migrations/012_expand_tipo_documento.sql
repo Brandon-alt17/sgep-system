@@ -1,0 +1,2 @@
+ALTER TABLE aprendices
+MODIFY COLUMN tipo_documento VARCHAR(30) NOT NULL;

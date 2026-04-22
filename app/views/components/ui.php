@@ -104,6 +104,13 @@ if (!function_exists('ui_button_small_classes')) {
     }
 }
 
+if (!function_exists('ui_button_icon_classes')) {
+    function ui_button_icon_classes(): string
+    {
+        return 'font-app inline-flex h-10 w-10 items-center justify-center rounded-md border border-app-borderControl bg-app-panelSubtle text-app-muted no-underline hover:bg-app-accentSoft hover:text-app-accent';
+    }
+}
+
 if (!function_exists('ui_button_small_primary_classes')) {
     function ui_button_small_primary_classes(): string
     {
@@ -114,7 +121,7 @@ if (!function_exists('ui_button_small_primary_classes')) {
 if (!function_exists('ui_table_classes')) {
     function ui_table_classes(): string
     {
-        return 'mt-2.5 w-full border-collapse';
+        return 'mt-2.5 w-full border-collapse [&>tbody>tr:hover>td]:bg-app-panelHover';
     }
 }
 
@@ -122,21 +129,21 @@ if (!function_exists('ui_table_classes')) {
 if (!function_exists('ui_table_in_card_classes')) {
     function ui_table_in_card_classes(): string
     {
-        return 'w-full border-collapse';
+        return 'w-full border-collapse [&>tbody>tr:hover>td]:bg-app-panelHover';
     }
 }
 
 if (!function_exists('ui_th_classes')) {
     function ui_th_classes(): string
     {
-        return 'border-b border-app-border px-2 py-2.5 text-left text-xs font-semibold text-app-muted';
+        return 'h-[50px] border-b border-app-border px-2 text-left text-sm font-semibold text-app-muted align-middle transition-colors duration-200 ';
     }
 }
 
 if (!function_exists('ui_td_classes')) {
     function ui_td_classes(): string
     {
-        return 'border-b border-app-border px-2 py-2.5 text-left text-xs';
+        return 'h-[50px] border-b border-app-borderSoft px-2 text-left text-sm align-middle transition-colors duration-200 ease-in-out';
     }
 }
 
@@ -179,5 +186,74 @@ if (!function_exists('ui_warning_card_classes')) {
     function ui_warning_card_classes(): string
     {
         return 'rounded-[10px] border border-app-borderWarning bg-app-warningBg p-4 text-sm text-app-warningText';
+    }
+}
+
+if (!function_exists('ui_render_pagination')) {
+    /**
+     * Renderiza paginación reutilizable con ancla opcional.
+     *
+     * @param int $currentPage Página actual (1-indexed)
+     * @param int $totalPages Total de páginas
+     * @param string $urlPattern Patrón URL con placeholder %d para el número de página
+     * @param string $ariaLabel Etiqueta accesible del nav
+     * @param string $anchor Id de ancla sin # (opcional)
+     */
+    function ui_render_pagination(
+        int $currentPage,
+        int $totalPages,
+        string $urlPattern,
+        string $ariaLabel = 'Paginación',
+        string $anchor = ''
+    ): void {
+        if ($totalPages <= 1) {
+            return;
+        }
+
+        $anchorSuffix = $anchor !== '' ? '#' . rawurlencode($anchor) : '';
+        $prevUrl = sprintf($urlPattern, $currentPage - 1) . $anchorSuffix;
+        $nextUrl = sprintf($urlPattern, $currentPage + 1) . $anchorSuffix;
+        ?>
+        <nav class="mt-4 flex items-center justify-center gap-2 text-sm" aria-label="<?= e($ariaLabel) ?>">
+            <?php if ($currentPage > 1): ?>
+                <a class="<?= e(ui_button_icon_classes()) ?>" href="<?= e($prevUrl) ?>" aria-label="Página anterior">
+                    <span class="inline-flex h-4 w-4 [&_svg]:h-4 [&_svg]:w-4"><?= ui_icon('arrow') ?></span>
+                </a>
+            <?php endif; ?>
+            <span class="text-app-muted">Página <?= e((string) $currentPage) ?> de <?= e((string) $totalPages) ?></span>
+            <?php if ($currentPage < $totalPages): ?>
+                <a class="<?= e(ui_button_icon_classes()) ?>" href="<?= e($nextUrl) ?>" aria-label="Página siguiente">
+                    <span class="inline-flex h-4 w-4 -scale-x-100 [&_svg]:h-4 [&_svg]:w-4"><?= ui_icon('arrow') ?></span>
+                </a>
+            <?php endif; ?>
+        </nav>
+        <?php
+    }
+}
+
+if (!function_exists('ui_document_type_label')) {
+    function ui_document_type_label(?string $value): string
+    {
+        $raw = trim((string) ($value ?? ''));
+        if ($raw === '') {
+            return '';
+        }
+
+        $normalized = mb_strtolower($raw);
+        $normalized = str_replace(
+            ['á', 'é', 'í', 'ó', 'ú', 'ü'],
+            ['a', 'e', 'i', 'o', 'u', 'u'],
+            $normalized
+        );
+        $normalized = preg_replace('/\s+/', ' ', $normalized) ?? $normalized;
+
+        return match ($normalized) {
+            'cc', 'cedula', 'cedula de', 'cedula de ciudadania' => 'Cédula de Ciudadanía',
+            'ti', 'tarjeta', 'tarjeta de', 'tarjeta de identidad' => 'Tarjeta de Identidad',
+            'ce' => 'Cédula de Extranjería',
+            'pep' => 'PEP',
+            'ppt' => 'PPT',
+            default => $raw,
+        };
     }
 }

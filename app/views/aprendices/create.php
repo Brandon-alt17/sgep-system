@@ -17,7 +17,13 @@
             <input type="text" name="nombre_completo" required class="<?= e(ui_input_classes()) ?>">
         </label>
         <label class="<?= e(ui_label_classes()) ?>">Tipo documento
-            <input type="text" name="tipo_documento" value="CC" required class="<?= e(ui_input_classes()) ?>">
+            <select name="tipo_documento" required class="<?= e(ui_input_classes()) ?>">
+                <option value="CC">Cédula de Ciudadanía</option>
+                <option value="TI">Tarjeta de Identidad</option>
+                <option value="CE">Cédula de Extranjería</option>
+                <option value="PEP">PEP</option>
+                <option value="PPT">PPT</option>
+            </select>
         </label>
         <label class="<?= e(ui_label_classes()) ?>">Número documento
             <input type="text" name="numero_documento" required class="<?= e(ui_input_classes()) ?>">
