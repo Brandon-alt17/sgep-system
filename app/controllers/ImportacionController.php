@@ -5,14 +5,20 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use App\Helpers\ImportHistory;
+use App\Helpers\Database;
 use App\Imports\AprendicesImport;
 
 class ImportacionController
 {
+    private const HISTORY_PER_PAGE = 10;
+
     public function upload(): void
     {
+        $historyState = $this->historyPaginationState();
         view('import/upload', [
-            'history' => ImportHistory::all(),
+            'history' => $historyState['items'],
+            'historyPage' => $historyState['page'],
+            'historyTotalPages' => $historyState['totalPages'],
             'templateUrl' => $this->templateUrl(),
             'templateAvailable' => $this->templateAvailable(),
         ]);
@@ -26,8 +32,11 @@ class ImportacionController
                 $this->jsonResponse(['ok' => false, 'message' => $errorMessage], 422);
                 return;
             }
+            $historyState = $this->historyPaginationState();
             view('import/upload', [
-                'history' => ImportHistory::all(),
+                'history' => $historyState['items'],
+                'historyPage' => $historyState['page'],
+                'historyTotalPages' => $historyState['totalPages'],
                 'templateUrl' => $this->templateUrl(),
                 'templateAvailable' => $this->templateAvailable(),
                 'flashError' => $errorMessage,
@@ -79,6 +88,69 @@ class ImportacionController
         ]);
     }
 
+    public function resolveConflict(): void
+    {
+        $raw = file_get_contents('php://input');
+        $decoded = json_decode($raw ?: '', true);
+        if (!is_array($decoded)) {
+            $this->jsonResponse(['ok' => false, 'message' => 'Solicitud inválida.'], 422);
+            return;
+        }
+
+        $aprendizId = (int) ($decoded['aprendiz_id'] ?? 0);
+        $field = trim((string) ($decoded['field'] ?? ''));
+        $action = trim((string) ($decoded['action'] ?? ''));
+        $newValue = $decoded['value'] ?? null;
+
+        if ($aprendizId <= 0 || $field === '' || ($action !== 'new' && $action !== 'current')) {
+            $this->jsonResponse(['ok' => false, 'message' => 'Parámetros inválidos.'], 422);
+            return;
+        }
+
+        $allowedFields = [
+            'nombre_completo',
+            'tipo_documento',
+            'telefono',
+            'correo_personal',
+            'correo_institucional',
+            'ficha',
+            'programa_id',
+            'empresa_id',
+            'fecha_hora_formulario',
+            'direccion_domicilio',
+            'ciudad_domicilio',
+            'alternativa_ep',
+            'fecha_sofia',
+            'nombre_instructor_seguimiento',
+            'telefono_instructor_seguimiento',
+            'tipo_asistencia',
+            'sugerencias_comentarios',
+            'ficha_curso',
+            'jefe_grupo',
+            'coordinacion',
+        ];
+        if (!in_array($field, $allowedFields, true)) {
+            $this->jsonResponse(['ok' => false, 'message' => 'Campo no permitido.'], 422);
+            return;
+        }
+
+        if ($action === 'current') {
+            $this->jsonResponse(['ok' => true, 'updated' => false]);
+            return;
+        }
+
+        $pdo = Database::connection();
+        $sql = 'UPDATE aprendices SET ' . $field . ' = :value, updated_at = NOW() WHERE id = :id';
+        $stmt = $pdo->prepare($sql);
+        $normalizedValue = $this->normalizeConflictValue($field, $newValue);
+        $stmt->execute([
+            'value' => $normalizedValue,
+            'id' => $aprendizId,
+        ]);
+
+        $this->jsonResponse(['ok' => true, 'updated' => $stmt->rowCount() > 0]);
+    }
+
     private function templateUrl(): string
     {
         return (string) env('IMPORT_TEMPLATE_URL', rtrim((string) APP_BASE_PATH, '/') . '/templates/plantilla_seguimiento.xlsx');
@@ -93,6 +165,48 @@ class ImportacionController
     {
         $requestedWith = strtolower((string) ($_SERVER['HTTP_X_REQUESTED_WITH'] ?? ''));
         return $requestedWith === 'xmlhttprequest';
+    }
+
+    private function normalizeConflictValue(string $field, mixed $value): mixed
+    {
+        if (!is_string($value)) {
+            return $value;
+        }
+
+        $normalized = trim($value);
+        if ($field === 'tipo_documento') {
+            $lower = mb_strtolower($normalized);
+            $lower = str_replace(
+                ['á', 'é', 'í', 'ó', 'ú', 'ü'],
+                ['a', 'e', 'i', 'o', 'u', 'u'],
+                $lower
+            );
+            if (str_starts_with($lower, 'cedula')) {
+                return 'CC';
+            }
+            if (str_starts_with($lower, 'tarjeta')) {
+                return 'TI';
+            }
+        }
+
+        return $normalized;
+    }
+
+    /** @return array{items: array<int, array<string, mixed>>, page: int, totalPages: int} */
+    private function historyPaginationState(): array
+    {
+        $allHistory = ImportHistory::all();
+        $totalItems = count($allHistory);
+        $totalPages = max(1, (int) ceil($totalItems / self::HISTORY_PER_PAGE));
+        $requestedPage = (int) ($_GET['page'] ?? 1);
+        $page = min(max(1, $requestedPage), $totalPages);
+        $offset = ($page - 1) * self::HISTORY_PER_PAGE;
+
+        return [
+            'items' => array_slice($allHistory, $offset, self::HISTORY_PER_PAGE),
+            'page' => $page,
+            'totalPages' => $totalPages,
+        ];
     }
 
     /** @param array<string, mixed> $payload */

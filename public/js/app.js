@@ -14,55 +14,72 @@ var fileName = document.querySelector("[data-import-filename]");
 var trigger = document.querySelector("[data-import-trigger]");
 var form = document.querySelector("[data-import-form]");
 var progress = document.querySelector("[data-import-progress]");
+var dropzone = document.querySelector("[data-import-dropzone]");
 
 if (fileInput && trigger && form) {
   var openPicker = function () { fileInput.click(); };
   trigger.addEventListener("click", openPicker);
 
+  var setProgressState = function (labelText, percent) {
+    if (!progress) return;
+    progress.classList.remove("hidden");
+    var label = progress.querySelector("[data-import-progress-label]");
+    var value = progress.querySelector("[data-import-progress-value]");
+    var bar = progress.querySelector("[data-import-progress-bar]");
+    var safePercent = Math.max(0, Math.min(100, Math.round(percent || 0)));
+    if (label) label.textContent = labelText;
+    if (value) value.textContent = safePercent + "%";
+    if (bar) bar.style.width = safePercent + "%";
+  };
+
   var sendImport = function () {
     var xhr = new XMLHttpRequest();
     xhr.open("POST", form.getAttribute("action") || window.location.href, true);
     xhr.setRequestHeader("X-Requested-With", "XMLHttpRequest");
+    xhr.timeout = 300000;
+
+    setProgressState("Preparando carga...", 0);
 
     xhr.upload.addEventListener("progress", function (event) {
       if (!progress || !event.lengthComputable) return;
-      var percent = Math.max(1, Math.min(100, Math.round((event.loaded / event.total) * 100)));
-      progress.classList.remove("hidden");
-
-      var label = progress.querySelector("[data-import-progress-label]");
-      var value = progress.querySelector("[data-import-progress-value]");
-      var bar = progress.querySelector("[data-import-progress-bar]");
-      if (label) label.textContent = "Subiendo archivo...";
-      if (value) value.textContent = percent + "%";
-      if (bar) bar.style.width = percent + "%";
+      // Reserva el tramo final para el procesamiento del servidor.
+      var uploadPercent = Math.round((event.loaded / event.total) * 95);
+      var percent = Math.max(1, Math.min(95, uploadPercent));
+      setProgressState("Subiendo archivo...", percent);
     });
 
-    xhr.addEventListener("readystatechange", function () {
-      if (xhr.readyState !== 4) return;
+    xhr.upload.addEventListener("load", function () {
+      setProgressState("Procesando importación...", 95);
+    });
 
-      if (progress) {
-        var label = progress.querySelector("[data-import-progress-label]");
-        var value = progress.querySelector("[data-import-progress-value]");
-        var bar = progress.querySelector("[data-import-progress-bar]");
-        if (label) label.textContent = "Procesando importación...";
-        if (value) value.textContent = "100%";
-        if (bar) bar.style.width = "100%";
-      }
-
+    xhr.addEventListener("load", function () {
       try {
         var data = JSON.parse(xhr.responseText || "{}");
         if (xhr.status >= 200 && xhr.status < 300 && data.redirect) {
+          setProgressState("Importación completada", 100);
           window.location.href = data.redirect;
           return;
         }
+        setProgressState("No se pudo completar la importación", 0);
         if (data.message) {
           alert(data.message);
         } else {
           alert("No se pudo completar la importación.");
         }
       } catch (e) {
+        setProgressState("Error inesperado durante la importación", 0);
         alert("Error inesperado durante la importación.");
       }
+    });
+
+    xhr.addEventListener("error", function () {
+      setProgressState("Error de red durante la carga", 0);
+      alert("Error de red durante la importación.");
+    });
+
+    xhr.addEventListener("timeout", function () {
+      setProgressState("La importación tardó demasiado", 95);
+      alert("La importación está tardando más de lo esperado. Intente nuevamente.");
     });
 
     xhr.send(new FormData(form));
@@ -73,16 +90,48 @@ if (fileInput && trigger && form) {
       fileName.textContent = fileInput.files && fileInput.files[0] ? fileInput.files[0].name : "Sin archivo seleccionado";
     }
     if (fileInput.files && fileInput.files[0]) {
-      if (progress) {
-        progress.classList.remove("hidden");
-        var label = progress.querySelector("[data-import-progress-label]");
-        var value = progress.querySelector("[data-import-progress-value]");
-        var bar = progress.querySelector("[data-import-progress-bar]");
-        if (label) label.textContent = "Preparando carga...";
-        if (value) value.textContent = "0%";
-        if (bar) bar.style.width = "0%";
-      }
+      setProgressState("Preparando carga...", 0);
       sendImport();
     }
   });
+
+  if (dropzone) {
+    var dragDepth = 0;
+    var activateDropzone = function () {
+      dropzone.classList.add("bg-app-panelHover");
+    };
+    var deactivateDropzone = function () {
+      dropzone.classList.remove("bg-app-panelHover");
+    };
+
+    dropzone.addEventListener("dragenter", function (event) {
+      event.preventDefault();
+      dragDepth += 1;
+      activateDropzone();
+    });
+
+    dropzone.addEventListener("dragover", function (event) {
+      event.preventDefault();
+      event.dataTransfer.dropEffect = "copy";
+      activateDropzone();
+    });
+
+    dropzone.addEventListener("dragleave", function (event) {
+      event.preventDefault();
+      dragDepth = Math.max(0, dragDepth - 1);
+      if (dragDepth === 0) deactivateDropzone();
+    });
+
+    dropzone.addEventListener("drop", function (event) {
+      event.preventDefault();
+      dragDepth = 0;
+      deactivateDropzone();
+
+      var files = event.dataTransfer && event.dataTransfer.files ? event.dataTransfer.files : null;
+      if (!files || !files.length) return;
+
+      fileInput.files = files;
+      fileInput.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+  }
 }
