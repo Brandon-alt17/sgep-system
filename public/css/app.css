@@ -1751,3 +1751,34 @@ a:hover {
 .\[\&_svg\]\:w-3\.5 svg {
   width: 0.875rem;
 }
+
+/* Sistema de modales reutilizable */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(15, 23, 42, 0.7);
+}
+
+.modal-overlay.hidden {
+  display: none;
+}
+
+.modal-panel {
+  width: 100%;
+  max-width: 36rem;
+  max-height: 80vh;
+  overflow: auto;
+  padding: 24px;
+  border-radius: 0.5rem;
+  background: #fff;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35);
+}
+
+.modal-panel--lg {
+  max-width: 56rem;
+}

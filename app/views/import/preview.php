@@ -53,6 +53,40 @@ $pendingPage = (int) ($_GET['pending_page'] ?? 1);
 $pendingPage = min(max(1, $pendingPage), $pendingTotalPages);
 $pendingOffset = ($pendingPage - 1) * $perPage;
 $pendingPageItems = array_slice($pendingRows, $pendingOffset, $perPage);
+$pendingFieldLabels = [
+    'fecha_hora_formulario' => 'Fecha y hora del formulario',
+    'documento_identidad' => 'Documento de identidad',
+    'tipo_documento' => 'Tipo de documento',
+    'programa_formacion' => 'Programa de formación',
+    'numero_ficha' => 'Número de ficha',
+    'modalidad_formacion' => 'Modalidad de formación',
+    'nombre_completo' => 'Nombre completo',
+    'numero_celular' => 'Número de celular',
+    'direccion_domicilio_aprendiz' => 'Dirección de domicilio',
+    'ciudad_domicilio_aprendiz' => 'Ciudad de domicilio',
+    'correo_electronico_personal' => 'Correo personal',
+    'correo_electronico_institucional' => 'Correo institucional',
+    'alternativa_ep' => 'Alternativa EP',
+    'fecha_sofia' => 'Fecha Sofia',
+    'empresa_entidad_coformadora' => 'Empresa o entidad coformadora',
+    'direccion_empresa' => 'Dirección de empresa',
+    'direccion_realiza_practica' => 'Dirección donde realiza práctica',
+    'nit_empresa' => 'NIT de empresa',
+    'correo_organizacional' => 'Correo organizacional',
+    'nombre_jefe' => 'Nombre del jefe',
+    'cargo_jefe' => 'Cargo del jefe',
+    'correo_jefe' => 'Correo del jefe',
+    'telefono_jefe' => 'Teléfono del jefe',
+    'nombre_contacto_2' => 'Nombre de contacto 2',
+    'correo_contacto_2' => 'Correo de contacto 2',
+    'nombre_instructor_seguimiento' => 'Instructor de seguimiento',
+    'telefono_instructor_seguimiento' => 'Teléfono del instructor',
+    'tipo_asistencia' => 'Tipo de asistencia',
+    'sugerencias_comentarios' => 'Sugerencias y comentarios',
+    'ficha_curso' => 'Ficha de curso',
+    'jefe_grupo' => 'Jefe de grupo',
+    'coordinacion' => 'Coordinación',
+];
 ?>
 
 <section class="bg-app-bg flex flex-row items-start gap-2">
@@ -114,9 +148,9 @@ $pendingPageItems = array_slice($pendingRows, $pendingOffset, $perPage);
             <button
                 type="button"
                 class="<?= e(ui_button_small_classes()) ?>"
-                data-open-conflicts-modal
+                data-modal-open="conflicts"
                 aria-haspopup="dialog"
-                aria-controls="conflicts-modal"
+                aria-controls="modal-conflicts"
             >
                 Ver conflictos
             </button>
@@ -124,12 +158,15 @@ $pendingPageItems = array_slice($pendingRows, $pendingOffset, $perPage);
     </section>
 <?php endif; ?>
 
+<!-- Modal de conflictos -->
 <?php if ($conflictRows !== []): ?>
-    <div id="conflicts-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 p-4" role="dialog" aria-modal="true" aria-labelledby="conflicts-modal-title">
-        <div class="w-full max-w-4xl rounded-lg bg-app-panel p-4 shadow-xl">
+    <div id="modal-conflicts" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="conflicts-modal-title" data-modal-overlay="conflicts">
+        <div class="modal-panel modal-panel--lg bg-app-panel">
             <div class="mb-3 flex items-center justify-between gap-3">
                 <h3 id="conflicts-modal-title" class="m-0 text-lg font-semibold text-app-text">Conflictos de importación</h3>
-                <button type="button" class="<?= e(ui_button_small_classes()) ?>" data-close-conflicts-modal aria-label="Cerrar modal de conflictos">Cerrar</button>
+                <button type="button" class="<?= e(ui_button_icon_classes()) ?>" data-modal-close="conflicts" aria-label="Cerrar modal de conflictos">
+                    <span class="inline-flex h-4 w-4 [&_svg]:h-4 [&_svg]:w-4"><?= ui_icon('x') ?></span>
+                </button>
             </div>
 
             <div class="max-h-[70vh] overflow-auto rounded border border-app-border">
@@ -168,33 +205,9 @@ $pendingPageItems = array_slice($pendingRows, $pendingOffset, $perPage);
             </div>
         </div>
     </div>
-
-    <script>
-        (function () {
-            var modal = document.getElementById("conflicts-modal");
-            if (!modal) return;
-            var openButton = document.querySelector("[data-open-conflicts-modal]");
-            var closeButton = modal.querySelector("[data-close-conflicts-modal]");
-            var open = function () {
-                modal.classList.remove("hidden");
-                modal.classList.add("flex");
-            };
-            var close = function () {
-                modal.classList.add("hidden");
-                modal.classList.remove("flex");
-            };
-            if (openButton) openButton.addEventListener("click", open);
-            if (closeButton) closeButton.addEventListener("click", close);
-            modal.addEventListener("click", function (event) {
-                if (event.target === modal) close();
-            });
-            document.addEventListener("keydown", function (event) {
-                if (event.key === "Escape") close();
-            });
-        })();
-    </script>
 <?php endif; ?>
 
+<!-- Tablas de importación -->
 <section class="mt-4 <?= e(ui_card_classes()) ?>">
     <div class="mb-5 inline-flex rounded-md border border-app-border bg-app-panelSubtle p-1 text-sm">
         <?php foreach ($tabs as $key => $tab): ?>
@@ -259,6 +272,7 @@ $pendingPageItems = array_slice($pendingRows, $pendingOffset, $perPage);
     </div>
 </section>
 
+<!-- Pendientes -->
 <?php if ($pendingRows !== []): ?>
     <section class="mt-4 <?= e(ui_card_classes()) ?>">
         <h3 class="<?= e(ui_heading_sm_classes()) ?>">Pendientes</h3>
@@ -280,13 +294,31 @@ $pendingPageItems = array_slice($pendingRows, $pendingOffset, $perPage);
             <?php foreach ($pendingPageItems as $pending): ?>
                 <?php
                 $aprendizId = (int) ($pending['aprendiz_id'] ?? 0);
-                $detailUrl = APP_BASE_PATH . '/aprendices/show?id=' . $aprendizId;
                 $faltantes = (array) ($pending['faltantes'] ?? []);
+                $pendingCount = count($faltantes);
+                $badgeClasses = $pendingCount > 5
+                    ? 'bg-rose-100 text-rose-700 border-rose-200'
+                    : 'bg-amber-100 text-amber-700 border-amber-200';
                 ?>
-                <tr class="cursor-pointer" role="link" tabindex="0" onclick="window.location.href='<?= e($detailUrl) ?>'" onkeydown="if(event.key==='Enter' || event.key===' '){event.preventDefault();window.location.href='<?= e($detailUrl) ?>';}">
+                <tr
+                    class="cursor-pointer hover:bg-app-panelSubtle"
+                    data-modal-open="<?= e((string) $aprendizId) ?>"
+                    tabindex="0"
+                    role="button"
+                    onkeydown="if(event.key==='Enter' || event.key===' '){event.preventDefault();openModal('<?= e((string) $aprendizId) ?>');}"
+                >
                     <td class="<?= e(ui_td_classes()) ?> px-4"><?= e((string) ($pending['nombre'] ?? '')) ?></td>
                     <td class="<?= e(ui_td_classes()) ?> px-4"><?= e((string) ($pending['identificacion'] ?? '')) ?></td>
-                    <td class="<?= e(ui_td_classes()) ?> px-4"><?= e(implode(', ', array_map(static fn ($field): string => (string) $field, $faltantes))) ?></td>
+                    <td class="<?= e(ui_td_classes()) ?> px-4">
+                        <div class="inline-flex items-center gap-2">
+                            <span class="inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold <?= e($badgeClasses) ?>">
+                                <?= e((string) $pendingCount) ?> pendientes
+                            </span>
+                            <span class="inline-flex h-6 w-6 items-center justify-center rounded-full border border-app-border text-xs font-bold text-app-muted">
+                                <span class="inline-flex h-3.5 w-3.5 [&_svg]:h-3.5 [&_svg]:w-3.5"><?= ui_icon('circle-alert') ?></span>
+                            </span>
+                        </div>
+                    </td>
                 </tr>
             <?php endforeach; ?>
             </tbody>
@@ -307,6 +339,39 @@ $pendingPageItems = array_slice($pendingRows, $pendingOffset, $perPage);
             </nav>
         <?php endif; ?>
     </section>
+
+    <?php foreach ($pendingPageItems as $pending): ?>
+        <?php
+        $aprendizId = (int) ($pending['aprendiz_id'] ?? 0);
+        $faltantes = (array) ($pending['faltantes'] ?? []);
+        $editUrl = APP_BASE_PATH . '/aprendices/show?id=' . $aprendizId;
+        ?>
+        <div id="modal-<?= e((string) $aprendizId) ?>" class="modal-overlay hidden" data-modal-overlay="<?= e((string) $aprendizId) ?>">
+            <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="pending-modal-title-<?= e((string) $aprendizId) ?>">
+                <div class="mb-4 flex items-center justify-between gap-3">
+                    <h3 id="pending-modal-title-<?= e((string) $aprendizId) ?>" class="m-0 text-lg font-semibold text-app-text">Campos pendientes — <?= e((string) ($pending['nombre'] ?? 'Aprendiz')) ?></h3>
+                    <button type="button" class="<?= e(ui_button_icon_classes()) ?>" data-modal-close="<?= e((string) $aprendizId) ?>" aria-label="Cerrar modal">
+                        <span class="inline-flex h-4 w-4 [&_svg]:h-4 [&_svg]:w-4"><?= ui_icon('x') ?></span>
+                    </button>
+                </div>
+                <div class="max-h-[55vh] overflow-auto rounded-md border border-app-border">
+                    <ul class="m-0 divide-y divide-app-border p-0">
+                        <?php foreach ($faltantes as $campo): ?>
+                            <?php $campoKey = (string) $campo; ?>
+                            <li class="flex items-center gap-2 px-4 py-2 text-sm text-app-text">
+                                <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-amber-100 text-[11px] font-bold text-amber-700">!</span>
+                                <span><?= e((string) ($pendingFieldLabels[$campoKey] ?? $campoKey)) ?></span>
+                            </li>
+                        <?php endforeach; ?>
+                    </ul>
+                </div>
+                <div class="mt-4 flex justify-end gap-2">
+                    <a class="<?= e(ui_button_small_classes()) ?>" href="<?= e($editUrl) ?>">Completar campos</a>
+                    <button type="button" class="<?= e(ui_button_small_classes()) ?>" data-modal-close="<?= e((string) $aprendizId) ?>">Cerrar</button>
+                </div>
+            </div>
+        </div>
+    <?php endforeach; ?>
 <?php endif; ?>
 
 <?php if (!empty($resultado['errors'])): ?>
