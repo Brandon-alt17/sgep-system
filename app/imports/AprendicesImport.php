@@ -22,12 +22,15 @@ class AprendicesImport
             'inserted' => 0,
             'updated' => 0,
             'duplicates' => 0,
+            'conflicts' => 0,
             'skipped' => 0,
             'warnings' => [],
             'errors' => [],
             'inserted_rows' => [],
             'updated_rows' => [],
             'duplicate_rows' => [],
+            'pending_rows' => [],
+            'conflict_rows' => [],
         ];
 
         foreach (array_slice($rows, 1) as $index => $row) {
@@ -58,11 +61,6 @@ class AprendicesImport
                     continue;
                 }
 
-                $optionalMissing = $this->missingOptionalFields($assoc);
-                if ($optionalMissing !== []) {
-                    $results['warnings'][] = $usuarioLabel . ': campos vacíos (' . implode(', ', $optionalMissing) . '). Se pueden completar luego en gestión de usuarios.';
-                }
-
                 $programaId = $this->findOrCreatePrograma(
                     $assoc['programa_formacion'] ?? null,
                     $assoc['modalidad_formacion'] ?? null
@@ -70,19 +68,41 @@ class AprendicesImport
                 $empresaId = $this->findOrCreateEmpresa($assoc);
 
                 $payload = $this->buildAprendizPayload($assoc, $doc, $programaId, $empresaId);
+                $rowSummary = $this->rowSummary($assoc, $doc);
 
                 $existing = $this->findByDocumento($doc);
                 if ($existing) {
-                    $this->updateAprendiz((int) $existing['id'], $payload);
-                    $results['updated']++;
+                    $aprendizId = (int) $existing['id'];
+                    $comparison = $this->compareExistingWithPayload($existing, $payload);
                     $results['duplicates']++;
-                    $rowSummary = $this->rowSummary($assoc, $doc);
-                    $results['updated_rows'][] = $rowSummary;
                     $results['duplicate_rows'][] = $rowSummary;
+                    if ($comparison['conflicts'] !== []) {
+                        $results['conflicts']++;
+                        $results['conflict_rows'][] = [
+                            'aprendiz_id' => $aprendizId,
+                            'nombre' => $rowSummary['nombre'],
+                            'identificacion' => $rowSummary['identificacion'],
+                            'conflicts' => $comparison['conflicts'],
+                        ];
+                    } elseif ($comparison['fillable_payload'] !== []) {
+                        $this->updateAprendizPartial($aprendizId, $comparison['fillable_payload']);
+                        $results['updated']++;
+                        $results['updated_rows'][] = $rowSummary;
+                    }
                 } else {
-                    $this->insertAprendiz($payload);
+                    $aprendizId = $this->insertAprendiz($payload);
                     $results['inserted']++;
-                    $results['inserted_rows'][] = $this->rowSummary($assoc, $doc);
+                    $results['inserted_rows'][] = $rowSummary;
+                }
+
+                $pendingFields = $this->missingImportColumns($assoc);
+                if ($pendingFields !== []) {
+                    $results['pending_rows'][] = [
+                        'aprendiz_id' => $aprendizId,
+                        'nombre' => trim((string) ($assoc['nombre_completo'] ?? '')),
+                        'identificacion' => $doc,
+                        'faltantes' => $pendingFields,
+                    ];
                 }
             } catch (\Throwable $e) {
                 $results['errors'][] = 'Fila ' . ($index + 2) . ': ' . $e->getMessage();
@@ -125,26 +145,119 @@ class AprendicesImport
     }
 
     /** @return array<int, string> */
-    private function missingOptionalFields(array $assoc): array
+    private function missingImportColumns(array $assoc): array
     {
-        $check = [
-            'tipo_documento',
-            'numero_celular',
-            'correo_electronico_personal',
-            'correo_electronico_institucional',
-            'programa_formacion',
-            'numero_ficha',
-            'empresa_entidad_coformadora',
-        ];
+        $check = require base_path('config/import_mapping.php');
         $missing = [];
         foreach ($check as $field) {
-            $value = $assoc[$field] ?? null;
-            if ($value === null || trim((string) $value) === '') {
-                $missing[] = $field;
+            $label = (string) $field;
+            if ($label === 'documento_identidad' || $label === 'nombre_completo') {
+                continue;
+            }
+            $value = $assoc[$label] ?? null;
+            if ($this->isEmptyValue($value)) {
+                $missing[] = $label;
             }
         }
 
         return $missing;
+    }
+
+    /** @return array{fillable_payload: array<string, mixed>, conflicts: array<int, array<string, string>>} */
+    private function compareExistingWithPayload(array $existing, array $payload): array
+    {
+        $fields = [
+            'nombre_completo',
+            'tipo_documento',
+            'telefono',
+            'correo_personal',
+            'correo_institucional',
+            'ficha',
+            'programa_id',
+            'empresa_id',
+            'fecha_hora_formulario',
+            'direccion_domicilio',
+            'ciudad_domicilio',
+            'alternativa_ep',
+            'fecha_sofia',
+            'nombre_instructor_seguimiento',
+            'telefono_instructor_seguimiento',
+            'tipo_asistencia',
+            'sugerencias_comentarios',
+            'ficha_curso',
+            'jefe_grupo',
+            'coordinacion',
+        ];
+
+        $fillable = [];
+        $conflicts = [];
+
+        foreach ($fields as $field) {
+            $incoming = $payload[$field] ?? null;
+            if ($this->isEmptyValue($incoming)) {
+                continue;
+            }
+
+            $current = $existing[$field] ?? null;
+            if ($this->isEmptyValue($current)) {
+                $fillable[$field] = $incoming;
+                continue;
+            }
+
+            if ($this->areEquivalentValues($current, $incoming)) {
+                continue;
+            }
+
+            $conflicts[] = [
+                'field' => $field,
+                'actual' => $this->stringifyValue($current),
+                'nuevo' => $this->stringifyValue($incoming),
+            ];
+        }
+
+        return [
+            'fillable_payload' => $fillable,
+            'conflicts' => $conflicts,
+        ];
+    }
+
+    private function isEmptyValue(mixed $value): bool
+    {
+        if ($value === null) {
+            return true;
+        }
+
+        if (is_string($value)) {
+            return trim($value) === '';
+        }
+
+        return false;
+    }
+
+    private function areEquivalentValues(mixed $current, mixed $incoming): bool
+    {
+        if ((is_numeric($current) || is_string($current)) && (is_numeric($incoming) || is_string($incoming))) {
+            return trim((string) $current) === trim((string) $incoming);
+        }
+
+        return $current === $incoming;
+    }
+
+    private function stringifyValue(mixed $value): string
+    {
+        if ($value === null) {
+            return '';
+        }
+
+        if (is_string($value)) {
+            return trim($value);
+        }
+
+        if (is_scalar($value)) {
+            return (string) $value;
+        }
+
+        return json_encode($value, JSON_UNESCAPED_UNICODE) ?: '';
     }
 
     private function normalizeDocumento(mixed $value): string
@@ -379,7 +492,7 @@ class AprendicesImport
     }
 
     /** @param array<string, mixed> $data */
-    private function insertAprendiz(array $data): void
+    private function insertAprendiz(array $data): int
     {
         $sql = 'INSERT INTO aprendices (
                     nombre_completo, tipo_documento, numero_documento, telefono, correo_personal, correo_institucional,
@@ -396,7 +509,8 @@ class AprendicesImport
                     :ficha_curso, :jefe_grupo, :coordinacion,
                     NOW(), NOW()
                 )';
-        $stmt = Database::connection()->prepare($sql);
+        $pdo = Database::connection();
+        $stmt = $pdo->prepare($sql);
         $stmt->execute([
             'nombre_completo' => $data['nombre_completo'],
             'tipo_documento' => $data['tipo_documento'],
@@ -421,6 +535,8 @@ class AprendicesImport
             'jefe_grupo' => $data['jefe_grupo'],
             'coordinacion' => $data['coordinacion'],
         ]);
+
+        return (int) $pdo->lastInsertId();
     }
 
     /** @param array<string, mixed> $data */
@@ -474,5 +590,53 @@ class AprendicesImport
             'coordinacion' => $data['coordinacion'] ?? '',
         ];
         Database::connection()->prepare($sql)->execute($bind);
+    }
+
+    /** @param array<string, mixed> $fillableData */
+    private function updateAprendizPartial(int $id, array $fillableData): void
+    {
+        if ($fillableData === []) {
+            return;
+        }
+
+        $allowed = [
+            'nombre_completo',
+            'tipo_documento',
+            'telefono',
+            'correo_personal',
+            'correo_institucional',
+            'ficha',
+            'programa_id',
+            'empresa_id',
+            'fecha_hora_formulario',
+            'direccion_domicilio',
+            'ciudad_domicilio',
+            'alternativa_ep',
+            'fecha_sofia',
+            'nombre_instructor_seguimiento',
+            'telefono_instructor_seguimiento',
+            'tipo_asistencia',
+            'sugerencias_comentarios',
+            'ficha_curso',
+            'jefe_grupo',
+            'coordinacion',
+        ];
+
+        $setParts = [];
+        $params = ['id' => $id];
+        foreach ($fillableData as $field => $value) {
+            if (!in_array($field, $allowed, true)) {
+                continue;
+            }
+            $setParts[] = $field . ' = :' . $field;
+            $params[$field] = $value;
+        }
+
+        if ($setParts === []) {
+            return;
+        }
+
+        $sql = 'UPDATE aprendices SET ' . implode(', ', $setParts) . ', updated_at = NOW() WHERE id = :id';
+        Database::connection()->prepare($sql)->execute($params);
     }
 }
