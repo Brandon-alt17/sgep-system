@@ -22,6 +22,42 @@ class Normalizer
         if (!empty($row['nit_empresa'])) {
             $row['nit_empresa'] = preg_replace('/\.\d+$/', '', (string) $row['nit_empresa']);
         }
+        if (!empty($row['programa_formacion'])) {
+            $row['programa_formacion'] = self::normalizeProgramaNombre((string) $row['programa_formacion']);
+        }
         return $row;
+    }
+
+    public static function normalizeProgramaNombre(string $value): string
+    {
+        $text = trim($value);
+        $text = preg_replace('/\s+/', ' ', $text) ?? $text;
+        return $text;
+    }
+
+    public static function extractProgramaNivel(string $value): ?string
+    {
+        $text = trim($value);
+        if ($text === '') {
+            return null;
+        }
+
+        if (preg_match('/^(tec\.?|tecnico|técnico)\b/iu', $text) === 1) {
+            return 'Técnico';
+        }
+        if (preg_match('/^(tgo|tecnologo|tecnólogo)\b/iu', $text) === 1) {
+            return 'Tecnólogo';
+        }
+
+        return null;
+    }
+
+    public static function normalizeProgramComparableKey(string $value): string
+    {
+        $v = trim($value);
+        $v = mb_strtolower($v);
+        $v = str_replace(['á', 'é', 'í', 'ó', 'ú', 'ü'], ['a', 'e', 'i', 'o', 'u', 'u'], $v);
+        $v = preg_replace('/\s+/', ' ', $v) ?? $v;
+        return trim($v);
     }
 }

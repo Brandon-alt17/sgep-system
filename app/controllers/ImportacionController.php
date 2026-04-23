@@ -120,12 +120,10 @@ class ImportacionController
             'direccion_domicilio',
             'ciudad_domicilio',
             'alternativa_ep',
-            'fecha_sofia',
             'nombre_instructor_seguimiento',
             'telefono_instructor_seguimiento',
             'tipo_asistencia',
             'sugerencias_comentarios',
-            'ficha_curso',
             'jefe_grupo',
             'coordinacion',
         ];

@@ -32,7 +32,6 @@ Tabla principal. Cada fila es un aprendiz único. La clave de unicidad es `numer
 | `correo_personal` | `varchar(150)` | No | — | Correo personal del aprendiz |
 | `correo_institucional` | `varchar(150)` | Sí | null | Correo `@soy.sena.edu.co` o alternativo |
 | `alternativa_ep` | `varchar(100)` | No | — | Tipo de vinculación: contrato, pasantía, proyecto, etc. |
-| `fecha_sofia` | `date` | Sí | null | Fecha de registro en SofiaPlus |
 | `tipo_asistencia` | `varchar(100)` | Sí | null | Lenguaje de señas, apoyo visual, etc. |
 | `sugerencias` | `text` | Sí | null | Comentarios del formulario |
 | `modalidad` | `enum` | No | `Presencial` | `Presencial`, `Virtual` |

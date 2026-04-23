@@ -37,7 +37,7 @@
         <label class="<?= e(ui_label_classes()) ?>">Correo institucional
             <input type="email" name="correo_institucional" class="<?= e(ui_input_classes()) ?>">
         </label>
-        <label class="<?= e(ui_label_classes()) ?>">Ficha
+        <label class="<?= e(ui_label_classes()) ?>">Grupo
             <input type="text" name="ficha" class="<?= e(ui_input_classes()) ?>">
         </label>
         <label class="<?= e(ui_label_classes()) ?>">Estado
