@@ -12,4 +12,13 @@ class Programa
     {
         return Database::connection()->query('SELECT * FROM programas ORDER BY nombre ASC')->fetchAll();
     }
+
+    public static function catalogo(): array
+    {
+        $sql = 'SELECT id, codigo, nombre, nivel, modalidad
+                FROM programas
+                ORDER BY nombre ASC';
+
+        return Database::connection()->query($sql)->fetchAll();
+    }
 }

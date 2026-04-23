@@ -135,3 +135,32 @@ if (fileInput && trigger && form) {
     });
   }
 }
+
+// Sidebar catalogo: colapsable con persistencia y animacion de chevron.
+(function () {
+  var toggle = document.querySelector("[data-catalog-toggle]");
+  var submenu = document.querySelector("[data-catalog-submenu]");
+  var chevron = document.querySelector("[data-catalog-chevron]");
+  if (!toggle || !submenu || !chevron) return;
+
+  var storageKey = "sidebar.catalogo.open";
+  var isExpanded = toggle.getAttribute("aria-expanded") === "true";
+  var saved = localStorage.getItem(storageKey);
+  if (saved === "true" || saved === "false") {
+    isExpanded = saved === "true";
+  }
+
+  var applyState = function (expanded) {
+    toggle.setAttribute("aria-expanded", expanded ? "true" : "false");
+    submenu.classList.toggle("hidden", !expanded);
+    chevron.classList.toggle("rotate-180", expanded);
+  };
+
+  applyState(isExpanded);
+
+  toggle.addEventListener("click", function () {
+    isExpanded = !(toggle.getAttribute("aria-expanded") === "true");
+    applyState(isExpanded);
+    localStorage.setItem(storageKey, isExpanded ? "true" : "false");
+  });
+})();
