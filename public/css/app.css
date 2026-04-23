@@ -853,8 +853,8 @@ a:hover {
   margin-bottom: 1.25rem;
 }
 
-.ml-6 {
-  margin-left: 1.5rem;
+.ml-4 {
+  margin-left: 1rem;
 }
 
 .ml-auto {
@@ -899,10 +899,6 @@ a:hover {
 
 .mt-auto {
   margin-top: auto;
-}
-
-.ml-4 {
-  margin-left: 1rem;
 }
 
 .block {
@@ -1029,6 +1025,10 @@ a:hover {
   width: 2.25rem;
 }
 
+.w-\[12\%\] {
+  width: 12%;
+}
+
 .w-\[14\%\] {
   width: 14%;
 }
@@ -1134,6 +1134,10 @@ a:hover {
 
 .transform {
   transform: translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y));
+}
+
+.transform-gpu {
+  transform: translate3d(var(--tw-translate-x), var(--tw-translate-y), 0) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y));
 }
 
 .cursor-pointer {
@@ -1273,6 +1277,14 @@ a:hover {
   overflow: hidden;
 }
 
+.whitespace-normal {
+  white-space: normal;
+}
+
+.break-words {
+  overflow-wrap: break-word;
+}
+
 .rounded {
   border-radius: 0.25rem;
 }
@@ -1306,8 +1318,8 @@ a:hover {
   border-bottom-width: 1px;
 }
 
-.border-l-2 {
-  border-left-width: 2px;
+.border-l-\[1\.5px\] {
+  border-left-width: 1.5px;
 }
 
 .border-r {
@@ -1316,26 +1328,6 @@ a:hover {
 
 .border-t {
   border-top-width: 1px;
-}
-
-.border-l-4 {
-  border-left-width: 4px;
-}
-
-.border-l-\[1px\] {
-  border-left-width: 1px;
-}
-
-.border-l-\[3px\] {
-  border-left-width: 3px;
-}
-
-.border-l-\[2px\] {
-  border-left-width: 2px;
-}
-
-.border-l-\[1\.5px\] {
-  border-left-width: 1.5px;
 }
 
 .border-amber-200 {
@@ -1378,18 +1370,9 @@ a:hover {
   border-color: rgb(252 211 77 / var(--tw-border-opacity, 1));
 }
 
-.border-app-mutedSoft {
-  --tw-border-opacity: 1;
-  border-color: rgb(154 162 175 / var(--tw-border-opacity, 1));
-}
-
 .border-rose-200 {
   --tw-border-opacity: 1;
   border-color: rgb(254 205 211 / var(--tw-border-opacity, 1));
-}
-
-.border-l-\[2x\] {
-  border-left-color: 2x;
 }
 
 .bg-amber-100 {
@@ -1575,8 +1558,8 @@ a:hover {
   padding-bottom: 1rem;
 }
 
-.pl-3 {
-  padding-left: 0.75rem;
+.pl-2 {
+  padding-left: 0.5rem;
 }
 
 .pl-4 {
@@ -1585,10 +1568,6 @@ a:hover {
 
 .pl-5 {
   padding-left: 1.25rem;
-}
-
-.pl-6 {
-  padding-left: 1.5rem;
 }
 
 .pl-8 {
@@ -1611,10 +1590,6 @@ a:hover {
   padding-top: 1.5rem;
 }
 
-.pl-2 {
-  padding-left: 0.5rem;
-}
-
 .text-left {
   text-align: left;
 }
@@ -1627,6 +1602,10 @@ a:hover {
   text-align: right;
 }
 
+.align-top {
+  vertical-align: top;
+}
+
 .align-middle {
   vertical-align: middle;
 }
@@ -1634,11 +1613,6 @@ a:hover {
 .text-2xl {
   font-size: 1.5rem;
   line-height: 2rem;
-}
-
-.text-3xl {
-  font-size: 1.875rem;
-  line-height: 2.25rem;
 }
 
 .text-\[10px\] {
@@ -1682,6 +1656,10 @@ a:hover {
 
 .font-semibold {
   font-weight: 600;
+}
+
+.leading-6 {
+  line-height: 1.5rem;
 }
 
 .leading-none {
@@ -1821,6 +1799,10 @@ a:hover {
 
 .duration-200 {
   transition-duration: 200ms;
+}
+
+.duration-300 {
+  transition-duration: 300ms;
 }
 
 .ease-in-out {

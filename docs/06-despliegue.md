@@ -44,10 +44,10 @@ composer install --no-dev --optimize-autoloader
 
 # Compilar Tailwind CSS en un archivo minificado
 npm install
-npm run build
+npm run build:css
 ```
 
-> Esto genera `vendor/` con librerías PHP y `public/build/` con assets compilados. El directivo no necesita Composer ni Node.js.
+> Esto genera `vendor/` con librerías PHP y `public/css/app.css` minificado. El directivo no necesita Composer ni Node.js.
 
 ### Paso 2 — Verificar configuración
 
@@ -273,11 +273,11 @@ composer install
 # Instalar con optimización para distribución
 composer install --no-dev --optimize-autoloader
 
-# Compilar assets en modo desarrollo (con hot-reload)
-npm run dev
+# Observar cambios de CSS en desarrollo
+npm run watch:css
 
-# Compilar assets para distribución
-npm run build
+# Compilar CSS para distribución
+npm run build:css
 
 # Correr migraciones
 php database/run_migrations.php
@@ -347,9 +347,9 @@ Solución: Verificar que WAMP está activo (ícono verde).
 ### Los estilos CSS no cargan
 
 ```
-Causa: La carpeta public/build/ no está incluida en el ZIP.
-Solución: El equipo debe correr "npm run build" antes de empaquetar.
-          Verificar que public/build/manifest.json existe en el ZIP.
+Causa: El archivo public/css/app.css no está actualizado o no está incluido en el ZIP.
+Solución: El equipo debe correr "npm run build:css" antes de empaquetar.
+          Verificar que public/css/app.css existe en el ZIP.
 ```
 
 ---

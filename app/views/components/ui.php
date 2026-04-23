@@ -16,8 +16,8 @@ if (!function_exists('ui_card_classes')) {
 if (!function_exists('ui_select_classes')) {
     function ui_select_classes(): string
     {
-        // w-64 = 256px (ancho fijo preestablecido)
-        return 'w-64 h-10 pl-3 pr-10 border border-app-borderControlStrong rounded-md text-sm bg-white appearance-none';
+        // Mantiene ancho fijo de filtros y alinea estilo visual con el input base.
+        return 'w-64 h-10 rounded-lg border border-app-borderControlStrong bg-white px-3 pr-10 text-sm text-app-text appearance-none';
     }
 }
 

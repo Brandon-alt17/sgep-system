@@ -64,7 +64,7 @@ $bottomItems = [
                     <span class="inline-flex h-4 w-4 [&_svg]:h-4 [&_svg]:w-4"><?= ui_icon('book-open') ?></span>
                     Catálogo
                 </span>
-                <span class="inline-flex h-4 w-4 transition-transform duration-200 ease-out <?= $catalogSectionActive ? 'rotate-180' : '' ?>" data-catalog-chevron aria-hidden="true">
+                <span class="inline-flex h-4 w-4 transform-gpu transition-transform duration-300 ease-in-out <?= $catalogSectionActive ? 'rotate-180' : '' ?>" data-catalog-chevron aria-hidden="true">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-4 w-4">
                         <path d="m6 9 6 6 6-6"></path>
                     </svg>

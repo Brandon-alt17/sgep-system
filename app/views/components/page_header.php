@@ -5,12 +5,12 @@ declare(strict_types=1);
 
 <section class="mb-4">
 
-    <!-- 🔥 Contenedor flex -->
+    <!-- Contenedor flex -->
     <div class="flex justify-between items-center">
 
         <!-- Título + subtítulo -->
         <div>
-            <h2 class="m-0 text-3xl font-semibold">
+            <h2 class="m-0 text-2xl font-semibold">
                 <?= e((string) ($title ?? '')) ?>
             </h2>
 
@@ -21,7 +21,7 @@ declare(strict_types=1);
             <?php endif; ?>
         </div>
 
-        <!-- 🔥 Acciones (botón) -->
+        <!-- Acciones (botón) -->
         <?php if (!empty($actions)): ?>
             <div>
                 <?= $actions ?>

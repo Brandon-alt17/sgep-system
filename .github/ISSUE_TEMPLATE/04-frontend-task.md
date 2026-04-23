@@ -23,5 +23,5 @@ labels: ["frontend"]
 
 ## Definición de hecho
 
-- [ ] Build del front sin errores (`npm run build` o el comando que use el equipo)
+- [ ] Build del front sin errores (`npm run build:css` o el comando que use el equipo)
 - [ ] Probado en navegador en la ruta o flujo indicado
