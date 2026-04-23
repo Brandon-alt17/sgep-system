@@ -32,18 +32,7 @@ class Normalizer
     {
         $text = trim($value);
         $text = preg_replace('/\s+/', ' ', $text) ?? $text;
-
-        // Separa prefijos de nivel cuando vienen incrustados en el nombre.
-        $text = preg_replace('/^(tec\.?|tecnico|técnico|tgo|tecnologo|tecnólogo)\s+(en\s+)?/iu', '', $text) ?? $text;
-        $text = trim($text);
-
-        $text = mb_strtolower($text);
-        $text = mb_convert_case($text, MB_CASE_TITLE, 'UTF-8');
-        // Conserva siglas frecuentes en mayúsculas.
-        $text = preg_replace('/\bTic\b/u', 'TIC', $text) ?? $text;
-        $text = preg_replace('/\bTics\b/u', 'TIC', $text) ?? $text;
-
-        return trim($text);
+        return $text;
     }
 
     public static function extractProgramaNivel(string $value): ?string

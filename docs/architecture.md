@@ -100,7 +100,6 @@ sgep/
 │ correo_personal │
 │ correo_inst     │
 │ alternativa_ep  │       ┌──────────────────┐
-│ fecha_sofia     │       │    momentos      │
 │ modalidad_ep    │       ├──────────────────┤
 │ estado          │──────▶│ id               │
 │ ficha           │       │ aprendiz_id (FK) │

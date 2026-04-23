@@ -40,7 +40,7 @@
                 <th class="<?= e(ui_th_classes()) ?>">Nombre completo</th>
                 <th class="<?= e(ui_th_classes()) ?>">Documento</th>
                 <th class="<?= e(ui_th_classes()) ?>">Empresa</th>
-                <th class="<?= e(ui_th_classes()) ?>">Ficha</th>
+                <th class="<?= e(ui_th_classes()) ?>">Grupo</th>
                 <th class="<?= e(ui_th_classes()) ?>">Estado</th>
                 <th class="<?= e(ui_th_classes()) ?>">Última visita</th>
                 <th class="<?= e(ui_th_classes()) ?>"></th>

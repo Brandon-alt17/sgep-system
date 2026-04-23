@@ -65,7 +65,8 @@ $pendingFieldLabels = [
     'documento_identidad' => 'Documento de identidad',
     'tipo_documento' => 'Tipo de documento',
     'programa_formacion' => 'Programa de formación',
-    'numero_ficha' => 'Número de ficha',
+    'numero_grupo' => 'Número de grupo',
+    'numero_ficha' => 'Número de grupo',
     'modalidad_formacion' => 'Modalidad de formación',
     'nombre_completo' => 'Nombre completo',
     'numero_celular' => 'Número de celular',
@@ -74,7 +75,6 @@ $pendingFieldLabels = [
     'correo_electronico_personal' => 'Correo personal',
     'correo_electronico_institucional' => 'Correo institucional',
     'alternativa_ep' => 'Alternativa EP',
-    'fecha_sofia' => 'Fecha Sofia',
     'empresa_entidad_coformadora' => 'Empresa o entidad coformadora',
     'direccion_empresa' => 'Dirección de empresa',
     'direccion_realiza_practica' => 'Dirección donde realiza práctica',
@@ -90,7 +90,6 @@ $pendingFieldLabels = [
     'telefono_instructor_seguimiento' => 'Teléfono del instructor',
     'tipo_asistencia' => 'Tipo de asistencia',
     'sugerencias_comentarios' => 'Sugerencias y comentarios',
-    'ficha_curso' => 'Ficha de curso',
     'jefe_grupo' => 'Jefe de grupo',
     'coordinacion' => 'Coordinación',
 ];
@@ -173,7 +172,7 @@ $pendingFieldLabels = [
             <tr>
                 <th class="<?= e(ui_th_classes()) ?> px-1">Nombre</th>
                 <th class="<?= e(ui_th_classes()) ?> px-1">Identificación</th>
-                <th class="<?= e(ui_th_classes()) ?> px-1">Ficha</th>
+                <th class="<?= e(ui_th_classes()) ?> px-1">Grupo</th>
                 <th class="<?= e(ui_th_classes()) ?> px-1">Programa</th>
             </tr>
             </thead>
