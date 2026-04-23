@@ -22,7 +22,6 @@ Homestead.yaml
 # --- Node / Vite / frontend ---
 /node_modules
 /public/build
-/public/hot
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
