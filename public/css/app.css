@@ -1455,6 +1455,21 @@ a:hover {
   background-color: rgb(255 255 255 / var(--tw-bg-opacity, 1));
 }
 
+.bg-app-muted {
+  --tw-bg-opacity: 1;
+  background-color: rgb(107 114 128 / var(--tw-bg-opacity, 1));
+}
+
+.bg-app-mutedSoft {
+  --tw-bg-opacity: 1;
+  background-color: rgb(154 162 175 / var(--tw-bg-opacity, 1));
+}
+
+.bg-app-panelHover {
+  --tw-bg-opacity: 1;
+  background-color: rgb(238 243 246 / var(--tw-bg-opacity, 1));
+}
+
 .p-0 {
   padding: 0px;
 }

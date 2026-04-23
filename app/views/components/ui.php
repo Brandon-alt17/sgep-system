@@ -121,7 +121,7 @@ if (!function_exists('ui_button_small_primary_classes')) {
 if (!function_exists('ui_table_classes')) {
     function ui_table_classes(): string
     {
-        return 'mt-2.5 w-full border-collapse [&>tbody>tr:hover>td]:bg-app-panelHover';
+        return 'w-full border-collapse [&>tbody>tr:hover>td]:bg-app-panelHover';
     }
 }
 

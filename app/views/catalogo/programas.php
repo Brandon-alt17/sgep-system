@@ -58,7 +58,7 @@ $tdClasses = str_replace('h-[50px] ', '', ui_td_classes());
             <col class="w-[16%]">
         </colgroup>
         <thead>
-        <tr>
+        <tr class="bg-app-panelSubtle">
             <th class="<?= e(ui_th_classes()) ?>">Código</th>
             <th class="<?= e(ui_th_classes()) ?>">Nombre</th>
             <th class="<?= e(ui_th_classes()) ?>">Nivel</th>

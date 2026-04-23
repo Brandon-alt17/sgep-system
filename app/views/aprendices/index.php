@@ -35,7 +35,7 @@
     <table class="<?= e(ui_table_classes()) ?>">
         
         <!-- 👇 HEADER con fondo gris como la imagen -->
-        <thead class="bg-gray-100 border-b">
+        <thead class="bg-app-panelSubtle border-b">
             <tr>
                 <th class="<?= e(ui_th_classes()) ?>">Nombre completo</th>
                 <th class="<?= e(ui_th_classes()) ?>">Documento</th>
