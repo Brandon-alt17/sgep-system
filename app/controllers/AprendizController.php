@@ -64,7 +64,7 @@ class AprendizController
 
         view('aprendices/show', [
             'aprendiz' => $aprendiz,
-            'momentos' => $momentos // 👈 AQUÍ ESTÁ LA CLAVE
+            'momentos' => $momentos 
         ]);
     }
 

@@ -47,13 +47,6 @@ class Aprendiz
         return $stmt->fetchAll();
     }
 
-    public static function findById(int $id): ?array
-    {
-        $stmt = Database::connection()->prepare('SELECT * FROM aprendices WHERE id = :id');
-        $stmt->execute(['id' => $id]);
-        return $stmt->fetch() ?: null;
-    }
-
     public static function findByCedula(string $cedula): ?array
     {
         $stmt = Database::connection()->prepare('SELECT * FROM aprendices WHERE numero_documento = :cedula');
@@ -94,6 +87,28 @@ class Aprendiz
         ]);
     }
 
+    public static function findById(int $id): ?array
+    {
+        $sql = "
+            SELECT 
+                a.*,
+                e.nombre AS empresa_nombre,
+                e.nit,
+                e.direccion,
+                e.nombre_jefe,
+                e.cargo_jefe,
+                e.telefono_jefe
+            FROM aprendices a
+            LEFT JOIN empresas e ON a.empresa_id = e.id
+            WHERE a.id = :id
+        ";
+
+        $stmt = Database::connection()->prepare($sql);
+        $stmt->execute(['id' => $id]);
+
+        return $stmt->fetch() ?: null;
+    }
+
     public static function updateEstado(int $id, string $nuevoEstado, ?string $motivo = null): void
     {
         if (!in_array($nuevoEstado, self::ESTADOS_VALIDOS, true)) {
@@ -118,4 +133,6 @@ class Aprendiz
             throw $e;
         }
     }
+
+    
 }

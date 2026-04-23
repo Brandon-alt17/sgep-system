@@ -39,7 +39,7 @@
             <tr>
                 <th class="<?= e(ui_th_classes()) ?>">Nombre completo</th>
                 <th class="<?= e(ui_th_classes()) ?>">Documento</th>
-                <th class="<?= e(ui_th_classes()) ?>">Empresa</th>
+                <th class="<?= e(ui_th_classes()) ?>">Empresa co-formadora</th>
                 <th class="<?= e(ui_th_classes()) ?>">Ficha</th>
                 <th class="<?= e(ui_th_classes()) ?>">Estado</th>
                 <th class="<?= e(ui_th_classes()) ?>">Última visita</th>
@@ -62,7 +62,7 @@
                 </td>
 
                 <td class="<?= e(ui_td_classes()) ?>">
-                    <?= e($aprendiz['empresa'] ?? '-') ?>
+                    <?= e( $aprendiz['empresa_nombre'] ?? '-') ?>
                 </td>
 
                 <td class="<?= e(ui_td_classes()) ?> text-gray-600">
