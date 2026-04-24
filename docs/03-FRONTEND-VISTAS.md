@@ -65,25 +65,24 @@ module.exports = {
 - [ ] Tablas usables en pantallas pequeñas.
 - [ ] Sin `console.log()` olvidados.
 
-### Comandos útiles (Vite)
+### Comandos útiles (Tailwind CSS)
 
 ```bash
-# Desarrollo con hot-reload
-npm run dev
+# Desarrollo con observación de cambios
+npm run watch:css
 
-# Build para producción
-npm run build
+# Build CSS para producción
+npm run build:css
 ```
 
-Si hay problemas con caché de Vite:
+Si hay problemas con compilación:
 
 ```bash
-# macOS / Linux
-rm -rf node_modules/.vite
-npm run dev
+npm install
+npm run build:css
 ```
 
-En Windows (PowerShell), puedes borrar la carpeta `node_modules\.vite` desde el explorador y volver a ejecutar `npm run dev`.
+En Windows (PowerShell), si hay errores de dependencias, reinstala módulos y vuelve a ejecutar `npm run watch:css`.
 
 ### Documentación relacionada
 

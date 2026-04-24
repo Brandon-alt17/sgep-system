@@ -57,7 +57,6 @@ $tables = [
 ];
 
 try {
-    $pdo->beginTransaction();
     $pdo->exec('SET FOREIGN_KEY_CHECKS = 0');
 
     foreach ($tables as $table) {
@@ -66,14 +65,9 @@ try {
     }
 
     $pdo->exec('SET FOREIGN_KEY_CHECKS = 1');
-    $pdo->commit();
-
     fwrite(STDOUT, 'Reset completado. Estructura intacta, datos eliminados.' . PHP_EOL);
     fwrite(STDOUT, 'Nota: historial de imports en storage/app/imports/history.json no se limpia desde este script.' . PHP_EOL);
 } catch (\Throwable $e) {
-    if ($pdo->inTransaction()) {
-        $pdo->rollBack();
-    }
     $pdo->exec('SET FOREIGN_KEY_CHECKS = 1');
     fwrite(STDERR, 'Error en reset: ' . $e->getMessage() . PHP_EOL);
     exit(1);

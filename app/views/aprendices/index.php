@@ -13,17 +13,27 @@
         <!-- 🔍 Buscador -->
         <input type="text" placeholder="Buscar por nombre o documento" class="<?= e(ui_input_classes()) ?> flex-1 min-w-0">
 
-        <div class="relative">
+        <div class="<?= e(ui_select_wrapper_classes()) ?> w-64 shrink-0">
             <select class="<?= e(ui_select_classes()) ?>">
                 <option>Todas</option>
             </select>
+            <span class="<?= e(ui_select_chevron_classes()) ?>" data-select-chevron aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-4 w-4">
+                    <path d="m6 9 6 6 6-6"></path>
+                </svg>
+            </span>
         </div>
 
         <!-- 🎛 Select 2 -->
-        <div class="relative">
+        <div class="<?= e(ui_select_wrapper_classes()) ?> w-64 shrink-0">
             <select class="<?= e(ui_select_classes()) ?>">
                 <option>Todos</option>
             </select>
+            <span class="<?= e(ui_select_chevron_classes()) ?>" data-select-chevron aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-4 w-4">
+                    <path d="m6 9 6 6 6-6"></path>
+                </svg>
+            </span>
         </div>
 
     </div>
@@ -35,7 +45,7 @@
     <table class="<?= e(ui_table_classes()) ?>">
         
         <!-- 👇 HEADER con fondo gris como la imagen -->
-        <thead class="bg-gray-100 border-b">
+        <thead class="bg-app-panelSubtle border-b">
             <tr>
                 <th class="<?= e(ui_th_classes()) ?>">Nombre completo</th>
                 <th class="<?= e(ui_th_classes()) ?>">Documento</th>

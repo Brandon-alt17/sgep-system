@@ -435,14 +435,15 @@ $pendingFieldLabels = [
 
 <?php if ($programaPendingRows !== []): ?>
     <section class="mt-4 <?= e(ui_warning_card_classes()) ?>">
-        <h3 class="<?= e(ui_heading_sm_classes()) ?> mb-1 mt-0">Programas pendientes por nivel</h3>
-        <p class="mb-3 mt-0 text-sm">Algunas filas no se vincularon a programa porque el nombre coincide con varios niveles y no llegó nivel en el archivo.</p>
+        <h3 class="<?= e(ui_heading_sm_classes()) ?> mb-1 mt-0">Programas pendientes por enlazar</h3>
+        <p class="mb-3 mt-0 text-sm">Algunas filas quedaron sin enlace automático a catálogo. Puede resolverlas desde el módulo de pendientes.</p>
         <table class="<?= e(ui_table_classes()) ?> table-fixed">
             <colgroup>
-                <col class="w-[34%]">
-                <col class="w-[20%]">
+                <col class="w-[30%]">
+                <col class="w-[18%]">
                 <col class="w-[24%]">
-                <col class="w-[22%]">
+                <col class="w-[16%]">
+                <col class="w-[12%]">
             </colgroup>
             <thead>
             <tr>
@@ -450,6 +451,7 @@ $pendingFieldLabels = [
                 <th class="<?= e(ui_th_classes()) ?> px-1">Documento</th>
                 <th class="<?= e(ui_th_classes()) ?> px-1">Programa</th>
                 <th class="<?= e(ui_th_classes()) ?> px-1">Niveles candidatos</th>
+                <th class="<?= e(ui_th_classes()) ?> px-1">Motivo</th>
             </tr>
             </thead>
             <tbody>
@@ -459,10 +461,12 @@ $pendingFieldLabels = [
                     <td class="<?= e(ui_td_classes()) ?> px-4"><?= e((string) ($row['identificacion'] ?? '')) ?></td>
                     <td class="<?= e(ui_td_classes()) ?> px-4"><?= e((string) ($row['programa'] ?? '')) ?></td>
                     <td class="<?= e(ui_td_classes()) ?> px-4"><?= e(implode(', ', (array) ($row['candidatos'] ?? []))) ?></td>
+                    <td class="<?= e(ui_td_classes()) ?> px-4"><?= e((string) ($row['motivo'] ?? '')) ?></td>
                 </tr>
             <?php endforeach; ?>
             </tbody>
         </table>
+        <a class="<?= e(ui_button_small_classes()) ?> mt-3 inline-flex" href="<?= e(APP_BASE_PATH) ?>/catalogo/programas/pendientes">Ir a pendientes por enlazar</a>
     </section>
 <?php endif; ?>
 

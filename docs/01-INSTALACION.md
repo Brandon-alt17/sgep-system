@@ -24,7 +24,7 @@ cd sgep-system
 ```bash
 composer install
 npm install
-npm run build
+npm run build:css
 ```
 
 3. **Crear archivo `.env`**
@@ -80,8 +80,8 @@ php -S localhost:8000 -t public
 
 - **Error de versión de PHP**
   - Verificar que sea 8.2+ y seleccionar esa versión en WAMP/MAMP.
-- **Falla `npm run build`**
-  - Ejecutar `npm install` y repetir build.
+- **Falla `npm run build:css`**
+  - Ejecutar `npm install` y repetir compilación CSS.
 - **Error de conexión a MySQL**
   - Revisar `.env` (`DB_HOST`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`).
 

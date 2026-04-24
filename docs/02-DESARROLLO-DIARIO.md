@@ -35,14 +35,14 @@ composer install
 npm install
 ```
 
-**Compilación de assets (CSS/JS):**
+**Compilación de assets (CSS):**
 
 ```bash
-# Opción A: desarrollo (hot-reload mientras programas)
-npm run dev
+# Opción A: observar cambios de CSS en tiempo real
+npm run watch:css
 
-# Opción B: producción (compilación final)
-npm run build
+# Opción B: compilación final minificada
+npm run build:css
 ```
 
 ### 4. Ejecución y pruebas
@@ -74,8 +74,8 @@ git push origin feature/importar-csv
 
 ### Consejos rápidos
 
-- **Detener procesos:** `Ctrl + C` en `php -S ...` y en `npm run dev`.
-- **Si no ves cambios de frontend:** volver a ejecutar `npm run build` o mantener `npm run dev` activo.
+- **Detener procesos:** `Ctrl + C` en `php -S ...` y en `npm run watch:css`.
+- **Si no ves cambios de frontend:** volver a ejecutar `npm run build:css` o mantener `npm run watch:css` activo.
 
 ### Documentación relacionada
 
