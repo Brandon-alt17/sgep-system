@@ -6,6 +6,7 @@ namespace App\Imports;
 
 use App\Helpers\Database;
 use App\Helpers\Normalizer;
+use App\Models\ProgramaEnlacePendiente;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Shared\Date as ExcelDate;
 
@@ -66,7 +67,7 @@ class AprendicesImport
                     continue;
                 }
 
-                $programaResolution = $this->findOrCreatePrograma(
+                $programaResolution = $this->findProgramaStrict(
                     $assoc['programa_formacion'] ?? null,
                     $assoc['modalidad_formacion'] ?? null
                 );
@@ -84,7 +85,22 @@ class AprendicesImport
                         'programa' => (string) ($programaResolution['normalized_name'] ?? ''),
                         'nivel_detectado' => (string) ($programaResolution['detected_level'] ?? ''),
                         'candidatos' => (array) ($programaResolution['candidates'] ?? []),
+                        'motivo' => 'ambiguous',
                     ];
+                    $this->registerProgramaPendingLink($assoc, $doc, $nombre, $programaResolution, 'ambiguous');
+                }
+
+                if ($programaId === null && ($programaResolution['ambiguous'] ?? false) !== true) {
+                    $results['warnings'][] = $usuarioLabel . ': programa no encontrado en catálogo (' . ($programaResolution['normalized_name'] ?? 'N/D') . ').';
+                    $results['programa_pending_rows'][] = [
+                        'nombre' => $rowSummary['nombre'],
+                        'identificacion' => $rowSummary['identificacion'],
+                        'programa' => (string) ($programaResolution['normalized_name'] ?? ''),
+                        'nivel_detectado' => (string) ($programaResolution['detected_level'] ?? ''),
+                        'candidatos' => [],
+                        'motivo' => 'not_found',
+                    ];
+                    $this->registerProgramaPendingLink($assoc, $doc, $nombre, $programaResolution, 'not_found');
                 }
 
                 $existing = $this->findByDocumento($doc);
@@ -416,7 +432,7 @@ class AprendicesImport
     }
 
     /** @return array{id: ?int, ambiguous: bool, normalized_name: string, detected_level: ?string, candidates: array<int, string>} */
-    private function findOrCreatePrograma(mixed $nombrePrograma, mixed $modalidad): array
+    private function findProgramaStrict(mixed $nombrePrograma, mixed $modalidad): array
     {
         $nombreRaw = $this->stringOrNull($nombrePrograma);
         if ($nombreRaw === null) {
@@ -458,21 +474,6 @@ class AprendicesImport
         }
 
         if ($selected !== null) {
-            $mod = $this->stringOrNull($modalidad);
-            $updates = [];
-            $params = ['id' => (int) $selected['id']];
-            if ($mod !== null && (($selected['modalidad'] ?? null) === null || trim((string) $selected['modalidad']) === '')) {
-                $updates[] = 'modalidad = :modalidad';
-                $params['modalidad'] = $mod;
-            }
-            if ($nivel !== null && (($selected['nivel'] ?? null) === null || trim((string) $selected['nivel']) === '')) {
-                $updates[] = 'nivel = :nivel';
-                $params['nivel'] = $nivel;
-            }
-            if ($updates !== []) {
-                $pdo->prepare('UPDATE programas SET ' . implode(', ', $updates) . ' WHERE id = :id')->execute($params);
-            }
-
             return [
                 'id' => (int) $selected['id'],
                 'ambiguous' => false,
@@ -497,18 +498,35 @@ class AprendicesImport
             ];
         }
 
-        $mod = $this->stringOrNull($modalidad);
-        $nivelDb = $nivel ?? '';
-        $pdo->prepare('INSERT INTO programas (nombre, nivel, modalidad, created_at) VALUES (:nombre, :nivel, :modalidad, NOW())')
-            ->execute(['nombre' => $nombre, 'nivel' => $nivelDb, 'modalidad' => $mod]);
-
         return [
-            'id' => (int) $pdo->lastInsertId(),
+            'id' => null,
             'ambiguous' => false,
             'normalized_name' => $nombre,
             'detected_level' => $nivel,
             'candidates' => [],
         ];
+    }
+
+    /** @param array<string,mixed> $assoc @param array{id:?int, ambiguous:bool, normalized_name:string, detected_level:?string, candidates:array<int,string>} $programaResolution */
+    private function registerProgramaPendingLink(array $assoc, string $doc, string $nombre, array $programaResolution, string $reason): void
+    {
+        $programaFuente = trim((string) ($assoc['programa_formacion'] ?? ''));
+        if ($programaFuente === '') {
+            $programaFuente = (string) ($programaResolution['normalized_name'] ?? '');
+        }
+        if ($programaFuente === '') {
+            return;
+        }
+
+        ProgramaEnlacePendiente::createOrIgnorePending([
+            'numero_documento' => $doc,
+            'nombre_aprendiz' => $nombre,
+            'programa_fuente' => $programaFuente,
+            'nivel_fuente' => (string) ($programaResolution['detected_level'] ?? ''),
+            'modalidad_fuente' => trim((string) ($assoc['modalidad_formacion'] ?? '')),
+            'candidatos_json' => json_encode((array) ($programaResolution['candidates'] ?? []), JSON_UNESCAPED_UNICODE),
+            'motivo' => $reason,
+        ]);
     }
 
     private function findOrCreateEmpresa(array $assoc): ?int

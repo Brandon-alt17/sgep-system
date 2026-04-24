@@ -1,4 +1,6 @@
-<?php partial('components/page_header', [
+<?php
+$programaContenido = (array) ($programaContenido ?? []);
+partial('components/page_header', [
     'title' => 'Registro de momento ' . (string) $tipo,
     'subtitle' => 'Diligencie la visita y la valoración del aprendiz según el momento seleccionado.',
 ]); ?>
@@ -9,6 +11,22 @@
     <section class="mb-4 <?= e(ui_card_classes()) ?>">
         <p class="m-0 text-sm"><?= e((string) $aprendiz['nombre_completo']) ?> - <?= e((string) $aprendiz['numero_documento']) ?></p>
     </section>
+
+    <?php if ($programaContenido !== []): ?>
+        <section class="mb-4 <?= e(ui_card_classes()) ?>">
+            <h3 class="<?= e(ui_heading_sm_classes()) ?>">Resultados sugeridos por programa</h3>
+            <div class="mt-2 max-h-56 overflow-auto rounded border border-app-border p-3">
+                <?php foreach ($programaContenido as $competencia): ?>
+                    <p class="mb-1 mt-0 text-sm font-semibold text-app-text"><?= e((string) ($competencia['nombre'] ?? '')) ?></p>
+                    <ul class="mb-2 mt-0 list-disc pl-4 text-sm text-app-muted">
+                        <?php foreach ((array) ($competencia['resultados'] ?? []) as $resultado): ?>
+                            <li><?= e((string) ($resultado['descripcion'] ?? '')) ?></li>
+                        <?php endforeach; ?>
+                    </ul>
+                <?php endforeach; ?>
+            </div>
+        </section>
+    <?php endif; ?>
 
     <form method="post" action="<?= e(APP_BASE_PATH) ?>/momentos/store" class="<?= e(ui_card_classes()) ?>">
         <input type="hidden" name="aprendiz_id" value="<?= (int) $aprendiz['id'] ?>">

@@ -997,6 +997,10 @@ a:hover {
   max-height: 70vh;
 }
 
+.max-h-56 {
+  max-height: 14rem;
+}
+
 .min-h-24 {
   min-height: 6rem;
 }
@@ -1113,8 +1117,16 @@ a:hover {
   width: 100%;
 }
 
+.w-\[30\%\] {
+  width: 30%;
+}
+
 .min-w-0 {
   min-width: 0px;
+}
+
+.min-w-\[280px\] {
+  min-width: 280px;
 }
 
 .max-w-\[720px\] {
@@ -1272,6 +1284,12 @@ a:hover {
   --tw-space-y-reverse: 0;
   margin-top: calc(1.5rem * calc(1 - var(--tw-space-y-reverse)));
   margin-bottom: calc(1.5rem * var(--tw-space-y-reverse));
+}
+
+.space-y-4 > :not([hidden]) ~ :not([hidden]) {
+  --tw-space-y-reverse: 0;
+  margin-top: calc(1rem * calc(1 - var(--tw-space-y-reverse)));
+  margin-bottom: calc(1rem * var(--tw-space-y-reverse));
 }
 
 .divide-y > :not([hidden]) ~ :not([hidden]) {

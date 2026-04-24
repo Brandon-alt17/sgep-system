@@ -39,6 +39,11 @@ $routes = [
     ['POST', '/reportes/update', [ReporteController::class, 'update']],
     ['GET', '/reportes/exportar', [ReporteController::class, 'export']],
     ['GET', '/catalogo/programas', [CatalogoController::class, 'programas']],
+    ['GET', '/catalogo/programas/pendientes', [CatalogoController::class, 'pendientesPrograma']],
+    ['POST', '/catalogo/programas/pendientes/resolver', [CatalogoController::class, 'resolverPendientePrograma']],
+    ['GET', '/catalogo/programas/importar', [CatalogoController::class, 'importarProgramaForm']],
+    ['POST', '/catalogo/programas/importar/analizar', [CatalogoController::class, 'importarProgramaAnalizar']],
+    ['POST', '/catalogo/programas/importar/guardar', [CatalogoController::class, 'importarProgramaGuardar']],
     ['GET', '/catalogo/grupos', [CatalogoController::class, 'grupos']],
     ['GET', '/catalogo/empresas', [CatalogoController::class, 'empresas']],
 ];

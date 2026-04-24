@@ -10,6 +10,7 @@ $q = trim((string) ($filters['q'] ?? ''));
 $nivel = trim((string) ($filters['nivel'] ?? ''));
 $modalidad = trim((string) ($filters['modalidad'] ?? ''));
 $totalRows = count($programas);
+$pendientesCount = (int) ($pendientesCount ?? 0);
 
 // Reutiliza estilos base sin altura fija para permitir crecimiento de fila con multilinea.
 $tdClasses = str_replace('h-[50px] ', '', ui_td_classes());
@@ -17,6 +18,16 @@ $tdClasses = str_replace('h-[50px] ', '', ui_td_classes());
 
 <!-- Buscador y filtros -->
 <section class="<?= e(ui_card_classes()) ?> mb-4">
+    <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <div class="text-sm text-app-muted">
+            Pendientes por enlazar: <span class="font-semibold text-app-text"><?= e((string) $pendientesCount) ?></span>
+        </div>
+        <div class="flex items-center gap-2">
+            <a class="<?= e(ui_button_small_classes()) ?>" href="<?= e(APP_BASE_PATH) ?>/catalogo/programas/pendientes">Gestionar pendientes</a>
+            <a class="<?= e(ui_button_primary_classes()) ?>" href="<?= e(APP_BASE_PATH) ?>/catalogo/programas/importar">Importar PDF programa</a>
+        </div>
+    </div>
+
     <form method="get" action="<?= e(APP_BASE_PATH) ?>/catalogo/programas" class="flex w-full items-center gap-3" data-auto-filter-form>
         <input
             type="text"

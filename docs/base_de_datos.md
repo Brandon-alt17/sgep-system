@@ -15,6 +15,10 @@
 - [factores_valoracion](#factores_valoracion)
 - [documentos_generados](#documentos_generados)
 - [reporte_campos](#reporte_campos)
+- [programa_importaciones_pdf](#programa_importaciones_pdf)
+- [programa_competencias](#programa_competencias)
+- [programa_resultados_aprendizaje](#programa_resultados_aprendizaje)
+- [programa_enlaces_pendientes](#programa_enlaces_pendientes)
 
 ---
 
@@ -198,6 +202,72 @@ Campos que el instructor edita manualmente en el reporte maestro que no se puede
 | `saber_tt` | `boolean` | No | `false` |
 | `notas_reporte` | `text` | Sí | Notas adicionales del instructor |
 | `updated_at` | `timestamp` | No | Fecha de última edición manual |
+
+---
+
+## programa_importaciones_pdf
+
+Traza cada importación semi-automática desde PDF/TXT para auditoría y reproceso.
+
+| Columna | Tipo | Nulo | Descripción |
+|---------|------|------|-------------|
+| `id` | `int` | No | Clave primaria |
+| `programa_id` | `int` | Sí | FK opcional a `programas.id` |
+| `nombre_archivo` | `varchar(255)` | No | Archivo procesado |
+| `codigo_programa` | `varchar(80)` | Sí | Código detectado |
+| `nombre_programa` | `varchar(220)` | Sí | Nombre detectado |
+| `estado` | `varchar(30)` | No | `borrador`/`confirmado` |
+| `advertencias_json` | `longtext` | Sí | Advertencias de parseo |
+| `resumen_json` | `longtext` | Sí | Payload extraído |
+
+---
+
+## programa_competencias
+
+Competencias normalizadas por programa.
+
+| Columna | Tipo | Nulo | Descripción |
+|---------|------|------|-------------|
+| `id` | `int` | No | Clave primaria |
+| `programa_id` | `int` | No | FK a `programas.id` |
+| `codigo` | `varchar(80)` | Sí | Código de competencia |
+| `nombre` | `varchar(255)` | No | Descripción de la competencia |
+| `orden` | `int` | No | Orden en el documento fuente |
+
+---
+
+## programa_resultados_aprendizaje
+
+Resultados de aprendizaje dependientes de una competencia.
+
+| Columna | Tipo | Nulo | Descripción |
+|---------|------|------|-------------|
+| `id` | `int` | No | Clave primaria |
+| `programa_id` | `int` | No | FK a `programas.id` |
+| `competencia_id` | `int` | No | FK a `programa_competencias.id` |
+| `codigo` | `varchar(80)` | Sí | Código del resultado |
+| `descripcion` | `text` | No | Texto del resultado de aprendizaje |
+| `orden` | `int` | No | Orden en competencia |
+
+---
+
+## programa_enlaces_pendientes
+
+Pendientes para enlazar aprendices importados con un programa de catálogo.
+
+| Columna | Tipo | Nulo | Descripción |
+|---------|------|------|-------------|
+| `id` | `int` | No | Clave primaria |
+| `numero_documento` | `varchar(30)` | No | Documento del aprendiz |
+| `nombre_aprendiz` | `varchar(180)` | No | Nombre del aprendiz |
+| `programa_fuente` | `varchar(220)` | No | Programa reportado en importación |
+| `nivel_fuente` | `varchar(80)` | Sí | Nivel detectado |
+| `modalidad_fuente` | `varchar(80)` | Sí | Modalidad detectada |
+| `candidatos_json` | `longtext` | Sí | Niveles candidatos cuando ambiguo |
+| `motivo` | `varchar(30)` | No | `not_found` / `ambiguous` |
+| `estado` | `varchar(30)` | No | `pendiente` / `resuelto` |
+| `programa_id_destino` | `int` | Sí | Programa finalmente vinculado |
+| `resolved_at` | `datetime` | Sí | Fecha de resolución |
 
 ---
 
