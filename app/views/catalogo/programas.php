@@ -17,39 +17,48 @@ $tdClasses = str_replace('h-[50px] ', '', ui_td_classes());
 
 <!-- Buscador y filtros -->
 <section class="<?= e(ui_card_classes()) ?> mb-4">
-    <form method="get" action="<?= e(APP_BASE_PATH) ?>/catalogo/programas" class="flex w-full items-center gap-3">
+    <form method="get" action="<?= e(APP_BASE_PATH) ?>/catalogo/programas" class="flex w-full items-center gap-3" data-auto-filter-form>
         <input
             type="text"
             name="q"
             value="<?= e($q) ?>"
             placeholder="Buscar por código o nombre"
             class="<?= e(ui_input_classes()) ?> mt-0 flex-1 min-w-0"
+            data-auto-filter-input
         >
 
-        <div class="relative">
-            <select name="nivel" class="<?= e(ui_select_classes()) ?>">
+        <div class="<?= e(ui_select_wrapper_classes()) ?> w-64 shrink-0">
+            <select name="nivel" class="<?= e(ui_select_classes()) ?>" data-auto-filter-change>
                 <option value="">Todos los niveles</option>
                 <option value="Técnico" <?= $nivel === 'Técnico' ? 'selected' : '' ?>>Técnico</option>
                 <option value="Tecnólogo" <?= $nivel === 'Tecnólogo' ? 'selected' : '' ?>>Tecnólogo</option>
                 <option value="Auxiliar" <?= $nivel === 'Auxiliar' ? 'selected' : '' ?>>Auxiliar</option>
                 <option value="Operario" <?= $nivel === 'Operario' ? 'selected' : '' ?>>Operario</option>
             </select>
+            <span class="<?= e(ui_select_chevron_classes()) ?>" data-select-chevron aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-4 w-4">
+                    <path d="m6 9 6 6 6-6"></path>
+                </svg>
+            </span>
         </div>
 
-        <div class="relative">
-            <select name="modalidad" class="<?= e(ui_select_classes()) ?>">
+        <div class="<?= e(ui_select_wrapper_classes()) ?> w-64 shrink-0">
+            <select name="modalidad" class="<?= e(ui_select_classes()) ?>" data-auto-filter-change>
                 <option value="">Todas las modalidades</option>
                 <option value="Presencial" <?= $modalidad === 'Presencial' ? 'selected' : '' ?>>Presencial</option>
                 <option value="Virtual" <?= $modalidad === 'Virtual' ? 'selected' : '' ?>>Virtual</option>
             </select>
+            <span class="<?= e(ui_select_chevron_classes()) ?>" data-select-chevron aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-4 w-4">
+                    <path d="m6 9 6 6 6-6"></path>
+                </svg>
+            </span>
         </div>
-
-        <button type="submit" class="<?= e(ui_button_small_primary_classes()) ?>">Filtrar</button>
     </form>
 </section>
 
-<section class="<?= e(ui_card_classes()) ?>">
-    <table id="tabla-catalogo-programas" class="<?= e(ui_table_classes()) ?> table-fixed">
+<section class="<?= e(ui_card_classes()) ?> !p-0 overflow-hidden">
+    <table id="tabla-catalogo-programas" class="<?= e(ui_table_in_card_classes()) ?> !m-0 !p-0 table-fixed">
         <colgroup>
             <col class="w-[12%]">
             <col class="w-[38%]">
@@ -69,7 +78,7 @@ $tdClasses = str_replace('h-[50px] ', '', ui_td_classes());
         <tbody>
         <?php if ($programas === []): ?>
             <tr>
-                <td class="<?= e($tdClasses) ?> py-3" colspan="5">No hay programas registrados.</td>
+                <td class="<?= e($tdClasses) ?> py-4 text-center" colspan="5">No hay programas registrados.</td>
             </tr>
         <?php else: ?>
             <?php foreach ($programas as $programa): ?>

@@ -804,6 +804,10 @@ a:hover {
   border-width: 0;
 }
 
+.pointer-events-none {
+  pointer-events: none;
+}
+
 .static {
   position: static;
 }
@@ -824,8 +828,20 @@ a:hover {
   top: 50%;
 }
 
+.right-3 {
+  right: 0.75rem;
+}
+
 .m-0 {
   margin: 0px;
+}
+
+.\!m-0 {
+  margin: 0px !important;
+}
+
+.m-2 {
+  margin: 0.5rem;
 }
 
 .mx-auto {
@@ -899,6 +915,10 @@ a:hover {
 
 .mt-auto {
   margin-top: auto;
+}
+
+.\!mt-0 {
+  margin-top: 0px !important;
 }
 
 .block {
@@ -1440,11 +1460,6 @@ a:hover {
   background-color: rgb(239 246 255 / var(--tw-bg-opacity, 1));
 }
 
-.bg-gray-100 {
-  --tw-bg-opacity: 1;
-  background-color: rgb(243 244 246 / var(--tw-bg-opacity, 1));
-}
-
 .bg-rose-50 {
   --tw-bg-opacity: 1;
   background-color: rgb(255 241 242 / var(--tw-bg-opacity, 1));
@@ -1455,19 +1470,8 @@ a:hover {
   background-color: rgb(255 255 255 / var(--tw-bg-opacity, 1));
 }
 
-.bg-app-muted {
-  --tw-bg-opacity: 1;
-  background-color: rgb(107 114 128 / var(--tw-bg-opacity, 1));
-}
-
-.bg-app-mutedSoft {
-  --tw-bg-opacity: 1;
-  background-color: rgb(154 162 175 / var(--tw-bg-opacity, 1));
-}
-
-.bg-app-panelHover {
-  --tw-bg-opacity: 1;
-  background-color: rgb(238 243 246 / var(--tw-bg-opacity, 1));
+.bg-none {
+  background-image: none;
 }
 
 .p-0 {
@@ -1492,6 +1496,10 @@ a:hover {
 
 .p-6 {
   padding: 1.5rem;
+}
+
+.\!p-0 {
+  padding: 0px !important;
 }
 
 .px-1 {
@@ -1567,6 +1575,11 @@ a:hover {
 .py-\[18\.5px\] {
   padding-top: 18.5px;
   padding-bottom: 18.5px;
+}
+
+.py-4 {
+  padding-top: 1rem;
+  padding-bottom: 1rem;
 }
 
 .pb-4 {
@@ -1790,6 +1803,11 @@ a:hover {
   box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
 }
 
+.outline-none {
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+}
+
 .transition {
   transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
@@ -1826,6 +1844,11 @@ a:hover {
 
 .ease-out {
   transition-timing-function: cubic-bezier(0, 0, 0.2, 1);
+}
+
+.hover\:border-app-accent:hover {
+  --tw-border-opacity: 1;
+  border-color: rgb(10 139 129 / var(--tw-border-opacity, 1));
 }
 
 .hover\:bg-app-accentHover:hover {
@@ -1886,6 +1909,22 @@ a:hover {
   text-decoration-line: none;
 }
 
+.focus\:border-app-accent:focus {
+  --tw-border-opacity: 1;
+  border-color: rgb(10 139 129 / var(--tw-border-opacity, 1));
+}
+
+.focus\:ring-2:focus {
+  --tw-ring-offset-shadow: var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);
+  --tw-ring-shadow: var(--tw-ring-inset) 0 0 0 calc(2px + var(--tw-ring-offset-width)) var(--tw-ring-color);
+  box-shadow: var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow, 0 0 #0000);
+}
+
+.focus\:ring-app-accentSoft:focus {
+  --tw-ring-opacity: 1;
+  --tw-ring-color: rgb(232 253 251 / var(--tw-ring-opacity, 1));
+}
+
 @media (min-width: 768px) {
   .md\:col-span-1 {
     grid-column: span 1 / span 1;
@@ -1932,6 +1971,16 @@ a:hover {
   .lg\:grid-cols-\[2fr_1fr\] {
     grid-template-columns: 2fr 1fr;
   }
+}
+
+.\[\&\>option\]\:bg-white>option {
+  --tw-bg-opacity: 1;
+  background-color: rgb(255 255 255 / var(--tw-bg-opacity, 1));
+}
+
+.\[\&\>option\]\:text-app-muted>option {
+  --tw-text-opacity: 1;
+  color: rgb(107 114 128 / var(--tw-text-opacity, 1));
 }
 
 .\[\&\>tbody\>tr\:hover\>td\]\:bg-app-panelHover>tbody>tr:hover>td {

@@ -164,3 +164,202 @@ if (fileInput && trigger && form) {
     localStorage.setItem(storageKey, isExpanded ? "true" : "false");
   });
 })();
+
+// Filtros de listado: auto-submit sin boton.
+document.querySelectorAll("[data-auto-filter-form]").forEach(function (filterForm) {
+  var debounceTimer = null;
+  var submitForm = function () {
+    if (typeof filterForm.requestSubmit === "function") {
+      filterForm.requestSubmit();
+      return;
+    }
+    filterForm.submit();
+  };
+
+  filterForm.querySelectorAll("[data-auto-filter-change]").forEach(function (field) {
+    field.addEventListener("change", submitForm);
+  });
+
+  filterForm.querySelectorAll("[data-auto-filter-input]").forEach(function (field) {
+    field.addEventListener("input", function () {
+      if (debounceTimer) window.clearTimeout(debounceTimer);
+      debounceTimer = window.setTimeout(submitForm, 350);
+    });
+  });
+});
+
+// Selects: anima chevron al enfocar/abrir.
+document.querySelectorAll("[data-select-chevron]").forEach(function (chevron) {
+  var wrapper = chevron.closest(".relative");
+  if (!wrapper) return;
+  var select = wrapper.querySelector("select");
+  if (!select) return;
+
+  var setOpen = function (open) {
+    chevron.classList.toggle("rotate-180", open);
+  };
+
+  select.addEventListener("focus", function () { setOpen(true); });
+  select.addEventListener("blur", function () { setOpen(false); });
+  select.addEventListener("change", function () { setOpen(false); });
+});
+
+// Select custom reutilizable: estilo consistente cross-browser.
+document.querySelectorAll(".js-custom-select").forEach(function (wrapper) {
+  var select = wrapper.querySelector("select");
+  if (!select || select.dataset.customized === "true") return;
+  if (select.multiple) return;
+  select.dataset.customized = "true";
+
+  var existingChevron = wrapper.querySelector("[data-select-chevron]");
+  if (existingChevron) existingChevron.remove();
+
+  select.classList.add("sr-only");
+  select.tabIndex = -1;
+
+  var trigger = document.createElement("button");
+  trigger.type = "button";
+  trigger.className = "flex w-full items-center justify-between rounded-lg border border-app-borderControlStrong bg-white px-3 py-2 text-left text-sm text-app-muted outline-none transition-colors duration-200 hover:border-app-accent focus:border-app-accent focus:ring-2 focus:ring-app-accentSoft";
+  trigger.setAttribute("aria-haspopup", "listbox");
+  trigger.setAttribute("aria-expanded", "false");
+
+  var label = document.createElement("span");
+  label.className = "truncate";
+
+  var chevron = document.createElement("span");
+  chevron.className = "ml-3 inline-flex h-4 w-4 shrink-0 text-app-muted transition-transform duration-200 ease-in-out";
+  chevron.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-4 w-4"><path d="m6 9 6 6 6-6"></path></svg>';
+
+  trigger.appendChild(label);
+  trigger.appendChild(chevron);
+
+  var menu = document.createElement("div");
+  menu.className = "absolute left-0 right-0 z-40 mt-1 hidden overflow-hidden rounded-lg border border-app-borderControlStrong bg-white shadow-xsSoft";
+
+  var list = document.createElement("ul");
+  list.className = "max-h-64 overflow-auto py-1";
+  list.setAttribute("role", "listbox");
+
+  var optionButtons = [];
+  var renderOptions = function () {
+    list.innerHTML = "";
+    optionButtons = [];
+    Array.prototype.forEach.call(select.options, function (opt, index) {
+      var item = document.createElement("li");
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "w-full px-3 py-2 text-left text-sm text-app-muted transition-colors duration-150 hover:bg-app-accentSoft hover:text-app-text";
+      btn.textContent = opt.textContent || "";
+      btn.dataset.value = opt.value;
+      btn.setAttribute("role", "option");
+      btn.setAttribute("aria-selected", opt.selected ? "true" : "false");
+      btn.dataset.index = String(index);
+      item.appendChild(btn);
+      list.appendChild(item);
+      optionButtons.push(btn);
+    });
+  };
+
+  var syncTriggerLabel = function () {
+    var selectedOption = select.options[select.selectedIndex];
+    label.textContent = selectedOption ? selectedOption.textContent || "" : "";
+    optionButtons.forEach(function (btn) {
+      var isSelected = btn.dataset.value === select.value;
+      btn.setAttribute("aria-selected", isSelected ? "true" : "false");
+      btn.classList.toggle("bg-app-accentSoft", isSelected);
+      btn.classList.toggle("text-app-text", isSelected);
+      btn.classList.toggle("font-semibold", isSelected);
+    });
+  };
+
+  var openMenu = function () {
+    syncMenuWidth();
+    menu.classList.remove("hidden");
+    trigger.setAttribute("aria-expanded", "true");
+    chevron.classList.add("rotate-180");
+  };
+
+  var closeMenu = function () {
+    menu.classList.add("hidden");
+    trigger.setAttribute("aria-expanded", "false");
+    chevron.classList.remove("rotate-180");
+  };
+
+  trigger.addEventListener("click", function () {
+    if (menu.classList.contains("hidden")) {
+      openMenu();
+      return;
+    }
+    closeMenu();
+  });
+
+  trigger.addEventListener("keydown", function (event) {
+    if (event.key === "ArrowDown" || event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      openMenu();
+      var current = optionButtons.find(function (btn) { return btn.dataset.value === select.value; });
+      (current || optionButtons[0])?.focus();
+    }
+  });
+
+  list.addEventListener("click", function (event) {
+    var target = event.target;
+    if (!(target instanceof HTMLButtonElement)) return;
+    var nextValue = target.dataset.value;
+    if (typeof nextValue !== "string") return;
+    if (select.value !== nextValue) {
+      select.value = nextValue;
+      select.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+    syncTriggerLabel();
+    closeMenu();
+    trigger.focus();
+  });
+
+  list.addEventListener("keydown", function (event) {
+    var target = event.target;
+    if (!(target instanceof HTMLButtonElement)) return;
+    var currentIndex = parseInt(target.dataset.index || "-1", 10);
+    if (event.key === "Escape") {
+      event.preventDefault();
+      closeMenu();
+      trigger.focus();
+      return;
+    }
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      var next = optionButtons[Math.min(optionButtons.length - 1, currentIndex + 1)];
+      if (next) next.focus();
+      return;
+    }
+    if (event.key === "ArrowUp") {
+      event.preventDefault();
+      var prev = optionButtons[Math.max(0, currentIndex - 1)];
+      if (prev) prev.focus();
+      return;
+    }
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      target.click();
+    }
+  });
+
+  document.addEventListener("click", function (event) {
+    if (!wrapper.contains(event.target)) closeMenu();
+  });
+
+  renderOptions();
+  syncTriggerLabel();
+  var syncMenuWidth = function () {
+    var width = trigger.getBoundingClientRect().width;
+    if (!width) return;
+    menu.style.width = width + "px";
+    menu.style.minWidth = width + "px";
+  };
+  syncMenuWidth();
+  window.addEventListener("resize", syncMenuWidth);
+
+  menu.appendChild(list);
+  wrapper.appendChild(trigger);
+  wrapper.appendChild(menu);
+});

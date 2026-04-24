@@ -19,10 +19,17 @@
                 <input type="date" name="fecha_visita" required class="<?= e(ui_input_classes()) ?>">
             </label>
             <label class="<?= e(ui_label_classes()) ?>">Modalidad
-                <select name="modalidad" class="<?= e(ui_input_classes()) ?>">
-                    <option value="Presencial">Presencial</option>
-                    <option value="Virtual">Virtual</option>
-                </select>
+                <span class="<?= e(ui_select_wrapper_classes()) ?>">
+                    <select name="modalidad" class="<?= e(ui_select_classes()) ?>">
+                        <option value="Presencial">Presencial</option>
+                        <option value="Virtual">Virtual</option>
+                    </select>
+                    <span class="<?= e(ui_select_chevron_classes()) ?>" data-select-chevron aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-4 w-4">
+                            <path d="m6 9 6 6 6-6"></path>
+                        </svg>
+                    </span>
+                </span>
             </label>
             <?php if ($tipo !== 'M3'): ?>
                 <label class="<?= e(ui_label_classes()) ?> md:col-span-2">Próxima visita
@@ -37,10 +44,17 @@
 
         <?php if ($tipo === 'M3'): ?>
             <label class="mt-2 <?= e(ui_label_classes()) ?>">Juicio final
-                <select name="juicio_final" class="<?= e(ui_input_classes()) ?> md:max-w-xs">
-                    <option value="Aprobado">Aprobado</option>
-                    <option value="No aprobado">No aprobado</option>
-                </select>
+                <span class="<?= e(ui_select_wrapper_classes()) ?> md:max-w-xs">
+                    <select name="juicio_final" class="<?= e(ui_select_classes()) ?>">
+                        <option value="Aprobado">Aprobado</option>
+                        <option value="No aprobado">No aprobado</option>
+                    </select>
+                    <span class="<?= e(ui_select_chevron_classes()) ?>" data-select-chevron aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-4 w-4">
+                            <path d="m6 9 6 6 6-6"></path>
+                        </svg>
+                    </span>
+                </span>
             </label>
         <?php endif; ?>
 
