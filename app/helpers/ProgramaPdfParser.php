@@ -45,6 +45,7 @@ class ProgramaPdfParser
         $inCompetenciaBlock = false;
         $inResultados = false;
         $expectNombreCompetencia = false;
+        $pendingRaCode = null;
         $competenciaAutoIndex = 1;
         foreach ($lines as $line) {
             if (preg_match('/^4\.\s*&?\s*contenidos\s+curriculares\s+de\s+la\s+competencia/iu', $line)) {
@@ -87,12 +88,14 @@ class ProgramaPdfParser
             if (preg_match('/^4\.5\s+resultados?\s+de\s+aprendizaje/iu', $line)) {
                 $inResultados = true;
                 $expectNombreCompetencia = false;
+                $pendingRaCode = null;
                 continue;
             }
 
             if (preg_match('/^4\.(6|7|8|9|10)\b/iu', $line)) {
                 $inResultados = false;
                 $expectNombreCompetencia = false;
+                $pendingRaCode = null;
                 continue;
             }
 
@@ -116,8 +119,16 @@ class ProgramaPdfParser
                     if (preg_match('/^competencia$/iu', $candidateNombre)) {
                         continue;
                     }
-                    $current['nombre'] = $candidateNombre;
-                    $expectNombreCompetencia = false;
+
+                    $existingNombre = trim((string) ($current['nombre'] ?? ''));
+                    if ($existingNombre === '' || preg_match('/^Competencia\s+\d+$/i', $existingNombre)) {
+                        $current['nombre'] = $candidateNombre;
+                    } else {
+                        $combined = trim($existingNombre . ' ' . $candidateNombre);
+                        if (mb_strlen($combined) <= 240) {
+                            $current['nombre'] = $combined;
+                        }
+                    }
                 }
                 continue;
             }
@@ -130,25 +141,41 @@ class ProgramaPdfParser
                 continue;
             }
 
-            if (preg_match('/^(RA\s*\d+)\s*[:\-]\s*(.+)$/iu', $line, $mRa)) {
-                $current['resultados'][] = [
-                    'codigo' => strtoupper(str_replace(' ', '', trim((string) $mRa[1]))),
-                    'descripcion' => self::cleanResultadoDescripcion((string) $mRa[2]),
-                ];
-                continue;
-            }
+            foreach (self::splitPotentialRaSegments($line) as $segment) {
+                if (preg_match('/^(RA\s*\d+)\s*[:\-]?$/iu', $segment, $mRaOnly)) {
+                    $pendingRaCode = strtoupper(str_replace(' ', '', trim((string) $mRaOnly[1])));
+                    continue;
+                }
 
-            if (preg_match('/^(RA\s*\d+)\s+(.+)$/iu', $line, $mRaNoColon)) {
-                $current['resultados'][] = [
-                    'codigo' => strtoupper(str_replace(' ', '', trim((string) $mRaNoColon[1]))),
-                    'descripcion' => self::cleanResultadoDescripcion((string) $mRaNoColon[2]),
-                ];
-                continue;
-            }
+                if ($pendingRaCode !== null && !preg_match('/^4\./', $segment)) {
+                    $current['resultados'][] = [
+                        'codigo' => $pendingRaCode,
+                        'descripcion' => self::cleanResultadoDescripcion($segment),
+                    ];
+                    $pendingRaCode = null;
+                    continue;
+                }
 
-            if ($current['resultados'] !== [] && !preg_match('/^4\./', $line)) {
-                $lastIdx = count($current['resultados']) - 1;
-                $current['resultados'][$lastIdx]['descripcion'] .= ' ' . self::cleanResultadoDescripcion($line);
+                if (preg_match('/^(RA\s*\d+)\s*[:\-]\s*(.+)$/iu', $segment, $mRa)) {
+                    $current['resultados'][] = [
+                        'codigo' => strtoupper(str_replace(' ', '', trim((string) $mRa[1]))),
+                        'descripcion' => self::cleanResultadoDescripcion((string) $mRa[2]),
+                    ];
+                    continue;
+                }
+
+                if (preg_match('/^(RA\s*\d+)\s+(.+)$/iu', $segment, $mRaNoColon)) {
+                    $current['resultados'][] = [
+                        'codigo' => strtoupper(str_replace(' ', '', trim((string) $mRaNoColon[1]))),
+                        'descripcion' => self::cleanResultadoDescripcion((string) $mRaNoColon[2]),
+                    ];
+                    continue;
+                }
+
+                if ($current['resultados'] !== [] && !preg_match('/^4\./', $segment)) {
+                    $lastIdx = count($current['resultados']) - 1;
+                    $current['resultados'][$lastIdx]['descripcion'] .= ' ' . self::cleanResultadoDescripcion($segment);
+                }
             }
         }
         if ($current !== null) {
@@ -288,5 +315,22 @@ class ProgramaPdfParser
     {
         $value = preg_replace('/\s+/', ' ', trim($value)) ?? trim($value);
         return $value;
+    }
+
+    /** @return array<int,string> */
+    private static function splitPotentialRaSegments(string $line): array
+    {
+        $normalized = preg_replace('/\s+/', ' ', trim($line)) ?? trim($line);
+        if ($normalized === '') {
+            return [];
+        }
+
+        $normalized = preg_replace('/([.;)])\s+(RA\s*\d+\s*[:\-])/iu', '$1' . "\n" . '$2', $normalized) ?? $normalized;
+        $parts = array_values(array_filter(array_map(
+            static fn ($part): string => trim((string) $part),
+            explode("\n", $normalized)
+        ), static fn (string $part): bool => $part !== ''));
+
+        return $parts === [] ? [$normalized] : $parts;
     }
 }

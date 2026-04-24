@@ -4,7 +4,11 @@
     </a>
     <div class="mb-3 flex flex-col gap-2 pl-4">
         <h2 class="m-0 text-2xl font-semibold text-app-text">Revisión de importación de programa</h2>
-        <p class="m-0 text-sm text-app-muted">Revise extracción automática y confirme persistencia.</p>
+        <p class="m-0 text-sm text-app-muted">
+            <span class="inline-flex h-4 w-4 [&_svg]:h-4 [&_svg]:w-4"><?= ui_icon('file') ?></span>
+            <?= e((string) ($fileName ?? 'Archivo sin nombre')) ?>
+            &mdash; Revise extracción automática y confirme persistencia.
+        </p>
     </div>
 </section>
 
