@@ -28,8 +28,6 @@ $missingMetaFields = [];
 $metaFieldLabels = [
     'nivel' => 'Nivel',
     'modalidad' => 'Modalidad',
-    'horas_lectiva' => 'Horas lectiva',
-    'horas_productiva' => 'Horas productiva',
     'horas_total' => 'Horas total',
 ];
 foreach ($metaFieldLabels as $metaKey => $metaLabel) {
@@ -114,8 +112,8 @@ foreach ($metaFieldLabels as $metaKey => $metaLabel) {
     </section>
 <?php endif; ?>
 
-<section class="<?= e(ui_card_classes()) ?> mb-4">
-    <h4 class="m-0 text-xl font-semibold text-app-text">Competencias y Resultados de Aprendizaje</h4>
+<section class="<?= e(ui_card_classes()) ?> mb-4 mt-4">
+    <h4 class="m-0 text-md font-semibold text-app-text">Competencias y Resultados de Aprendizaje</h4>
 
     <?php if ($competencias === []): ?>
         <div class="mt-4 rounded-md border border-app-border bg-app-panelSubtle p-4 text-sm text-app-muted">
@@ -126,30 +124,35 @@ foreach ($metaFieldLabels as $metaKey => $metaLabel) {
             <?php foreach ($competencias as $compIndex => $comp): ?>
                 <?php $resultadosComp = (array) ($comp['resultados'] ?? []); ?>
                 <article class="rounded-lg border border-app-border bg-app-panel p-4">
-                    <div class="mb-3">
+                    <div class="mb-3 flex items-start justify-between gap-3">
+                        <div>
                         <?php if (trim((string) ($comp['codigo'] ?? '')) !== ''): ?>
                             <p class="m-0 text-xs font-semibold tracking-wide text-app-muted"><?= e((string) $comp['codigo']) ?></p>
                         <?php endif; ?>
-                        <p class="m-0 mt-1 text-2xl font-semibold text-app-text"><?= e((string) (($comp['nombre'] ?? '') !== '' ? $comp['nombre'] : 'Competencia ' . ($compIndex + 1))) ?></p>
+                        <p class="m-0 mt-1 text-lg font-semibold text-app-text"><?= e((string) (($comp['nombre'] ?? '') !== '' ? $comp['nombre'] : 'Competencia ' . ($compIndex + 1))) ?></p>
+                        </div>
+                        <?php if (trim((string) ($comp['horas'] ?? '')) !== ''): ?>
+                            <span class="inline-flex items-center rounded-full bg-app-accent px-2.5 py-1 text-xs font-semibold text-app-textOnBrand"><?= e((string) $comp['horas']) ?>h</span>
+                        <?php endif; ?>
                     </div>
-                    <div class="overflow-hidden rounded-md border border-app-border">
+                    <div class="overflow-hidden rounded-md">
                         <table class="<?= e(ui_table_classes()) ?>">
                             <thead>
                             <tr>
-                                <th class="<?= e(ui_th_classes()) ?>">Código RA</th>
-                                <th class="<?= e(ui_th_classes()) ?>">Resultado de aprendizaje</th>
+                                <th class="h-[50px] px-2 text-left text-sm font-semibold text-app-muted align-middle">Código RA</th>
+                                <th class="h-[50px] px-2 text-left text-sm font-semibold text-app-muted align-middle">Resultado de aprendizaje</th>
                             </tr>
                             </thead>
                             <tbody>
                             <?php if ($resultadosComp === []): ?>
                                 <tr>
-                                    <td class="<?= e(ui_td_classes()) ?>" colspan="2">Sin resultados detectados para esta competencia.</td>
+                                    <td class="<?= e(str_replace('border-b border-app-borderSoft ', '', ui_td_classes())) ?>" colspan="2">Sin resultados detectados para esta competencia.</td>
                                 </tr>
                             <?php else: ?>
                                 <?php foreach ($resultadosComp as $raIndex => $resultado): ?>
-                                    <tr>
-                                        <td class="<?= e(ui_td_classes()) ?> w-32"><?= e('RA' . ($raIndex + 1)) ?></td>
-                                        <td class="<?= e(ui_td_classes()) ?>"><?= e((string) ($resultado['descripcion'] ?? '')) ?></td>
+                                    <tr class="<?= $raIndex < (count($resultadosComp) - 1) ? 'border-b border-app-borderSoft' : '' ?>">
+                                        <td class="<?= e(str_replace('border-b border-app-borderSoft ', '', ui_td_classes())) ?> w-32"><?= e('RA' . ($raIndex + 1)) ?></td>
+                                        <td class="<?= e(str_replace('border-b border-app-borderSoft ', '', ui_td_classes())) ?>"><?= e((string) ($resultado['descripcion'] ?? '')) ?></td>
                                     </tr>
                                 <?php endforeach; ?>
                             <?php endif; ?>
