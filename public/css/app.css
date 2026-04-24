@@ -1121,6 +1121,10 @@ a:hover {
   width: 30%;
 }
 
+.w-32 {
+  width: 8rem;
+}
+
 .min-w-0 {
   min-width: 0px;
 }
@@ -1692,6 +1696,21 @@ a:hover {
   line-height: 1rem;
 }
 
+.text-3xl {
+  font-size: 1.875rem;
+  line-height: 2.25rem;
+}
+
+.text-base {
+  font-size: 1rem;
+  line-height: 1.5rem;
+}
+
+.text-xl {
+  font-size: 1.25rem;
+  line-height: 1.75rem;
+}
+
 .font-bold {
   font-weight: 700;
 }
@@ -1704,12 +1723,20 @@ a:hover {
   font-weight: 600;
 }
 
+.uppercase {
+  text-transform: uppercase;
+}
+
 .leading-6 {
   line-height: 1.5rem;
 }
 
 .leading-none {
   line-height: 1;
+}
+
+.tracking-wide {
+  letter-spacing: 0.025em;
 }
 
 .text-amber-600 {
@@ -1991,6 +2018,12 @@ a:hover {
   }
 }
 
+@media (min-width: 1280px) {
+  .xl\:grid-cols-4 {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
 .\[\&\>option\]\:bg-white>option {
   --tw-bg-opacity: 1;
   background-color: rgb(255 255 255 / var(--tw-bg-opacity, 1));
@@ -2022,6 +2055,10 @@ a:hover {
   height: 40px;
 }
 
+.\[\&_svg\]\:h-6 svg {
+  height: 1.5rem;
+}
+
 .\[\&_svg\]\:w-3\.5 svg {
   width: 0.875rem;
 }
@@ -2036,4 +2073,8 @@ a:hover {
 
 .\[\&_svg\]\:w-\[40px\] svg {
   width: 40px;
+}
+
+.\[\&_svg\]\:w-6 svg {
+  width: 1.5rem;
 }
