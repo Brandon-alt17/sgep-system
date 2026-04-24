@@ -9,15 +9,15 @@
 
 
 <div class="space-y-6 md:col-span-2 grid gap-4">
-    <div class="inline-flex items-end justify-between">
+    <div class="mb-1 flex items-end justify-between">
         <!-- 🔙 VOLVER -->
         <a href="<?= e(APP_BASE_PATH) ?>/aprendices"
-        class="mt-4 text-sm text-app-link hover:underline">
+        class="mt-6 text-sm text-app-link hover:underline">
             ← Listado
         </a>
 
         <button type="button" onclick="abrirModalEditar()"
-        class="<?= e(ui_button_small_classes()) ?> gap-2">
+        class="items-center <?= e(ui_button_small_classes()) ?> gap-2">
             <span class="w-4 h-4 [&_svg]:w-4 [&_svg]:h-4"><?= ui_icon('user-round') ?></span>
             Editar datos del aprendiz
         </button>
@@ -36,7 +36,7 @@
                 </h2>
             </div>
 
-            <div class="space-y-3 text-sm md:col-span-2 grid gap-4">
+            <div class="space-y-3 text-sm md:col-span-2 grid gap-1">
                 <?php function infoRow($label, $value, $icon = null) { ?>
                     <div>
                         <!-- LABEL -->
