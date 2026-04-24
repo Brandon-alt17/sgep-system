@@ -45,11 +45,13 @@ class ProgramaPdfParser
         $inCompetenciaBlock = false;
         $inResultados = false;
         $expectNombreCompetencia = false;
+        $expectUnidadCompetencia = false;
         $pendingRaCode = null;
         $competenciaAutoIndex = 1;
         foreach ($lines as $line) {
             if (preg_match('/^4\.\s*&?\s*contenidos\s+curriculares\s+de\s+la\s+competencia/iu', $line)) {
                 if ($current !== null) {
+                    self::finalizeCompetenciaNombre($current);
                     $competencias[] = $current;
                 }
                 $current = [
@@ -57,15 +59,44 @@ class ProgramaPdfParser
                     'nombre' => 'Competencia ' . $competenciaAutoIndex++,
                     'horas' => '',
                     'resultados' => [],
+                    '_unidad_norma' => '',
                 ];
                 $inCompetenciaBlock = true;
                 $inResultados = false;
                 $expectNombreCompetencia = false;
+                $expectUnidadCompetencia = false;
                 continue;
             }
 
             if (!$inCompetenciaBlock || $current === null) {
                 continue;
+            }
+
+            if (preg_match('/^4\.1\b/i', $line)) {
+                $expectUnidadCompetencia = true;
+                $expectNombreCompetencia = false;
+                $inResultados = false;
+                if (preg_match('/^4\.1\b.*?(?:norma|unidad)[^\n:]*[:\-]\s*(.+)$/iu', $line, $mUnidadInline)) {
+                    $restUnidad = trim((string) ($mUnidadInline[1] ?? ''));
+                    if ($restUnidad !== '' && !preg_match('/^4\./', $restUnidad)) {
+                        $current['_unidad_norma'] = self::normalizeSentence($restUnidad);
+                        $expectUnidadCompetencia = false;
+                    }
+                }
+                continue;
+            }
+
+            if ($expectUnidadCompetencia) {
+                if (preg_match('/^4\.2\b/i', $line)) {
+                    $expectUnidadCompetencia = false;
+                } elseif ($line !== '' && !preg_match('/^4\./', $line)) {
+                    $piece = self::normalizeSentence($line);
+                    $prevUnidad = trim((string) ($current['_unidad_norma'] ?? ''));
+                    $current['_unidad_norma'] = $prevUnidad === '' ? $piece : trim($prevUnidad . ' ' . $piece);
+                    continue;
+                } else {
+                    $expectUnidadCompetencia = false;
+                }
             }
 
             if (preg_match('/^4\.3\b/i', $line)) {
@@ -77,11 +108,13 @@ class ProgramaPdfParser
             if (preg_match('/^4\.2\b/i', $line)) {
                 $inResultados = false;
                 $expectNombreCompetencia = false;
+                $expectUnidadCompetencia = false;
                 continue;
             }
 
             if (preg_match('/^4\.4\b/i', $line)) {
                 $expectNombreCompetencia = false;
+                $expectUnidadCompetencia = false;
                 continue;
             }
 
@@ -95,11 +128,12 @@ class ProgramaPdfParser
             if (preg_match('/^4\.(6|7|8|9|10)\b/iu', $line)) {
                 $inResultados = false;
                 $expectNombreCompetencia = false;
+                $expectUnidadCompetencia = false;
                 $pendingRaCode = null;
                 continue;
             }
 
-            if (preg_match('/^4\.[124]\b/iu', $line)) {
+            if (preg_match('/^4\.[24]\b/iu', $line)) {
                 continue;
             }
 
@@ -172,6 +206,21 @@ class ProgramaPdfParser
                     continue;
                 }
 
+                if (self::isLikelyResultadoLine($segment)) {
+                    $lastIdx = count($current['resultados']) - 1;
+                    $lastDescripcion = $lastIdx >= 0 ? (string) ($current['resultados'][$lastIdx]['descripcion'] ?? '') : '';
+                    if ($lastIdx >= 0 && self::shouldAppendToPreviousResultado($lastDescripcion, $segment)) {
+                        $current['resultados'][$lastIdx]['descripcion'] .= ' ' . self::cleanResultadoDescripcion($segment);
+                        continue;
+                    }
+
+                    $current['resultados'][] = [
+                        'codigo' => 'RA' . (count($current['resultados']) + 1),
+                        'descripcion' => self::cleanResultadoDescripcion($segment),
+                    ];
+                    continue;
+                }
+
                 if ($current['resultados'] !== [] && !preg_match('/^4\./', $segment)) {
                     $lastIdx = count($current['resultados']) - 1;
                     $current['resultados'][$lastIdx]['descripcion'] .= ' ' . self::cleanResultadoDescripcion($segment);
@@ -179,6 +228,7 @@ class ProgramaPdfParser
             }
         }
         if ($current !== null) {
+            self::finalizeCompetenciaNombre($current);
             $competencias[] = $current;
         }
 
@@ -246,6 +296,31 @@ class ProgramaPdfParser
 
     private static function detectNombre(string $text): string
     {
+        if (preg_match('/1[\.\s]*1\b[^\n]*denominaci[oó]n[^\n]*\n?(.*?)\n1[\.\s]*2\b/isu', $text, $mBlock)) {
+            $block = trim((string) ($mBlock[1] ?? ''));
+            if ($block !== '') {
+                $candidates = array_values(array_filter(array_map(
+                    static fn ($line): string => trim((string) $line),
+                    preg_split('/\R/u', $block) ?: []
+                ), static fn (string $line): bool => $line !== ''));
+
+                foreach ($candidates as $candidate) {
+                    $invalid = self::isInvalidProgramNameCandidate($candidate);
+                    if (!$invalid) {
+                        return self::normalizeSentence($candidate);
+                    }
+                }
+            }
+        }
+
+        if (preg_match('/1[\.\s]*1\b.*denominaci[oó]n(?:\s+del\s+programa)?\s*[:\-]?\s*(.+)$/imu', $text, $inline)) {
+            $candidateInline = trim((string) ($inline[1] ?? ''));
+            $invalidInline = self::isInvalidProgramNameCandidate($candidateInline);
+            if (!$invalidInline) {
+                return self::normalizeSentence($candidateInline);
+            }
+        }
+
         $lines = array_values(array_filter(array_map(
             static fn ($line): string => trim((string) $line),
             explode("\n", $text)
@@ -258,13 +333,8 @@ class ProgramaPdfParser
             }
             for ($j = $i + 1; $j < min($total, $i + 8); $j++) {
                 $candidate = trim($lines[$j]);
-                if ($candidate === '' || preg_match('/^(del\s+programa|programa:?)$/i', $candidate)) {
-                    continue;
-                }
-                if (preg_match('/programa\s+a[uú]n\s+se\s+encuentra\s+vigente/i', $candidate)) {
-                    continue;
-                }
-                if (preg_match('/^\d+$/', $candidate)) {
+                $invalidFallback = self::isInvalidProgramNameCandidate($candidate);
+                if ($invalidFallback) {
                     continue;
                 }
                 if (preg_match('/^1\.[2-9]/', $candidate)) {
@@ -272,10 +342,6 @@ class ProgramaPdfParser
                 }
                 return self::normalizeSentence($candidate);
             }
-        }
-
-        if (preg_match('/(?:^|\n)([A-ZÁÉÍÓÚÑ0-9][A-ZÁÉÍÓÚÑ0-9\-\s]{8,180})\n1\.\s*INFORMACION B[ÁA]SICA/iu', $text, $m)) {
-            return self::normalizeSentence((string) ($m[1] ?? ''));
         }
         return '';
     }
@@ -317,6 +383,80 @@ class ProgramaPdfParser
         return $value;
     }
 
+    /**
+     * Si no hubo nombre en 4.3 (sigue el placeholder "Competencia N"), usar 4.1 norma/unidad de competencia (p. ej. etapa práctica).
+     *
+     * @param array<string,mixed> $comp
+     */
+    private static function finalizeCompetenciaNombre(array &$comp): void
+    {
+        $nombre = trim((string) ($comp['nombre'] ?? ''));
+        $unidad = trim((string) ($comp['_unidad_norma'] ?? ''));
+        $isGenericPlaceholder = $nombre === '' || preg_match('/^Competencia\s+\d+$/i', $nombre) === 1;
+        if ($isGenericPlaceholder && $unidad !== '') {
+            $comp['nombre'] = self::normalizeSentence($unidad);
+        }
+        unset($comp['_unidad_norma']);
+    }
+
+    private static function isInvalidProgramNameCandidate(string $candidate): bool
+    {
+        $value = trim($candidate);
+        if ($value === '') {
+            return true;
+        }
+        if (preg_match('/^(del\s+programa:?|programa:?)$/iu', $value)) {
+            return true;
+        }
+        if (preg_match('/^\d+$/', $value)) {
+            return true;
+        }
+        if (preg_match('/\bprograma\b[\s\S]{0,60}\bvigente\b/iu', $value)) {
+            return true;
+        }
+        if (preg_match('/software\s+de\s+software/iu', $value)) {
+            return true;
+        }
+        return false;
+    }
+
+    private static function isLikelyResultadoLine(string $line): bool
+    {
+        $normalized = trim($line);
+        if ($normalized === '') {
+            return false;
+        }
+        if (preg_match('/^4\./i', $normalized)) {
+            return false;
+        }
+        if (preg_match('/^(denominaci[oó]n|c[oó]digo\s*ra|resultado[s]?\s+de\s+aprendizaje)$/iu', $normalized)) {
+            return false;
+        }
+        if (preg_match('/^aprendizaje\s*\(?\s*horas?\s*\)?$/iu', $normalized)) {
+            return false;
+        }
+        if (preg_match('/\b(aprendizaje|denominaci[oó]n)\b.*\bhoras?\b/iu', $normalized)) {
+            return false;
+        }
+        if (preg_match('/^\(?\s*horas?\s*\)?$/iu', $normalized)) {
+            return false;
+        }
+        return mb_strlen($normalized) >= 12 && preg_match('/[a-záéíóúñ]/iu', $normalized) === 1;
+    }
+
+    private static function shouldAppendToPreviousResultado(string $previous, string $current): bool
+    {
+        $prev = trim($previous);
+        $curr = trim($current);
+        if ($prev === '' || $curr === '') {
+            return false;
+        }
+        if (preg_match('/[.!?)]$/u', $prev)) {
+            return false;
+        }
+        return true;
+    }
+
     /** @return array<int,string> */
     private static function splitPotentialRaSegments(string $line): array
     {
@@ -333,4 +473,5 @@ class ProgramaPdfParser
 
         return $parts === [] ? [$normalized] : $parts;
     }
+
 }

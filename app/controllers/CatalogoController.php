@@ -75,6 +75,22 @@ class CatalogoController
         $extension = strtolower(pathinfo($name, PATHINFO_EXTENSION));
         $extracted = ProgramaPdfTextExtractor::extract($tmpPath, $extension);
         $parsed = ProgramaPdfParser::parsePages((array) ($extracted['pages'] ?? []));
+        $parsedMeta = (array) ($parsed['meta'] ?? []);
+        $nameFallbackApplied = false;
+        if (trim((string) ($parsedMeta['nombre'] ?? '')) === '') {
+            $fallbackName = $this->guessProgramNameFromFileName($name);
+            $parsed['meta']['nombre'] = $fallbackName;
+            $nameFallbackApplied = $fallbackName !== '';
+        }
+        if ($nameFallbackApplied) {
+            $parsed['warnings'] = array_values(array_filter(
+                (array) ($parsed['warnings'] ?? []),
+                static function ($warning): bool {
+                    $message = is_array($warning) ? (string) ($warning['message'] ?? '') : (string) $warning;
+                    return stripos($message, 'No se detecto nombre de programa automaticamente.') === false;
+                }
+            ));
+        }
         $parsed['warnings'] = array_merge(
             (array) ($parsed['warnings'] ?? []),
             array_map(static fn (string $w): array => ['severity' => 'warning', 'message' => $w], (array) ($extracted['warnings'] ?? []))
@@ -113,4 +129,14 @@ class CatalogoController
 
         redirect(APP_BASE_PATH . '/catalogo/programas');
     }
+
+    private function guessProgramNameFromFileName(string $fileName): string
+    {
+        $base = pathinfo($fileName, PATHINFO_FILENAME);
+        $base = preg_replace('/^[\d_\-\s]*programa\s+de\s+formaci[oó]n\s*-\s*/iu', '', $base) ?? $base;
+        $base = preg_replace('/[_\-]+/', ' ', $base) ?? $base;
+        $base = preg_replace('/\s+/', ' ', trim($base)) ?? trim($base);
+        return $base;
+    }
+
 }
