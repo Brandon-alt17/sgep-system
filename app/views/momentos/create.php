@@ -1,4 +1,6 @@
-<?php partial('components/page_header', [
+<?php
+$programaContenido = (array) ($programaContenido ?? []);
+partial('components/page_header', [
     'title' => 'Registro de momento ' . (string) $tipo,
     'subtitle' => 'Diligencie la visita y la valoración del aprendiz según el momento seleccionado.',
 ]); ?>
@@ -10,6 +12,22 @@
         <p class="m-0 text-sm"><?= e((string) $aprendiz['nombre_completo']) ?> - <?= e((string) $aprendiz['numero_documento']) ?></p>
     </section>
 
+    <?php if ($programaContenido !== []): ?>
+        <section class="mb-4 <?= e(ui_card_classes()) ?>">
+            <h3 class="<?= e(ui_heading_sm_classes()) ?>">Resultados sugeridos por programa</h3>
+            <div class="mt-2 max-h-56 overflow-auto rounded border border-app-border p-3">
+                <?php foreach ($programaContenido as $competencia): ?>
+                    <p class="mb-1 mt-0 text-sm font-semibold text-app-text"><?= e((string) ($competencia['nombre'] ?? '')) ?></p>
+                    <ul class="mb-2 mt-0 list-disc pl-4 text-sm text-app-muted">
+                        <?php foreach ((array) ($competencia['resultados'] ?? []) as $resultado): ?>
+                            <li><?= e((string) ($resultado['descripcion'] ?? '')) ?></li>
+                        <?php endforeach; ?>
+                    </ul>
+                <?php endforeach; ?>
+            </div>
+        </section>
+    <?php endif; ?>
+
     <form method="post" action="<?= e(APP_BASE_PATH) ?>/momentos/store" class="<?= e(ui_card_classes()) ?>">
         <input type="hidden" name="aprendiz_id" value="<?= (int) $aprendiz['id'] ?>">
         <input type="hidden" name="tipo" value="<?= e((string) $tipo) ?>">
@@ -19,10 +37,17 @@
                 <input type="date" name="fecha_visita" required class="<?= e(ui_input_classes()) ?>">
             </label>
             <label class="<?= e(ui_label_classes()) ?>">Modalidad
-                <select name="modalidad" class="<?= e(ui_input_classes()) ?>">
-                    <option value="Presencial">Presencial</option>
-                    <option value="Virtual">Virtual</option>
-                </select>
+                <span class="<?= e(ui_select_wrapper_classes()) ?>">
+                    <select name="modalidad" class="<?= e(ui_select_classes()) ?>">
+                        <option value="Presencial">Presencial</option>
+                        <option value="Virtual">Virtual</option>
+                    </select>
+                    <span class="<?= e(ui_select_chevron_classes()) ?>" data-select-chevron aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-4 w-4">
+                            <path d="m6 9 6 6 6-6"></path>
+                        </svg>
+                    </span>
+                </span>
             </label>
             <?php if ($tipo !== 'M3'): ?>
                 <label class="<?= e(ui_label_classes()) ?> md:col-span-2">Próxima visita
@@ -37,10 +62,17 @@
 
         <?php if ($tipo === 'M3'): ?>
             <label class="mt-2 <?= e(ui_label_classes()) ?>">Juicio final
-                <select name="juicio_final" class="<?= e(ui_input_classes()) ?> md:max-w-xs">
-                    <option value="Aprobado">Aprobado</option>
-                    <option value="No aprobado">No aprobado</option>
-                </select>
+                <span class="<?= e(ui_select_wrapper_classes()) ?> md:max-w-xs">
+                    <select name="juicio_final" class="<?= e(ui_select_classes()) ?>">
+                        <option value="Aprobado">Aprobado</option>
+                        <option value="No aprobado">No aprobado</option>
+                    </select>
+                    <span class="<?= e(ui_select_chevron_classes()) ?>" data-select-chevron aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-4 w-4">
+                            <path d="m6 9 6 6 6-6"></path>
+                        </svg>
+                    </span>
+                </span>
             </label>
         <?php endif; ?>
 

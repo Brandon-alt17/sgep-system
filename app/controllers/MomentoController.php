@@ -7,6 +7,7 @@ namespace App\Controllers;
 use App\Helpers\Database;
 use App\Models\Aprendiz;
 use App\Models\Momento;
+use App\Models\ProgramaContenido;
 
 class MomentoController
 {
@@ -15,7 +16,11 @@ class MomentoController
         $aprendizId = (int) ($_GET['aprendiz_id'] ?? 0);
         $tipo = (string) ($_GET['tipo'] ?? 'M1');
         $aprendiz = Aprendiz::findById($aprendizId);
-        view('momentos/create', ['aprendiz' => $aprendiz, 'tipo' => $tipo]);
+        $programaContenido = [];
+        if ($aprendiz && !empty($aprendiz['programa_id'])) {
+            $programaContenido = ProgramaContenido::competenciasConResultados((int) $aprendiz['programa_id']);
+        }
+        view('momentos/create', ['aprendiz' => $aprendiz, 'tipo' => $tipo, 'programaContenido' => $programaContenido]);
     }
 
     public function store(): void

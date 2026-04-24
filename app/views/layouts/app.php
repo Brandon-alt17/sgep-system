@@ -20,6 +20,11 @@ $titles = [
     '/aprendices' => 'Aprendices',
     '/importar' => 'Importar datos',
     '/reportes/maestro' => 'Reportes',
+    '/catalogo/programas' => 'Catálogo',
+    '/catalogo/programas/pendientes' => 'Catálogo',
+    '/catalogo/programas/importar' => 'Catálogo',
+    '/catalogo/grupos' => 'Catálogo',
+    '/catalogo/empresas' => 'Catálogo',
     '/documentos/generar' => 'Configuración',
 ];
 $pageTitle = $titles[$currentPath] ?? 'SGEP';

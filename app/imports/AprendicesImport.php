@@ -6,6 +6,7 @@ namespace App\Imports;
 
 use App\Helpers\Database;
 use App\Helpers\Normalizer;
+use App\Models\ProgramaEnlacePendiente;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Shared\Date as ExcelDate;
 
@@ -30,6 +31,7 @@ class AprendicesImport
             'updated_rows' => [],
             'duplicate_rows' => [],
             'pending_rows' => [],
+            'programa_pending_rows' => [],
             'conflict_rows' => [],
         ];
 
@@ -45,14 +47,18 @@ class AprendicesImport
                 }
                 $assoc = Normalizer::normalizeRow($assoc);
 
-                $doc = $this->normalizeDocumento($assoc['documento_identidad'] ?? null);
+                $doc = $this->normalizeDocumento(
+                    $assoc['documento_identidad_vigente']
+                    ?? $assoc['documento_identidad']
+                    ?? null
+                );
                 $nombre = isset($assoc['nombre_completo']) ? trim((string) $assoc['nombre_completo']) : '';
                 $usuarioLabel = $this->usuarioLabel($nombre, $doc);
                 if ($doc === '' || $nombre === '') {
                     $results['skipped']++;
                     $faltantes = [];
                     if ($doc === '') {
-                        $faltantes[] = 'documento_identidad';
+                        $faltantes[] = 'documento_identidad_vigente';
                     }
                     if ($nombre === '') {
                         $faltantes[] = 'nombre_completo';
@@ -61,14 +67,41 @@ class AprendicesImport
                     continue;
                 }
 
-                $programaId = $this->findOrCreatePrograma(
+                $programaResolution = $this->findProgramaStrict(
                     $assoc['programa_formacion'] ?? null,
                     $assoc['modalidad_formacion'] ?? null
                 );
+                $programaId = $programaResolution['id'];
                 $empresaId = $this->findOrCreateEmpresa($assoc);
 
                 $payload = $this->buildAprendizPayload($assoc, $doc, $programaId, $empresaId);
                 $rowSummary = $this->rowSummary($assoc, $doc);
+
+                if (($programaResolution['ambiguous'] ?? false) === true) {
+                    $results['warnings'][] = $usuarioLabel . ': programa ambiguo sin nivel (' . ($programaResolution['normalized_name'] ?? 'N/D') . ').';
+                    $results['programa_pending_rows'][] = [
+                        'nombre' => $rowSummary['nombre'],
+                        'identificacion' => $rowSummary['identificacion'],
+                        'programa' => (string) ($programaResolution['normalized_name'] ?? ''),
+                        'nivel_detectado' => (string) ($programaResolution['detected_level'] ?? ''),
+                        'candidatos' => (array) ($programaResolution['candidates'] ?? []),
+                        'motivo' => 'ambiguous',
+                    ];
+                    $this->registerProgramaPendingLink($assoc, $doc, $nombre, $programaResolution, 'ambiguous');
+                }
+
+                if ($programaId === null && ($programaResolution['ambiguous'] ?? false) !== true) {
+                    $results['warnings'][] = $usuarioLabel . ': programa no encontrado en catálogo (' . ($programaResolution['normalized_name'] ?? 'N/D') . ').';
+                    $results['programa_pending_rows'][] = [
+                        'nombre' => $rowSummary['nombre'],
+                        'identificacion' => $rowSummary['identificacion'],
+                        'programa' => (string) ($programaResolution['normalized_name'] ?? ''),
+                        'nivel_detectado' => (string) ($programaResolution['detected_level'] ?? ''),
+                        'candidatos' => [],
+                        'motivo' => 'not_found',
+                    ];
+                    $this->registerProgramaPendingLink($assoc, $doc, $nombre, $programaResolution, 'not_found');
+                }
 
                 $existing = $this->findByDocumento($doc);
                 if ($existing) {
@@ -142,7 +175,7 @@ class AprendicesImport
         return [
             'nombre' => trim((string) ($assoc['nombre_completo'] ?? '')),
             'identificacion' => $doc,
-            'ficha' => trim((string) ($assoc['numero_ficha'] ?? '')),
+            'ficha' => trim((string) ($assoc['numero_grupo'] ?? $assoc['numero_ficha'] ?? '')),
             'programa' => trim((string) ($assoc['programa_formacion'] ?? '')),
         ];
     }
@@ -154,7 +187,11 @@ class AprendicesImport
         $missing = [];
         foreach ($check as $field) {
             $label = (string) $field;
-            if ($label === 'documento_identidad' || $label === 'nombre_completo') {
+            if (
+                $label === 'documento_identidad'
+                || $label === 'documento_identidad_vigente'
+                || $label === 'nombre_completo'
+            ) {
                 continue;
             }
             $value = $assoc[$label] ?? null;
@@ -182,12 +219,10 @@ class AprendicesImport
             'direccion_domicilio',
             'ciudad_domicilio',
             'alternativa_ep',
-            'fecha_sofia',
             'nombre_instructor_seguimiento',
             'telefono_instructor_seguimiento',
             'tipo_asistencia',
             'sugerencias_comentarios',
-            'ficha_curso',
             'jefe_grupo',
             'coordinacion',
         ];
@@ -321,10 +356,7 @@ class AprendicesImport
 
     private function buildAprendizPayload(array $assoc, string $doc, ?int $programaId, ?int $empresaId): array
     {
-        $ficha = $this->stringOrNull($assoc['numero_ficha'] ?? null);
-        if ($ficha === null || $ficha === '') {
-            $ficha = $this->stringOrNull($assoc['ficha_curso'] ?? null);
-        }
+        $ficha = $this->stringOrNull($assoc['numero_grupo'] ?? $assoc['numero_ficha'] ?? null);
 
         return [
             'nombre_completo' => trim((string) ($assoc['nombre_completo'] ?? '')),
@@ -341,12 +373,10 @@ class AprendicesImport
             'direccion_domicilio' => $this->stringOrNull($assoc['direccion_domicilio_aprendiz'] ?? null),
             'ciudad_domicilio' => $this->stringOrNull($assoc['ciudad_domicilio_aprendiz'] ?? null),
             'alternativa_ep' => $this->stringOrNull($assoc['alternativa_ep'] ?? null),
-            'fecha_sofia' => $this->toMysqlDate($assoc['fecha_sofia'] ?? null),
             'nombre_instructor_seguimiento' => $this->stringOrNull($assoc['nombre_instructor_seguimiento'] ?? null),
             'telefono_instructor_seguimiento' => $this->stringOrNull($assoc['telefono_instructor_seguimiento'] ?? null),
             'tipo_asistencia' => $this->stringOrNull($assoc['tipo_asistencia'] ?? null),
             'sugerencias_comentarios' => $this->stringOrNull($assoc['sugerencias_comentarios'] ?? null),
-            'ficha_curso' => $this->stringOrNull($assoc['ficha_curso'] ?? null),
             'jefe_grupo' => $this->stringOrNull($assoc['jefe_grupo'] ?? null),
             'coordinacion' => $this->stringOrNull($assoc['coordinacion'] ?? null),
         ];
@@ -393,16 +423,6 @@ class AprendicesImport
         return null;
     }
 
-    private function toMysqlDate(mixed $v): ?string
-    {
-        $dt = $this->toMysqlDateTime($v);
-        if ($dt === null) {
-            return null;
-        }
-
-        return substr($dt, 0, 10);
-    }
-
     private function findByDocumento(string $documento): ?array
     {
         $stmt = Database::connection()->prepare('SELECT * FROM aprendices WHERE numero_documento = :doc');
@@ -411,32 +431,102 @@ class AprendicesImport
         return $stmt->fetch() ?: null;
     }
 
-    private function findOrCreatePrograma(mixed $nombrePrograma, mixed $modalidad): ?int
+    /** @return array{id: ?int, ambiguous: bool, normalized_name: string, detected_level: ?string, candidates: array<int, string>} */
+    private function findProgramaStrict(mixed $nombrePrograma, mixed $modalidad): array
     {
-        $nombre = $this->stringOrNull($nombrePrograma);
-        if ($nombre === null) {
-            return null;
+        $nombreRaw = $this->stringOrNull($nombrePrograma);
+        if ($nombreRaw === null) {
+            return [
+                'id' => null,
+                'ambiguous' => false,
+                'normalized_name' => '',
+                'detected_level' => null,
+                'candidates' => [],
+            ];
         }
+        $nombre = Normalizer::normalizeProgramaNombre($nombreRaw);
+        $nivel = Normalizer::extractProgramaNivel($nombreRaw);
+        $nombreKey = Normalizer::normalizeProgramComparableKey($nombre);
+        $nivelKey = Normalizer::normalizeProgramComparableKey((string) ($nivel ?? ''));
 
         $pdo = Database::connection();
-        $stmt = $pdo->prepare('SELECT id, modalidad FROM programas WHERE nombre = :n LIMIT 1');
-        $stmt->execute(['n' => $nombre]);
-        $row = $stmt->fetch();
-        if ($row) {
-            $mod = $this->stringOrNull($modalidad);
-            if ($mod !== null && ($row['modalidad'] === null || $row['modalidad'] === '')) {
-                $pdo->prepare('UPDATE programas SET modalidad = :m WHERE id = :id')
-                    ->execute(['m' => $mod, 'id' => (int) $row['id']]);
+        $rows = $pdo->query('SELECT id, nombre, nivel, modalidad FROM programas')->fetchAll();
+        $matched = [];
+        foreach ($rows as $row) {
+            $rowNombre = Normalizer::normalizeProgramaNombre((string) ($row['nombre'] ?? ''));
+            if (Normalizer::normalizeProgramComparableKey($rowNombre) !== $nombreKey) {
+                continue;
             }
-
-            return (int) $row['id'];
+            $matched[] = $row;
         }
 
-        $mod = $this->stringOrNull($modalidad);
-        $pdo->prepare('INSERT INTO programas (nombre, modalidad, created_at) VALUES (:nombre, :modalidad, NOW())')
-            ->execute(['nombre' => $nombre, 'modalidad' => $mod]);
+        $selected = null;
+        if ($nivelKey !== '') {
+            foreach ($matched as $row) {
+                $rowNivelKey = Normalizer::normalizeProgramComparableKey((string) ($row['nivel'] ?? ''));
+                if ($rowNivelKey === $nivelKey || $rowNivelKey === '') {
+                    $selected = $row;
+                    break;
+                }
+            }
+        } elseif (count($matched) === 1) {
+            $selected = $matched[0];
+        }
 
-        return (int) $pdo->lastInsertId();
+        if ($selected !== null) {
+            return [
+                'id' => (int) $selected['id'],
+                'ambiguous' => false,
+                'normalized_name' => $nombre,
+                'detected_level' => $nivel,
+                'candidates' => [],
+            ];
+        }
+
+        if ($nivelKey === '' && count($matched) > 1) {
+            $candidates = [];
+            foreach ($matched as $m) {
+                $candidateNivel = trim((string) ($m['nivel'] ?? ''));
+                $candidates[] = $candidateNivel !== '' ? $candidateNivel : 'Sin nivel';
+            }
+            return [
+                'id' => null,
+                'ambiguous' => true,
+                'normalized_name' => $nombre,
+                'detected_level' => null,
+                'candidates' => array_values(array_unique($candidates)),
+            ];
+        }
+
+        return [
+            'id' => null,
+            'ambiguous' => false,
+            'normalized_name' => $nombre,
+            'detected_level' => $nivel,
+            'candidates' => [],
+        ];
+    }
+
+    /** @param array<string,mixed> $assoc @param array{id:?int, ambiguous:bool, normalized_name:string, detected_level:?string, candidates:array<int,string>} $programaResolution */
+    private function registerProgramaPendingLink(array $assoc, string $doc, string $nombre, array $programaResolution, string $reason): void
+    {
+        $programaFuente = trim((string) ($assoc['programa_formacion'] ?? ''));
+        if ($programaFuente === '') {
+            $programaFuente = (string) ($programaResolution['normalized_name'] ?? '');
+        }
+        if ($programaFuente === '') {
+            return;
+        }
+
+        ProgramaEnlacePendiente::createOrIgnorePending([
+            'numero_documento' => $doc,
+            'nombre_aprendiz' => $nombre,
+            'programa_fuente' => $programaFuente,
+            'nivel_fuente' => (string) ($programaResolution['detected_level'] ?? ''),
+            'modalidad_fuente' => trim((string) ($assoc['modalidad_formacion'] ?? '')),
+            'candidatos_json' => json_encode((array) ($programaResolution['candidates'] ?? []), JSON_UNESCAPED_UNICODE),
+            'motivo' => $reason,
+        ]);
     }
 
     private function findOrCreateEmpresa(array $assoc): ?int
@@ -530,16 +620,16 @@ class AprendicesImport
         $sql = 'INSERT INTO aprendices (
                     nombre_completo, tipo_documento, numero_documento, telefono, correo_personal, correo_institucional,
                     ficha, programa_id, empresa_id, estado,
-                    fecha_hora_formulario, direccion_domicilio, ciudad_domicilio, alternativa_ep, fecha_sofia,
+                    fecha_hora_formulario, direccion_domicilio, ciudad_domicilio, alternativa_ep,
                     nombre_instructor_seguimiento, telefono_instructor_seguimiento, tipo_asistencia, sugerencias_comentarios,
-                    ficha_curso, jefe_grupo, coordinacion,
+                    jefe_grupo, coordinacion,
                     created_at, updated_at
                 ) VALUES (
                     :nombre_completo, :tipo_documento, :numero_documento, :telefono, :correo_personal, :correo_institucional,
                     :ficha, :programa_id, :empresa_id, :estado,
-                    :fecha_hora_formulario, :direccion_domicilio, :ciudad_domicilio, :alternativa_ep, :fecha_sofia,
+                    :fecha_hora_formulario, :direccion_domicilio, :ciudad_domicilio, :alternativa_ep,
                     :nombre_instructor_seguimiento, :telefono_instructor_seguimiento, :tipo_asistencia, :sugerencias_comentarios,
-                    :ficha_curso, :jefe_grupo, :coordinacion,
+                    :jefe_grupo, :coordinacion,
                     NOW(), NOW()
                 )';
         $pdo = Database::connection();
@@ -559,12 +649,10 @@ class AprendicesImport
             'direccion_domicilio' => $data['direccion_domicilio'],
             'ciudad_domicilio' => $data['ciudad_domicilio'],
             'alternativa_ep' => $data['alternativa_ep'],
-            'fecha_sofia' => $data['fecha_sofia'],
             'nombre_instructor_seguimiento' => $data['nombre_instructor_seguimiento'],
             'telefono_instructor_seguimiento' => $data['telefono_instructor_seguimiento'],
             'tipo_asistencia' => $data['tipo_asistencia'],
             'sugerencias_comentarios' => $data['sugerencias_comentarios'],
-            'ficha_curso' => $data['ficha_curso'],
             'jefe_grupo' => $data['jefe_grupo'],
             'coordinacion' => $data['coordinacion'],
         ]);
@@ -588,12 +676,10 @@ class AprendicesImport
             direccion_domicilio = COALESCE(NULLIF(:direccion_domicilio, ""), direccion_domicilio),
             ciudad_domicilio = COALESCE(NULLIF(:ciudad_domicilio, ""), ciudad_domicilio),
             alternativa_ep = COALESCE(NULLIF(:alternativa_ep, ""), alternativa_ep),
-            fecha_sofia = COALESCE(:fecha_sofia, fecha_sofia),
             nombre_instructor_seguimiento = COALESCE(NULLIF(:nombre_instructor_seguimiento, ""), nombre_instructor_seguimiento),
             telefono_instructor_seguimiento = COALESCE(NULLIF(:telefono_instructor_seguimiento, ""), telefono_instructor_seguimiento),
             tipo_asistencia = COALESCE(NULLIF(:tipo_asistencia, ""), tipo_asistencia),
             sugerencias_comentarios = COALESCE(NULLIF(:sugerencias_comentarios, ""), sugerencias_comentarios),
-            ficha_curso = COALESCE(NULLIF(:ficha_curso, ""), ficha_curso),
             jefe_grupo = COALESCE(NULLIF(:jefe_grupo, ""), jefe_grupo),
             coordinacion = COALESCE(NULLIF(:coordinacion, ""), coordinacion),
             updated_at = NOW()
@@ -613,12 +699,10 @@ class AprendicesImport
             'direccion_domicilio' => $data['direccion_domicilio'] ?? '',
             'ciudad_domicilio' => $data['ciudad_domicilio'] ?? '',
             'alternativa_ep' => $data['alternativa_ep'] ?? '',
-            'fecha_sofia' => $data['fecha_sofia'] ?? null,
             'nombre_instructor_seguimiento' => $data['nombre_instructor_seguimiento'] ?? '',
             'telefono_instructor_seguimiento' => $data['telefono_instructor_seguimiento'] ?? '',
             'tipo_asistencia' => $data['tipo_asistencia'] ?? '',
             'sugerencias_comentarios' => $data['sugerencias_comentarios'] ?? '',
-            'ficha_curso' => $data['ficha_curso'] ?? '',
             'jefe_grupo' => $data['jefe_grupo'] ?? '',
             'coordinacion' => $data['coordinacion'] ?? '',
         ];
@@ -645,12 +729,10 @@ class AprendicesImport
             'direccion_domicilio',
             'ciudad_domicilio',
             'alternativa_ep',
-            'fecha_sofia',
             'nombre_instructor_seguimiento',
             'telefono_instructor_seguimiento',
             'tipo_asistencia',
             'sugerencias_comentarios',
-            'ficha_curso',
             'jefe_grupo',
             'coordinacion',
         ];

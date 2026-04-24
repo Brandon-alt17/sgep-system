@@ -37,6 +37,7 @@ El SGEP es una aplicación web **monolítica de ejecución local** construida co
 | **Frontend** | Vistas PHP + Tailwind CSS 3 | Vistas y estilos |
 | **Base de datos** | MySQL 8.0 | Almacenamiento local |
 | **Importación** | PhpSpreadsheet | Lectura de CSV y .xlsx |
+| **Parseo programa PDF** | Reglas regex + revisión UI | Extracción semi-automática de competencias y resultados |
 | **Documentos Word** | PHPOffice/PHPWord | Generación del F-023 |
 | **Exportación Excel** | PhpSpreadsheet | Reporte maestro .xlsx |
 | **Entorno Windows** | WAMP 3.x | Servidor local PHP + MySQL + Apache |
@@ -100,7 +101,6 @@ sgep/
 │ correo_personal │
 │ correo_inst     │
 │ alternativa_ep  │       ┌──────────────────┐
-│ fecha_sofia     │       │    momentos      │
 │ modalidad_ep    │       ├──────────────────┤
 │ estado          │──────▶│ id               │
 │ ficha           │       │ aprendiz_id (FK) │
@@ -161,6 +161,30 @@ sgep/
 
 ## Flujo de Datos Principal
 
+```
+
+## Flujo Programas Normalizados
+
+```
+Importación aprendices (.xlsx)
+   │
+   ├── Match estricto a catálogo programas (sin INSERT automático)
+   ├── Si no hay match: aprendiz queda con programa_id NULL
+   └── Registro en programa_enlaces_pendientes
+       │
+       ▼
+Catálogo > Pendientes por enlazar
+   │
+   └── Resolución manual -> actualiza aprendices.programa_id
+
+Catálogo > Importar programa (PDF/TXT)
+   │
+   ├── Extracción por reglas (competencia/resultado)
+   ├── Revisión visual previa
+   └── Persistencia en:
+       - programa_importaciones_pdf
+       - programa_competencias
+       - programa_resultados_aprendizaje
 ```
 Google Forms
     │

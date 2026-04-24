@@ -5,6 +5,8 @@ declare(strict_types=1);
 /** Rutas absolutas al mismo prefijo que /css/app.css (APP_BASE_PATH). */
 $fontBase = rtrim((string) APP_BASE_PATH, '/');
 ?>
+<link rel="preload" href="<?= e($fontBase) ?>/fonts/inter/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="<?= e($fontBase) ?>/fonts/inter/inter-latin-ext-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
 <style>
 @font-face {
   font-family: 'Inter';

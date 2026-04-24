@@ -16,8 +16,21 @@ if (!function_exists('ui_card_classes')) {
 if (!function_exists('ui_select_classes')) {
     function ui_select_classes(): string
     {
-        // w-64 = 256px (ancho fijo preestablecido)
-        return 'w-64 h-10 pl-3 pr-10 border border-app-borderControlStrong rounded-md text-sm bg-white appearance-none';
+        return 'w-full rounded-lg border border-app-borderControlStrong bg-white bg-none px-3 py-2 pr-10 text-sm text-app-muted appearance-none outline-none transition-colors duration-200 hover:border-app-accent focus:border-app-accent focus:ring-2 focus:ring-app-accentSoft [&>option]:bg-white [&>option]:text-app-muted';
+    }
+}
+
+if (!function_exists('ui_select_wrapper_classes')) {
+    function ui_select_wrapper_classes(): string
+    {
+        return 'relative block js-custom-select';
+    }
+}
+
+if (!function_exists('ui_select_chevron_classes')) {
+    function ui_select_chevron_classes(): string
+    {
+        return 'pointer-events-none absolute right-3 top-1/2 inline-flex h-4 w-4 -translate-y-1/2 text-app-muted transition-transform duration-200 ease-in-out';
     }
 }
 
@@ -86,7 +99,7 @@ if (!function_exists('ui_label_classes')) {
 if (!function_exists('ui_input_classes')) {
     function ui_input_classes(): string
     {
-        return 'mt-1 w-full rounded-lg border border-app-borderControlStrong px-3 py-2 text-sm';
+        return 'w-full rounded-lg border border-app-borderControlStrong px-3 py-2 text-sm text-app-text outline-none transition-colors duration-200 focus:border-app-accent focus:ring-2 focus:ring-app-accentSoft';
     }
 }
 
@@ -121,7 +134,7 @@ if (!function_exists('ui_button_small_primary_classes')) {
 if (!function_exists('ui_table_classes')) {
     function ui_table_classes(): string
     {
-        return 'mt-2.5 w-full border-collapse [&>tbody>tr:hover>td]:bg-app-panelHover';
+        return 'w-full border-collapse [&>tbody>tr:hover>td]:bg-app-panelHover';
     }
 }
 

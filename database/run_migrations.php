@@ -40,8 +40,8 @@ foreach ($files as $file) {
             $pdo->exec($stmt);
         } catch (\PDOException $e) {
             $driverCode = (int) ($e->errorInfo[1] ?? 0);
-            // MySQL/MariaDB: 1060 = columna duplicada
-            if ($driverCode === 1060) {
+            // MySQL/MariaDB: 1060 = columna duplicada, 1061 = índice duplicado
+            if ($driverCode === 1060 || $driverCode === 1061) {
                 continue;
             }
             throw $e;

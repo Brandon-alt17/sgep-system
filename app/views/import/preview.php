@@ -3,6 +3,7 @@ $insertedRows = (array) ($resultado['inserted_rows'] ?? []);
 $updatedRows = (array) ($resultado['updated_rows'] ?? []);
 $duplicateRows = (array) ($resultado['duplicate_rows'] ?? []);
 $pendingRows = (array) ($resultado['pending_rows'] ?? []);
+$programaPendingRows = (array) ($resultado['programa_pending_rows'] ?? []);
 $conflictRows = (array) ($resultado['conflict_rows'] ?? []);
 $processed = (int) ($entry['records'] ?? ((int) ($resultado['inserted'] ?? 0) + (int) ($resultado['updated'] ?? 0)));
 $tabs = [
@@ -64,7 +65,8 @@ $pendingFieldLabels = [
     'documento_identidad' => 'Documento de identidad',
     'tipo_documento' => 'Tipo de documento',
     'programa_formacion' => 'Programa de formación',
-    'numero_ficha' => 'Número de ficha',
+    'numero_grupo' => 'Número de grupo',
+    'numero_ficha' => 'Número de grupo',
     'modalidad_formacion' => 'Modalidad de formación',
     'nombre_completo' => 'Nombre completo',
     'numero_celular' => 'Número de celular',
@@ -73,7 +75,6 @@ $pendingFieldLabels = [
     'correo_electronico_personal' => 'Correo personal',
     'correo_electronico_institucional' => 'Correo institucional',
     'alternativa_ep' => 'Alternativa EP',
-    'fecha_sofia' => 'Fecha Sofia',
     'empresa_entidad_coformadora' => 'Empresa o entidad coformadora',
     'direccion_empresa' => 'Dirección de empresa',
     'direccion_realiza_practica' => 'Dirección donde realiza práctica',
@@ -89,7 +90,6 @@ $pendingFieldLabels = [
     'telefono_instructor_seguimiento' => 'Teléfono del instructor',
     'tipo_asistencia' => 'Tipo de asistencia',
     'sugerencias_comentarios' => 'Sugerencias y comentarios',
-    'ficha_curso' => 'Ficha de curso',
     'jefe_grupo' => 'Jefe de grupo',
     'coordinacion' => 'Coordinación',
 ];
@@ -172,7 +172,7 @@ $pendingFieldLabels = [
             <tr>
                 <th class="<?= e(ui_th_classes()) ?> px-1">Nombre</th>
                 <th class="<?= e(ui_th_classes()) ?> px-1">Identificación</th>
-                <th class="<?= e(ui_th_classes()) ?> px-1">Ficha</th>
+                <th class="<?= e(ui_th_classes()) ?> px-1">Grupo</th>
                 <th class="<?= e(ui_th_classes()) ?> px-1">Programa</th>
             </tr>
             </thead>
@@ -340,7 +340,7 @@ $pendingFieldLabels = [
 <?php if ($pendingRows !== []): ?>
     <section id="tabla-pendientes" class="mt-4 <?= e(ui_card_classes()) ?>">
         <div class="mb-2 flex items-center gap-2">
-            <span class="inline-flex h-4 w-4 shrink-0 items-center justify-center text-amber-600 leading-none [&_svg]:h-4 [&_svg]:w-4"><?= ui_icon('clock') ?></span>
+            <span class="inline-flex h-4 w-4 shrink-0 items-center justify-center text-amber-600 leading-none [&_svg]:h-4 [&_svg]:w-4" style="transform: translateY(-1px);"><?= ui_icon('clock') ?></span>
             <h3 class="<?= e(ui_heading_sm_classes()) ?> m-0 text-amber-600">Pendientes</h3>
         </div>
         <p class="mb-3 mt-0 text-sm text-app-muted">Aprendices con datos faltantes para completar el perfil en esta importación.</p>
@@ -431,6 +431,43 @@ $pendingFieldLabels = [
             </div>
         </div>
     <?php endforeach; ?>
+<?php endif; ?>
+
+<?php if ($programaPendingRows !== []): ?>
+    <section class="mt-4 <?= e(ui_warning_card_classes()) ?>">
+        <h3 class="<?= e(ui_heading_sm_classes()) ?> mb-1 mt-0">Programas pendientes por enlazar</h3>
+        <p class="mb-3 mt-0 text-sm">Algunas filas quedaron sin enlace automático a catálogo. Puede resolverlas desde el módulo de pendientes.</p>
+        <table class="<?= e(ui_table_classes()) ?> table-fixed">
+            <colgroup>
+                <col class="w-[30%]">
+                <col class="w-[18%]">
+                <col class="w-[24%]">
+                <col class="w-[16%]">
+                <col class="w-[12%]">
+            </colgroup>
+            <thead>
+            <tr>
+                <th class="<?= e(ui_th_classes()) ?> px-1">Aprendiz</th>
+                <th class="<?= e(ui_th_classes()) ?> px-1">Documento</th>
+                <th class="<?= e(ui_th_classes()) ?> px-1">Programa</th>
+                <th class="<?= e(ui_th_classes()) ?> px-1">Niveles candidatos</th>
+                <th class="<?= e(ui_th_classes()) ?> px-1">Motivo</th>
+            </tr>
+            </thead>
+            <tbody>
+            <?php foreach ($programaPendingRows as $row): ?>
+                <tr>
+                    <td class="<?= e(ui_td_classes()) ?> px-4"><?= e((string) ($row['nombre'] ?? '')) ?></td>
+                    <td class="<?= e(ui_td_classes()) ?> px-4"><?= e((string) ($row['identificacion'] ?? '')) ?></td>
+                    <td class="<?= e(ui_td_classes()) ?> px-4"><?= e((string) ($row['programa'] ?? '')) ?></td>
+                    <td class="<?= e(ui_td_classes()) ?> px-4"><?= e(implode(', ', (array) ($row['candidatos'] ?? []))) ?></td>
+                    <td class="<?= e(ui_td_classes()) ?> px-4"><?= e((string) ($row['motivo'] ?? '')) ?></td>
+                </tr>
+            <?php endforeach; ?>
+            </tbody>
+        </table>
+        <a class="<?= e(ui_button_small_classes()) ?> mt-3 inline-flex" href="<?= e(APP_BASE_PATH) ?>/catalogo/programas/pendientes">Ir a pendientes por enlazar</a>
+    </section>
 <?php endif; ?>
 
 <?php if (!empty($resultado['errors'])): ?>
