@@ -1,7 +1,16 @@
-<?php partial('components/page_header', [
-    'title' => 'Revisión de importación de programa',
-    'subtitle' => 'Revise extracción automática y confirme persistencia.',
-]); ?>
+<section class="bg-app-bg flex flex-row items-start gap-2">
+    <a class="<?= e(ui_button_icon_classes()) ?> mt-2.5 self-start" href="<?= e(APP_BASE_PATH) ?>/catalogo/programas/importar" aria-label="Volver a importar programa">
+        <span class="inline-flex h-3.5 w-3.5 [&_svg]:h-3.5 [&_svg]:w-3.5 "><?= ui_icon('arrow') ?></span>
+    </a>
+    <div class="mb-3 flex flex-col gap-2 pl-4">
+        <h2 class="m-0 text-2xl font-semibold text-app-text">Revisión de importación de programa</h2>
+        <p class="m-0 text-sm text-app-muted">
+            <span class="inline-flex h-4 w-4 [&_svg]:h-4 [&_svg]:w-4"><?= ui_icon('file') ?></span>
+            <?= e((string) ($fileName ?? '')) ?>
+            &mdash; Revise extracción automática y confirme persistencia.
+        </p>
+    </div>
+</section>
 
 <?php
 $parsed = (array) ($parsed ?? []);
@@ -15,7 +24,7 @@ foreach ($competencias as $comp) {
 ?>
 
 <?php if ($warnings !== []): ?>
-    <section class="<?= e(ui_warning_card_classes()) ?> mb-4">
+    <section class="mt-4 <?= e(ui_warning_card_classes()) ?> mb-4">
         <ul class="m-0 list-disc space-y-1 pl-4">
             <?php foreach ($warnings as $warning): ?>
                 <?php
@@ -31,7 +40,7 @@ foreach ($competencias as $comp) {
     </section>
 <?php endif; ?>
 
-<section class="<?= e(ui_card_classes()) ?> mb-4">
+<section class="mt-4 <?= e(ui_card_classes()) ?> mb-4">
     <p class="m-0 text-sm text-app-muted">Archivo: <?= e((string) ($fileName ?? '')) ?></p>
     <div class="mt-3 grid gap-2 md:grid-cols-2">
         <p class="m-0 text-sm"><strong>Código:</strong> <?= e((string) ($meta['codigo'] ?? '')) ?></p>

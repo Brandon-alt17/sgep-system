@@ -21,7 +21,7 @@ class CatalogoController
             'modalidad' => trim((string) ($_GET['modalidad'] ?? '')),
         ];
 
-        view('catalogo/programas', [
+        view('catalogo/programas/index', [
             'programas' => Programa::catalogo($filters),
             'filters' => $filters,
             'pendientesCount' => Programa::countPendientesEnlace(),
@@ -30,18 +30,18 @@ class CatalogoController
 
     public function grupos(): void
     {
-        view('catalogo/grupos');
+        view('catalogo/grupos/index');
     }
 
     public function empresas(): void
     {
-        view('catalogo/empresas');
+        view('catalogo/empresas/index');
     }
 
     public function pendientesPrograma(): void
     {
         $filters = ['q' => trim((string) ($_GET['q'] ?? ''))];
-        view('catalogo/programas_pendientes', [
+        view('catalogo/programas/pendientes', [
             'pendientes' => ProgramaEnlacePendiente::pendingList($filters),
             'filters' => $filters,
             'programas' => Programa::all(),
@@ -60,13 +60,13 @@ class CatalogoController
 
     public function importarProgramaForm(): void
     {
-        view('catalogo/programas_importar');
+        view('catalogo/programas/importar');
     }
 
     public function importarProgramaAnalizar(): void
     {
         if (empty($_FILES['archivo_pdf']['tmp_name'])) {
-            view('catalogo/programas_importar', ['error' => 'Seleccione un PDF o TXT para analizar.']);
+            view('catalogo/programas/importar', ['error' => 'Seleccione un PDF o TXT para analizar.']);
             return;
         }
 
@@ -80,7 +80,7 @@ class CatalogoController
             array_map(static fn (string $w): array => ['severity' => 'warning', 'message' => $w], (array) ($extracted['warnings'] ?? []))
         );
 
-        view('catalogo/programas_importar_review', [
+        view('catalogo/programas/importar_review', [
             'fileName' => $name,
             'parsed' => $parsed,
             'encoded' => base64_encode(json_encode($parsed, JSON_UNESCAPED_UNICODE) ?: '{}'),
