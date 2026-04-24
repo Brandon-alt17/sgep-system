@@ -24,26 +24,44 @@ class Aprendiz
         $pdo = Database::connection();
         $where = [];
         $params = [];
+
         if (!empty($filters['estado'])) {
             $where[] = 'a.estado = :estado';
             $params['estado'] = $filters['estado'];
         }
+
         if (!empty($filters['q'])) {
             $where[] = '(a.nombre_completo LIKE :q OR a.numero_documento LIKE :q)';
             $params['q'] = '%' . $filters['q'] . '%';
         }
-        $sql = 'SELECT a.* FROM aprendices a';
+
+        // 🔥 AQUÍ ESTÁ EL CAMBIO
+        $sql = '
+            SELECT 
+                a.*,
+                e.nombre AS empresa_nombre,
+                e.nit
+            FROM aprendices a
+            LEFT JOIN empresas e ON a.empresa_id = e.id
+        ';
+
         if ($where !== []) {
             $sql .= ' WHERE ' . implode(' AND ', $where);
         }
+
         $sql .= ' ORDER BY a.created_at DESC LIMIT :limit OFFSET :offset';
+
         $stmt = $pdo->prepare($sql);
+
         foreach ($params as $k => $v) {
             $stmt->bindValue(':' . $k, $v);
         }
+
         $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
         $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+
         $stmt->execute();
+
         return $stmt->fetchAll();
     }
 
