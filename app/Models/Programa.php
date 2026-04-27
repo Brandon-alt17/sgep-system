@@ -20,8 +20,10 @@ class Programa
 
         $query = trim((string) ($filters['q'] ?? ''));
         if ($query !== '') {
-            $where[] = '(codigo LIKE :q OR nombre LIKE :q)';
-            $params['q'] = '%' . $query . '%';
+            $where[] = '(codigo LIKE :q_codigo OR nombre LIKE :q_nombre)';
+            $likeQuery = '%' . $query . '%';
+            $params['q_codigo'] = $likeQuery;
+            $params['q_nombre'] = $likeQuery;
         }
 
         $nivel = trim((string) ($filters['nivel'] ?? ''));
@@ -91,14 +93,25 @@ class Programa
             }
         }
 
-        $sql = 'INSERT INTO programas (codigo, nombre, nivel, modalidad, created_at, updated_at)
-                VALUES (:codigo, :nombre, :nivel, :modalidad, NOW(), NOW())';
-        $pdo->prepare($sql)->execute([
+        $params = [
             'codigo' => $codigo !== '' ? $codigo : null,
             'nombre' => $nombre !== '' ? $nombre : 'Programa pendiente de nombre',
             'nivel' => $nivel,
             'modalidad' => $modalidad,
-        ]);
+        ];
+        $sql = 'INSERT INTO programas (codigo, nombre, nivel, modalidad, created_at, updated_at)
+                VALUES (:codigo, :nombre, :nivel, :modalidad, NOW(), NOW())';
+        try {
+            $pdo->prepare($sql)->execute($params);
+        } catch (\PDOException $e) {
+            // Compatibilidad con esquemas antiguos que no tienen columna updated_at.
+            if ((int) $e->getCode() !== 42 || stripos($e->getMessage(), 'updated_at') === false) {
+                throw $e;
+            }
+            $sqlLegacy = 'INSERT INTO programas (codigo, nombre, nivel, modalidad, created_at)
+                          VALUES (:codigo, :nombre, :nivel, :modalidad, NOW())';
+            $pdo->prepare($sqlLegacy)->execute($params);
+        }
         return (int) $pdo->lastInsertId();
     }
 }

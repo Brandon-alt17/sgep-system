@@ -28,7 +28,7 @@ $tdClasses = str_replace('h-[50px] ', '', ui_td_classes());
         </div>
     </div>
 
-    <form method="get" action="<?= e(APP_BASE_PATH) ?>/catalogo/programas" class="flex w-full items-center gap-3" data-auto-filter-form>
+    <form method="get" action="<?= e(APP_BASE_PATH) ?>/catalogo/programas" class="flex w-full items-center gap-3" data-auto-filter-form data-auto-filter-ajax="true" data-auto-filter-target="#tabla-catalogo-programas tbody">
         <input
             type="text"
             name="q"
@@ -87,21 +87,7 @@ $tdClasses = str_replace('h-[50px] ', '', ui_td_classes());
         </tr>
         </thead>
         <tbody>
-        <?php if ($programas === []): ?>
-            <tr>
-                <td class="<?= e($tdClasses) ?> py-4 text-center" colspan="5">No hay programas registrados.</td>
-            </tr>
-        <?php else: ?>
-            <?php foreach ($programas as $programa): ?>
-                <tr>
-                    <td class="<?= e($tdClasses) ?> py-3 align-top"><?= e((string) ($programa['codigo'] ?? '')) ?></td>
-                    <td class="<?= e($tdClasses) ?> py-3 whitespace-normal break-words leading-6 align-top"><?= e((string) ($programa['nombre'] ?? '')) ?></td>
-                    <td class="<?= e($tdClasses) ?> py-3 align-top"><?= e((string) ($programa['nivel'] ?? '')) ?></td>
-                    <td class="<?= e($tdClasses) ?> py-3 align-top">-</td>
-                    <td class="<?= e($tdClasses) ?> py-3 align-top"><?= e((string) ($programa['modalidad'] ?? '')) ?></td>
-                </tr>
-            <?php endforeach; ?>
-        <?php endif; ?>
+        <?php partial('catalogo/programas/_rows', ['programas' => $programas, 'tdClasses' => $tdClasses]); ?>
         </tbody>
     </table>
 </section>

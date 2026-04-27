@@ -168,12 +168,77 @@ if (fileInput && trigger && form) {
 // Filtros de listado: auto-submit sin boton.
 document.querySelectorAll("[data-auto-filter-form]").forEach(function (filterForm) {
   var debounceTimer = null;
-  var submitForm = function () {
+  var activeController = null;
+  var useAjax = filterForm.getAttribute("data-auto-filter-ajax") === "true";
+  var targetSelector = filterForm.getAttribute("data-auto-filter-target") || "";
+
+  var runClassicSubmit = function () {
     if (typeof filterForm.requestSubmit === "function") {
       filterForm.requestSubmit();
       return;
     }
     filterForm.submit();
+  };
+
+  var runAjaxSubmit = function () {
+    if (!targetSelector) {
+      runClassicSubmit();
+      return;
+    }
+    var target = document.querySelector(targetSelector);
+    if (!target) {
+      runClassicSubmit();
+      return;
+    }
+
+    var action = filterForm.getAttribute("action") || window.location.pathname;
+    var url = new URL(action, window.location.origin);
+    var formData = new FormData(filterForm);
+    var params = new URLSearchParams();
+    formData.forEach(function (value, key) {
+      if (typeof value === "string") params.append(key, value);
+    });
+    params.set("ajax", "1");
+    url.search = params.toString();
+
+    if (activeController) activeController.abort();
+    activeController = new AbortController();
+
+    filterForm.setAttribute("aria-busy", "true");
+    fetch(url.toString(), {
+      method: "GET",
+      headers: {
+        "X-Requested-With": "XMLHttpRequest",
+        "Accept": "application/json"
+      },
+      signal: activeController.signal
+    }).then(function (response) {
+      if (!response.ok) throw new Error("No se pudo consultar");
+      return response.json();
+    }).then(function (payload) {
+      if (!payload || payload.ok !== true || typeof payload.rowsHtml !== "string") {
+        throw new Error("Respuesta invalida");
+      }
+      target.innerHTML = payload.rowsHtml;
+      if (window.history && typeof window.history.replaceState === "function") {
+        var browserUrl = new URL(action, window.location.origin);
+        browserUrl.search = new URLSearchParams(formData).toString();
+        window.history.replaceState(null, "", browserUrl.pathname + browserUrl.search);
+      }
+    }).catch(function (error) {
+      if (error && error.name === "AbortError") return;
+      runClassicSubmit();
+    }).finally(function () {
+      filterForm.removeAttribute("aria-busy");
+    });
+  };
+
+  var submitForm = function () {
+    if (useAjax) {
+      runAjaxSubmit();
+      return;
+    }
+    runClassicSubmit();
   };
 
   filterForm.querySelectorAll("[data-auto-filter-change]").forEach(function (field) {
