@@ -4,37 +4,12 @@
 ]); ?>
 
 <section class="grid gap-6 lg:grid-cols-[2fr_1fr]">
-    <article class="<?= e(ui_card_surface_classes()) ?>">
-        <div class="<?= e(ui_card_header_classes()) ?>">
-            <div class="<?= e(ui_card_header_stack_classes()) ?>">
-                <h3 class="<?= e(ui_card_title_classes()) ?>">Cargar archivo</h3>
-                <p class="<?= e(ui_card_description_classes()) ?>">Formato aceptado: .xlsx - Máximo 5 MB</p>
-            </div>
-        </div>
-        <div class="<?= e(ui_card_body_classes()) ?>">
-            <form method="post" action="<?= e(APP_BASE_PATH) ?>/importar" enctype="multipart/form-data" data-import-form>
-                <input class="sr-only" data-import-input type="file" name="archivo" accept=".xlsx,.xls,.csv" required>
-                <div class="upload-dropzone-dashed grid min-h-[122px] place-items-center rounded-lg bg-app-panel p-10 text-center transition-colors duration-150" data-import-dropzone>
-                    <div>
-                        <div class="mx-auto mb-3 h-[40px] w-[40px] text-app-muted [&_svg]:h-[40px] [&_svg]:w-[40px]"><?= ui_icon('upload') ?></div>
-                        <strong class="text-sm font-medium">Arrastre el archivo Excel aquí o haga clic para seleccionar</strong>
-                        <small class="mt-0.5 block text-xs text-app-mutedSoft">Solo archivos Excel (.xlsx, .xls, .csv)</small>
-                        <button type="button" class="mt-2 <?= e(ui_button_small_classes()) ?> text-app-text" data-import-trigger>Seleccionar archivo</button>
-                        <small class="mt-0.5 block text-xs text-app-mutedSoft" data-import-filename>Sin archivo seleccionado</small>
-                    </div>
-                </div>
-                <div class="mt-3 hidden" data-import-progress>
-                    <div class="mb-1 flex items-center justify-between text-xs text-app-muted">
-                        <span data-import-progress-label>Preparando carga...</span>
-                        <span data-import-progress-value>0%</span>
-                    </div>
-                    <div class="h-1.5 w-full rounded bg-app-panelSubtle">
-                        <div class="h-full w-0 rounded bg-app-accent" data-import-progress-bar></div>
-                    </div>
-                </div>
-            </form>
-        </div>
-    </article>
+    <?php
+    partial('components/upload_dropzone_card', array_merge(
+        ui_upload_dropzone_preset('excel'),
+        ['action' => APP_BASE_PATH . '/importar']
+    ));
+    ?>
 
     <article class="<?= e(ui_card_surface_classes()) ?>">
         <div class="<?= e(ui_card_header_classes()) ?>">

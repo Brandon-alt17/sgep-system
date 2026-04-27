@@ -8,17 +8,21 @@ document.querySelectorAll("[data-max]").forEach(function (element) {
   });
 });
 
-// UI de carga: click en el panel abre selector y muestra el nombre del archivo.
-var fileInput = document.querySelector("[data-import-input]");
-var fileName = document.querySelector("[data-import-filename]");
-var trigger = document.querySelector("[data-import-trigger]");
-var form = document.querySelector("[data-import-form]");
-var progress = document.querySelector("[data-import-progress]");
-var dropzone = document.querySelector("[data-import-dropzone]");
+// UI de carga reusable: soporta autosend (XHR) o envio manual.
+document.querySelectorAll("[data-import-form]").forEach(function (form) {
+  var fileInput = form.querySelector("[data-import-input]");
+  var fileName = form.querySelector("[data-import-filename]");
+  var trigger = form.querySelector("[data-import-trigger]");
+  var progress = form.querySelector("[data-import-progress]");
+  var dropzone = form.querySelector("[data-import-dropzone]");
+  var autoSend = form.getAttribute("data-import-autosend") !== "false";
+  if (!fileInput || !trigger) return;
 
-if (fileInput && trigger && form) {
   var openPicker = function () { fileInput.click(); };
-  trigger.addEventListener("click", openPicker);
+  trigger.addEventListener("click", function (event) {
+    event.preventDefault();
+    openPicker();
+  });
 
   var setProgressState = function (labelText, percent) {
     if (!progress) return;
@@ -89,10 +93,14 @@ if (fileInput && trigger && form) {
     if (fileName) {
       fileName.textContent = fileInput.files && fileInput.files[0] ? fileInput.files[0].name : "Sin archivo seleccionado";
     }
-    if (fileInput.files && fileInput.files[0]) {
-      setProgressState("Preparando carga...", 0);
-      sendImport();
+    if (!autoSend || !(fileInput.files && fileInput.files[0])) return;
+    // Cuando no hay barra de progreso, se usa submit nativo (p.ej. importar programa -> vista de revisión HTML).
+    if (!progress) {
+      form.submit();
+      return;
     }
+    setProgressState("Preparando carga...", 0);
+    sendImport();
   });
 
   if (dropzone) {
@@ -103,6 +111,11 @@ if (fileInput && trigger && form) {
     var deactivateDropzone = function () {
       dropzone.classList.remove("bg-app-panelHover");
     };
+
+    dropzone.addEventListener("click", function (event) {
+      if (event.target && event.target.closest("[data-import-trigger]")) return;
+      openPicker();
+    });
 
     dropzone.addEventListener("dragenter", function (event) {
       event.preventDefault();
@@ -134,7 +147,7 @@ if (fileInput && trigger && form) {
       fileInput.dispatchEvent(new Event("change", { bubbles: true }));
     });
   }
-}
+});
 
 // Sidebar catalogo: colapsable con persistencia y animacion de chevron.
 (function () {
