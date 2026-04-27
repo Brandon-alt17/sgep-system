@@ -89,6 +89,11 @@ class ProgramaPdfParser
             if ($expectUnidadCompetencia) {
                 if (preg_match('/^4\.2\b/i', $line)) {
                     $expectUnidadCompetencia = false;
+                } elseif ($line !== '' && preg_match('/^\d{6,12}$/', $line)) {
+                    if (trim((string) ($current['codigo'] ?? '')) === '') {
+                        $current['codigo'] = trim($line);
+                    }
+                    continue;
                 } elseif ($line !== '' && !preg_match('/^4\./', $line)) {
                     $piece = self::normalizeSentence($line);
                     $prevUnidad = trim((string) ($current['_unidad_norma'] ?? ''));
@@ -153,14 +158,21 @@ class ProgramaPdfParser
                     if (preg_match('/^competencia$/iu', $candidateNombre)) {
                         continue;
                     }
+                    if (self::isJunkCompetenciaNombre($candidateNombre)) {
+                        continue;
+                    }
 
                     $existingNombre = trim((string) ($current['nombre'] ?? ''));
                     if ($existingNombre === '' || preg_match('/^Competencia\s+\d+$/i', $existingNombre)) {
                         $current['nombre'] = $candidateNombre;
                     } else {
-                        $combined = trim($existingNombre . ' ' . $candidateNombre);
-                        if (mb_strlen($combined) <= 240) {
-                            $current['nombre'] = $combined;
+                        if (self::isJunkCompetenciaNombre($existingNombre)) {
+                            $current['nombre'] = $candidateNombre;
+                        } else {
+                            $combined = trim($existingNombre . ' ' . $candidateNombre);
+                            if (mb_strlen($combined) <= 240 && !self::isJunkCompetenciaNombre($combined)) {
+                                $current['nombre'] = $combined;
+                            }
                         }
                     }
                 }
@@ -392,11 +404,53 @@ class ProgramaPdfParser
     {
         $nombre = trim((string) ($comp['nombre'] ?? ''));
         $unidad = trim((string) ($comp['_unidad_norma'] ?? ''));
+        $codigo = trim((string) ($comp['codigo'] ?? ''));
         $isGenericPlaceholder = $nombre === '' || preg_match('/^Competencia\s+\d+$/i', $nombre) === 1;
-        if ($isGenericPlaceholder && $unidad !== '') {
-            $comp['nombre'] = self::normalizeSentence($unidad);
+        $junkNombre = self::isJunkCompetenciaNombre($nombre);
+        $needsFallback = $isGenericPlaceholder || $junkNombre;
+        $unidadTitulo = self::cleanUnidadNormaParaTitulo($unidad);
+        if ($needsFallback && $unidadTitulo !== '') {
+            $comp['nombre'] = self::normalizeSentence($unidadTitulo);
+        } elseif ($needsFallback && $codigo === '999999999') {
+            $comp['nombre'] = 'RESULTADOS DE APRENDIZAJE ETAPA PRÁCTICA';
         }
         unset($comp['_unidad_norma']);
+    }
+
+    private static function isJunkCompetenciaNombre(string $nombre): bool
+    {
+        $n = trim($nombre);
+        if ($n === '') {
+            return true;
+        }
+        if (preg_match('/p[aá]gina\s+\d+\s+de\s*\d*/iu', $n)) {
+            return true;
+        }
+        if (preg_match('/\b\d{1,2}\/\d{1,2}\/\d{2,4}\b/u', $n) && preg_match('/\b(de|del)\s*\d{3,5}\s*\/\s*\d{1,2}\s*\/\s*\d{1,2}/iu', $n)) {
+            return true;
+        }
+        if (preg_match('/^\d{5,12}$/', $n)) {
+            return true;
+        }
+        return false;
+    }
+
+    private static function cleanUnidadNormaParaTitulo(string $raw): string
+    {
+        $u = trim($raw);
+        if ($u === '') {
+            return '';
+        }
+        $u = preg_replace('/^\s*COMPETENCIA\s+/iu', '', $u) ?? $u;
+        $u = preg_replace('/\s+\d{6,12}\s*$/u', '', $u) ?? $u;
+        $u = trim($u);
+        if ($u === '' || preg_match('/^COMPETENCIA$/iu', $u)) {
+            return '';
+        }
+        if (preg_match('/^\d{5,12}$/', $u)) {
+            return '';
+        }
+        return self::normalizeSentence($u);
     }
 
     private static function isInvalidProgramNameCandidate(string $candidate): bool
@@ -473,5 +527,4 @@ class ProgramaPdfParser
 
         return $parts === [] ? [$normalized] : $parts;
     }
-
 }
