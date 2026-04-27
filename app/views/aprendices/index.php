@@ -13,7 +13,7 @@
         <!-- 🔍 Buscador -->
         <input type="text" id="search-input" placeholder="Buscar por nombre o documento" class="<?= e(ui_input_classes()) ?> flex-1 min-w-0">
 
-        <div class="<?= e(ui_select_wrapper_classes()) ?> w-64 shrink-0">
+        <div class="w-64 shrink-0">
             <select id="ficha-filter" class="<?= e(ui_select_classes()) ?>">
                 <option value="">Todas las fichas</option>
             </select>
@@ -24,7 +24,7 @@
             </span>
         </div>
 
-        <div class="<?= e(ui_select_wrapper_classes()) ?> w-64 shrink-0">
+        <div  classs="w-64 shrink-0">
             <select id="estado-filter" class="<?= e(ui_select_classes()) ?>">
                 <option value="">Todos los estados</option>
             </select>
