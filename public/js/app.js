@@ -8,6 +8,52 @@ document.querySelectorAll("[data-max]").forEach(function (element) {
   });
 });
 
+// Buscador local reusable: filtra items en vivo y permite limpiar con X.
+document.querySelectorAll("[data-live-filter-root]").forEach(function (root) {
+  var input = root.querySelector("[data-live-filter-input]");
+  var clearButton = root.querySelector("[data-live-filter-clear]");
+  var emptyState = root.querySelector("[data-live-filter-empty]");
+  var itemsContainer = root.parentElement ? root.parentElement.querySelector("[data-live-filter-items]") : null;
+  if (!input || !itemsContainer) return;
+
+  var items = Array.prototype.slice.call(itemsContainer.querySelectorAll("[data-live-filter-item]"));
+  var normalize = function (value) {
+    var text = (value || "").toString().toLowerCase();
+    if (typeof text.normalize === "function") {
+      text = text.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    }
+    return text.trim();
+  };
+
+  var applyFilter = function () {
+    var query = normalize(input.value);
+    var visibleCount = 0;
+
+    items.forEach(function (item) {
+      var source = normalize(item.getAttribute("data-live-filter-text") || item.textContent || "");
+      var matches = query === "" || source.indexOf(query) !== -1;
+      item.classList.toggle("hidden", !matches);
+      if (matches) visibleCount += 1;
+    });
+
+    if (clearButton) {
+      clearButton.classList.toggle("hidden", query === "");
+    }
+    if (emptyState) {
+      emptyState.classList.toggle("hidden", visibleCount > 0 || query === "");
+    }
+  };
+
+  input.addEventListener("input", applyFilter);
+  if (clearButton) {
+    clearButton.addEventListener("click", function () {
+      input.value = "";
+      applyFilter();
+      input.focus();
+    });
+  }
+});
+
 // UI de carga reusable: soporta autosend (XHR) o envio manual.
 document.querySelectorAll("[data-import-form]").forEach(function (form) {
   var fileInput = form.querySelector("[data-import-input]");

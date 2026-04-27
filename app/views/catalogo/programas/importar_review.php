@@ -124,10 +124,45 @@ foreach ($metaFieldLabels as $metaKey => $metaLabel) {
             No se detectaron competencias automáticamente.
         </div>
     <?php else: ?>
-        <div class="mt-4 space-y-4">
+        <div class="mt-4" data-live-filter-root>
+            <div class="relative">
+                <input
+                    type="text"
+                    class="<?= e(ui_input_classes()) ?> pr-10"
+                    placeholder="Buscar por competencia, RAE o código"
+                    aria-label="Buscar por competencia, RAE o código"
+                    data-live-filter-input
+                >
+                <button
+                    type="button"
+                    class="hidden absolute right-2 top-1/2 -translate-y-1/2 rounded-md px-2 py-1 text-sm text-app-muted hover:bg-app-panelSubtle hover:text-app-text"
+                    aria-label="Limpiar búsqueda"
+                    data-live-filter-clear
+                >&times;</button>
+            </div>
+            <p class="mt-2 hidden rounded-md border border-app-border bg-app-panelSubtle p-3 text-sm text-app-muted" data-live-filter-empty>
+                No hay coincidencias para la búsqueda.
+            </p>
+        </div>
+        <div class="mt-4 space-y-4" data-live-filter-items>
             <?php foreach ($competencias as $compIndex => $comp): ?>
-                <?php $resultadosComp = (array) ($comp['resultados'] ?? []); ?>
-                <article class="rounded-lg border border-app-border bg-app-panel p-4">
+                <?php
+                $resultadosComp = (array) ($comp['resultados'] ?? []);
+                $searchParts = [
+                    (string) ($comp['codigo'] ?? ''),
+                    (string) ($comp['nombre'] ?? ''),
+                ];
+                foreach ($resultadosComp as $raIndex => $resultado) {
+                    $searchParts[] = 'RA' . ($raIndex + 1);
+                    $searchParts[] = (string) ($resultado['descripcion'] ?? '');
+                    $searchParts[] = (string) ($resultado['codigo'] ?? '');
+                }
+                $searchText = trim(implode(' ', array_filter(array_map(
+                    static fn ($value): string => trim((string) $value),
+                    $searchParts
+                ))));
+                ?>
+                <article class="rounded-lg border border-app-border bg-app-panel p-4" data-live-filter-item data-live-filter-text="<?= e($searchText) ?>">
                     <div class="mb-3 flex items-start justify-between gap-3">
                         <div>
                         <?php if (trim((string) ($comp['codigo'] ?? '')) !== ''): ?>
@@ -169,11 +204,20 @@ foreach ($metaFieldLabels as $metaKey => $metaLabel) {
     <?php endif; ?>
 </section>
 
-<form method="post" action="<?= e(APP_BASE_PATH) ?>/catalogo/programas/importar/guardar" class="rounded-[10px] border border-app-border bg-app-panel p-3 shadow-xsSoft" style="position: fixed; right: 16px; bottom: 16px; z-index: 9999; width: min(320px, calc(100vw - 24px));">
-    <input type="hidden" name="parsed_payload" value="<?= e((string) ($encoded ?? '')) ?>">
-    <input type="hidden" name="file_name" value="<?= e((string) ($fileName ?? '')) ?>">
-    <?php if ($warnings !== []): ?>
-        <p class="mb-2 mt-0 text-xs text-app-muted">Se guardará como <strong>confirmado parcial</strong> por advertencias detectadas.</p>
-    <?php endif; ?>
-    <button class="<?= e(ui_button_primary_classes()) ?> w-full justify-center text-app-textOnBrand" type="submit">Confirmar y guardar</button>
-</form>
+<div class="pb-20" aria-hidden="true"></div>
+<?php
+$footerNote = $warnings !== []
+    ? 'Se guardará como <strong>confirmado parcial</strong> por advertencias detectadas.'
+    : '';
+partial('components/sticky_bottom_action', [
+    'action' => APP_BASE_PATH . '/catalogo/programas/importar/guardar',
+    'buttonText' => 'Confirmar y guardar',
+    'fields' => [
+        'parsed_payload' => (string) ($encoded ?? ''),
+        'file_name' => (string) ($fileName ?? ''),
+    ],
+    'note' => $footerNote,
+    'cancelText' => 'Cancelar',
+    'cancelHref' => APP_BASE_PATH . '/catalogo/programas/importar',
+]);
+?>
