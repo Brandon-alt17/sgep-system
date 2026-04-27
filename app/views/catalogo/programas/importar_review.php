@@ -169,11 +169,11 @@ foreach ($metaFieldLabels as $metaKey => $metaLabel) {
     <?php endif; ?>
 </section>
 
-<form method="post" action="<?= e(APP_BASE_PATH) ?>/catalogo/programas/importar/guardar">
+<form method="post" action="<?= e(APP_BASE_PATH) ?>/catalogo/programas/importar/guardar" class="rounded-[10px] border border-app-border bg-app-panel p-3 shadow-xsSoft" style="position: fixed; right: 16px; bottom: 16px; z-index: 9999; width: min(320px, calc(100vw - 24px));">
     <input type="hidden" name="parsed_payload" value="<?= e((string) ($encoded ?? '')) ?>">
     <input type="hidden" name="file_name" value="<?= e((string) ($fileName ?? '')) ?>">
     <?php if ($warnings !== []): ?>
-        <p class="mb-2 mt-0 text-sm text-app-muted">Se guardará como <strong>confirmado parcial</strong> por advertencias detectadas.</p>
+        <p class="mb-2 mt-0 text-xs text-app-muted">Se guardará como <strong>confirmado parcial</strong> por advertencias detectadas.</p>
     <?php endif; ?>
-    <button class="<?= e(ui_button_primary_classes()) ?>" type="submit">Confirmar y guardar</button>
+    <button class="<?= e(ui_button_primary_classes()) ?> w-full justify-center text-app-textOnBrand" type="submit">Confirmar y guardar</button>
 </form>

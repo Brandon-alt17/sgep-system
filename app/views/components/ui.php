@@ -203,6 +203,51 @@ if (!function_exists('ui_warning_card_classes')) {
     }
 }
 
+if (!function_exists('ui_upload_dropzone_preset')) {
+    /**
+     * Presets reutilizables para tarjetas de carga con drag & drop.
+     *
+     * @return array<string,mixed>
+     */
+    function ui_upload_dropzone_preset(string $preset): array
+    {
+        $key = strtolower(trim($preset));
+        if ($key === 'programa') {
+            return [
+                'title' => 'Cargar archivo',
+                'description' => 'Formato aceptado: .pdf o .txt - Máximo 10 MB',
+                'inputName' => 'archivo_pdf',
+                'accept' => '.pdf,.txt',
+                'required' => true,
+                'autoSend' => true,
+                'dropzonePrompt' => 'Arrastre el archivo del programa aquí o haga clic para seleccionar',
+                'dropzoneHint' => 'Solo archivos PDF o TXT',
+                'triggerText' => 'Seleccionar archivo',
+                'emptyFilenameText' => 'Sin archivo seleccionado',
+                'showProgress' => false,
+                'showSubmit' => false,
+                'submitText' => 'Analizar archivo',
+            ];
+        }
+
+        return [
+            'title' => 'Cargar archivo',
+            'description' => 'Formato aceptado: .xlsx - Máximo 5 MB',
+            'inputName' => 'archivo',
+            'accept' => '.xlsx,.xls,.csv',
+            'required' => true,
+            'autoSend' => true,
+            'dropzonePrompt' => 'Arrastre el archivo Excel aquí o haga clic para seleccionar',
+            'dropzoneHint' => 'Solo archivos Excel (.xlsx, .xls, .csv)',
+            'triggerText' => 'Seleccionar archivo',
+            'emptyFilenameText' => 'Sin archivo seleccionado',
+            'showProgress' => true,
+            'showSubmit' => false,
+            'submitText' => 'Enviar',
+        ];
+    }
+}
+
 if (!function_exists('ui_render_pagination')) {
     /**
      * Renderiza paginación reutilizable con ancla opcional.

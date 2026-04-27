@@ -37,7 +37,13 @@ foreach ($files as $file) {
     $parts = array_filter(array_map('trim', explode(';', $sql)), static fn (string $s): bool => $s !== '');
     foreach ($parts as $stmt) {
         try {
-            $pdo->exec($stmt);
+            $statement = $pdo->prepare($stmt);
+            if ($statement === false) {
+                throw new \PDOException('No se pudo preparar sentencia SQL de migración.');
+            }
+            $statement->execute();
+            // Evita "Cannot execute queries while other unbuffered queries are active".
+            $statement->closeCursor();
         } catch (\PDOException $e) {
             $driverCode = (int) ($e->errorInfo[1] ?? 0);
             // MySQL/MariaDB: 1060 = columna duplicada, 1061 = índice duplicado
