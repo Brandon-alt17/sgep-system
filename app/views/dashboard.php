@@ -1,46 +1,112 @@
-<?php partial('components/page_header', [
-    'title' => 'Dashboard',
-    'subtitle' => 'Vista general del estado de aprendices y próximas actividades.',
-]); ?>
+<div class="p-6 space-y-6">
 
-<section class="grid gap-4 lg:grid-cols-[2fr_1fr]">
-    <article class="<?= e(ui_card_classes()) ?>">
-        <h3 class="<?= e(ui_heading_sm_classes()) ?>">Conteo por estado</h3>
-        <table class="<?= e(ui_table_classes()) ?>">
-            <thead>
-            <tr>
-                <th class="<?= e(ui_th_classes()) ?>">Estado</th>
-                <th class="<?= e(ui_th_classes()) ?>">Total</th>
-            </tr>
-            </thead>
-            <tbody>
-            <?php foreach (($counts ?? []) as $row): ?>
-                <tr>
-                    <td class="<?= e(ui_td_classes()) ?>"><?= e((string) $row['estado']) ?></td>
-                    <td class="<?= e(ui_td_classes()) ?>"><?= e((string) $row['total']) ?></td>
-                </tr>
-            <?php endforeach; ?>
-            </tbody>
-        </table>
-    </article>
+    <!-- HEADER -->
+    <div>
+        <h1 class="text-2xl font-bold text-gray-800">Dashboard</h1>
+        <p class="text-sm text-gray-500">Resumen general del sistema</p>
+    </div>
 
-    <article class="<?= e(ui_card_classes()) ?>">
-        <h3 class="<?= e(ui_heading_sm_classes()) ?>">Próximas visitas (30 días)</h3>
-        <table class="<?= e(ui_table_classes()) ?>">
-            <thead>
-            <tr>
-                <th class="<?= e(ui_th_classes()) ?>">Aprendiz</th>
-                <th class="<?= e(ui_th_classes()) ?>">Fecha</th>
-            </tr>
-            </thead>
-            <tbody>
-            <?php foreach (($alerts ?? []) as $alert): ?>
-                <tr>
-                    <td class="<?= e(ui_td_classes()) ?>"><a href="<?= e(APP_BASE_PATH) ?>/aprendices/show?id=<?= (int) $alert['id'] ?>"><?= e((string) $alert['nombre_completo']) ?></a></td>
-                    <td class="<?= e(ui_td_classes()) ?>"><?= e((string) $alert['proxima_visita']) ?></td>
-                </tr>
+    <!-- KPIs -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        
+        <!-- Aprendices -->
+        <div class="bg-white rounded-xl shadow p-5 flex items-center justify-between">
+            <div>
+                <p class="text-sm text-gray-500">Aprendices activos</p>
+                <h2 class="text-2xl font-bold text-gray-800"><?= $totalAprendices ?></h2>
+            </div>
+            <div class="bg-blue-100 text-blue-600 p-3 rounded-lg">
+                <i data-lucide="users"></i>
+            </div>
+        </div>
+
+        <!-- Visitas -->
+        <div class="bg-white rounded-xl shadow p-5 flex items-center justify-between">
+            <div>
+                <p class="text-sm text-gray-500">Visitas esta semana</p>
+                <h2 class="text-2xl font-bold text-gray-800"><?= $visitasSemana ?></h2>
+            </div>
+            <div class="bg-yellow-100 text-yellow-600 p-3 rounded-lg">
+                <i data-lucide="map-pin"></i>
+            </div>
+        </div>
+
+        <!-- Por certificar -->
+        <div class="bg-white rounded-xl shadow p-5 flex items-center justify-between">
+            <div>
+                <p class="text-sm text-gray-500">Por certificar</p>
+                <h2 class="text-2xl font-bold text-gray-800"><?= $porCertificar ?></h2>
+            </div>
+            <div class="bg-green-100 text-green-600 p-3 rounded-lg">
+                <i data-lucide="award"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- ALERTAS / ESTADOS -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+        <!-- Conteo por estado -->
+        <div class="bg-white rounded-xl shadow p-5">
+            <h3 class="text-lg font-semibold text-gray-700 mb-4">Estado de aprendices</h3>
+
+            <div class="space-y-3">
+                <?php foreach ($conteoEstados as $estado => $cantidad): ?>
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm text-gray-600"><?= $estado ?></span>
+                        <span class="font-semibold text-gray-800"><?= $cantidad ?></span>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+        </div>
+
+        <!-- Resumen rápido -->
+        <div class="bg-white rounded-xl shadow p-5">
+            <h3 class="text-lg font-semibold text-gray-700 mb-4">Resumen rápido</h3>
+
+            <ul class="space-y-3 text-sm text-gray-600">
+                <li>📌 Tienes <strong><?= $visitasPendientes ?></strong> visitas pendientes</li>
+                <li>📌 <strong><?= $momentosPendientes ?></strong> momentos sin completar</li>
+                <li>📌 <strong><?= $aprendicesAtrasados ?></strong> aprendices con retraso</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- VISITAS -->
+    <div class="bg-white rounded-xl shadow p-5">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-semibold text-gray-700">Próximas visitas</h3>
+            <a href="/visitas" class="text-sm text-blue-600 hover:underline">Ver todas</a>
+        </div>
+
+        <div class="space-y-3">
+            <?php foreach ($visitas as $v): ?>
+                <div class="flex justify-between items-center border rounded-lg p-4 hover:bg-gray-50 transition">
+
+                    <div>
+                        <p class="font-medium text-gray-800"><?= $v['nombre'] ?></p>
+                        <p class="text-sm text-gray-500"><?= $v['empresa'] ?></p>
+                    </div>
+
+                    <div class="text-right space-y-1">
+                        <span class="text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded-full">
+                            <?= date('d M Y', strtotime($v['fecha'])) ?>
+                        </span>
+
+                        <?php if ($v['estado'] === 'pendiente'): ?>
+                            <span class="text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full">
+                                Pendiente
+                            </span>
+                        <?php else: ?>
+                            <span class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">
+                                Al día
+                            </span>
+                        <?php endif; ?>
+                    </div>
+
+                </div>
             <?php endforeach; ?>
-            </tbody>
-        </table>
-    </article>
-</section>
+        </div>
+    </div>
+
+</div>

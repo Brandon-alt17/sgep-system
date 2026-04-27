@@ -24,7 +24,7 @@
             </span>
         </div>
 
-        <div  classs="w-64 shrink-0">
+        <div class="w-64 shrink-0">
             <select id="estado-filter" class="<?= e(ui_select_classes()) ?>">
                 <option value="">Todos los estados</option>
             </select>
@@ -71,8 +71,12 @@
                         <?php
                             $estado = $aprendiz['estado'] ?? '';
                             $badgeClass = match($estado) {
-                                'En etapa productiva', 'Certificado' => ui_badge_success_classes(),
-                                'Pendiente' => ui_badge_warning_classes(),
+                                'En ejecución',
+                                'Aplazada',
+                                'Finalizada',
+                                'Certificado',
+                                'Pendiente por comité', => ui_badge_success_classes(),
+                                'Pendiente por iniciar' => ui_badge_warning_classes(),
                                 default => ui_badge_error_classes()
                             };
                         ?>
@@ -94,7 +98,6 @@
     </div>
 </section>
 
-<!-- Agregar el JavaScript al final -->
 <script>
 // Función para actualizar los filtros
 function actualizarFiltros() {
