@@ -46,8 +46,58 @@ class Programa
 
         $stmt = Database::connection()->prepare($sql);
         $stmt->execute($params);
+        $programas = $stmt->fetchAll();
+        if ($programas === []) {
+            return [];
+        }
 
-        return $stmt->fetchAll();
+        foreach ($programas as &$programa) {
+            $programa['horas_total'] = '';
+        }
+        unset($programa);
+
+        $programaIds = array_values(array_filter(array_map(
+            static fn (array $row): int => (int) ($row['id'] ?? 0),
+            $programas
+        )));
+        if ($programaIds === []) {
+            return $programas;
+        }
+
+        try {
+            $placeholders = implode(',', array_fill(0, count($programaIds), '?'));
+            $hoursSql = "SELECT i.programa_id,
+                                TRIM(COALESCE(JSON_UNQUOTE(JSON_EXTRACT(i.resumen_json, '$.meta.horas_total')), '')) AS horas_total
+                         FROM programa_importaciones_pdf i
+                         INNER JOIN (
+                           SELECT programa_id, MAX(id) AS max_id
+                           FROM programa_importaciones_pdf
+                           WHERE programa_id IN ($placeholders)
+                           GROUP BY programa_id
+                         ) latest ON latest.max_id = i.id";
+            $hoursStmt = Database::connection()->prepare($hoursSql);
+            $hoursStmt->execute(array_merge($programaIds, $programaIds));
+            $hoursRows = $hoursStmt->fetchAll();
+
+            $hoursByProgramaId = [];
+            foreach ($hoursRows as $row) {
+                $pid = (int) ($row['programa_id'] ?? 0);
+                $hours = trim((string) ($row['horas_total'] ?? ''));
+                if ($pid > 0 && $hours !== '') {
+                    $hoursByProgramaId[$pid] = $hours;
+                }
+            }
+
+            foreach ($programas as &$programa) {
+                $pid = (int) ($programa['id'] ?? 0);
+                $programa['horas_total'] = $hoursByProgramaId[$pid] ?? '';
+            }
+            unset($programa);
+        } catch (\Throwable) {
+            // Compatibilidad: si no existe tabla de importaciones o no soporta funciones JSON/ventana.
+        }
+
+        return $programas;
     }
 
     public static function findById(int $id): ?array
