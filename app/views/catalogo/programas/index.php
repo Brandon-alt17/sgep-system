@@ -1,8 +1,3 @@
-<?php partial('components/page_header', [
-    'title' => 'Catálogo - Programas de formación',
-    'subtitle' => 'Listado de programas disponibles para asociar aprendices y su gestión.',
-]); ?>
-
 <?php
 $programas = (array) ($programas ?? []);
 $filters = (array) ($filters ?? []);
@@ -14,21 +9,37 @@ $pendientesCount = (int) ($pendientesCount ?? 0);
 
 // Reutiliza estilos base sin altura fija para permitir crecimiento de fila con multilinea.
 $tdClasses = str_replace('h-[50px] ', '', ui_td_classes());
+
+ob_start();
 ?>
+<a class="<?= e(ui_button_primary_classes()) ?> inline-flex items-center gap-2 text-app-textOnBrand" href="<?= e(APP_BASE_PATH) ?>/catalogo/programas/importar">
+    <span class="inline-flex h-4 w-4 [&_svg]:h-4 [&_svg]:w-4"><?= ui_icon('file-up') ?></span>
+    Importar PDF del programa
+</a>
+<?php
+$headerActions = (string) ob_get_clean();
+
+partial('components/page_header', [
+    'title' => 'Catálogo - Programas de formación',
+    'subtitle' => 'Listado de programas disponibles para asociar aprendices y su gestión.',
+    'actions' => $headerActions,
+]);
+?>
+
+<?php partial('components/alerts/pending_link', [
+    'count' => $pendientesCount,
+    'manageUrl' => APP_BASE_PATH . '/catalogo/programas/pendientes',
+    'subjectPlural' => 'aprendices con programas',
+    'messageTail' => 'pendientes de enlazar.',
+    'ctaText' => 'Gestionar ahora',
+    'extraClasses' => 'mb-4',
+]); ?>
 
 <!-- Buscador y filtros -->
 <section class="<?= e(ui_card_classes()) ?> mb-4">
-    <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <div class="text-sm text-app-muted">
-            Pendientes por enlazar: <span class="font-semibold text-app-text"><?= e((string) $pendientesCount) ?></span>
-        </div>
-        <div class="flex items-center gap-2">
-            <a class="<?= e(ui_button_small_classes()) ?>" href="<?= e(APP_BASE_PATH) ?>/catalogo/programas/pendientes">Gestionar pendientes</a>
-            <a class="<?= e(ui_button_primary_classes()) ?>" href="<?= e(APP_BASE_PATH) ?>/catalogo/programas/importar">Importar PDF programa</a>
-        </div>
-    </div>
+   
 
-    <form method="get" action="<?= e(APP_BASE_PATH) ?>/catalogo/programas" class="flex w-full items-center gap-3" data-auto-filter-form>
+    <form method="get" action="<?= e(APP_BASE_PATH) ?>/catalogo/programas" class="flex w-full items-center gap-3" data-auto-filter-form data-auto-filter-ajax="true" data-auto-filter-target="#tabla-catalogo-programas tbody">
         <input
             type="text"
             name="q"
@@ -87,21 +98,7 @@ $tdClasses = str_replace('h-[50px] ', '', ui_td_classes());
         </tr>
         </thead>
         <tbody>
-        <?php if ($programas === []): ?>
-            <tr>
-                <td class="<?= e($tdClasses) ?> py-4 text-center" colspan="5">No hay programas registrados.</td>
-            </tr>
-        <?php else: ?>
-            <?php foreach ($programas as $programa): ?>
-                <tr>
-                    <td class="<?= e($tdClasses) ?> py-3 align-top"><?= e((string) ($programa['codigo'] ?? '')) ?></td>
-                    <td class="<?= e($tdClasses) ?> py-3 whitespace-normal break-words leading-6 align-top"><?= e((string) ($programa['nombre'] ?? '')) ?></td>
-                    <td class="<?= e($tdClasses) ?> py-3 align-top"><?= e((string) ($programa['nivel'] ?? '')) ?></td>
-                    <td class="<?= e($tdClasses) ?> py-3 align-top">-</td>
-                    <td class="<?= e($tdClasses) ?> py-3 align-top"><?= e((string) ($programa['modalidad'] ?? '')) ?></td>
-                </tr>
-            <?php endforeach; ?>
-        <?php endif; ?>
+        <?php partial('catalogo/programas/_rows', ['programas' => $programas, 'tdClasses' => $tdClasses]); ?>
         </tbody>
     </table>
 </section>

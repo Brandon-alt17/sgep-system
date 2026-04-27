@@ -20,11 +20,28 @@ class CatalogoController
             'nivel' => trim((string) ($_GET['nivel'] ?? '')),
             'modalidad' => trim((string) ($_GET['modalidad'] ?? '')),
         ];
+        $programas = Programa::catalogo($filters);
+        $pendientesCount = Programa::countPendientesEnlace();
+
+        if ($this->isAjaxFilterRequest()) {
+            ob_start();
+            partial('catalogo/programas/_rows', ['programas' => $programas]);
+            $rowsHtml = (string) ob_get_clean();
+
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode([
+                'ok' => true,
+                'rowsHtml' => $rowsHtml,
+                'total' => count($programas),
+                'pendientesCount' => $pendientesCount,
+            ], JSON_UNESCAPED_UNICODE);
+            return;
+        }
 
         view('catalogo/programas/index', [
-            'programas' => Programa::catalogo($filters),
+            'programas' => $programas,
             'filters' => $filters,
-            'pendientesCount' => Programa::countPendientesEnlace(),
+            'pendientesCount' => $pendientesCount,
         ]);
     }
 
@@ -137,6 +154,13 @@ class CatalogoController
         $base = preg_replace('/[_\-]+/', ' ', $base) ?? $base;
         $base = preg_replace('/\s+/', ' ', trim($base)) ?? trim($base);
         return $base;
+    }
+
+    private function isAjaxFilterRequest(): bool
+    {
+        $isXmlHttpRequest = strtolower((string) ($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '')) === 'xmlhttprequest';
+        $isAjaxQueryFlag = ((string) ($_GET['ajax'] ?? '')) === '1';
+        return $isXmlHttpRequest && $isAjaxQueryFlag;
     }
 
 }
