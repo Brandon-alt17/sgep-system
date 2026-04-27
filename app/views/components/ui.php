@@ -16,7 +16,8 @@ if (!function_exists('ui_card_classes')) {
 if (!function_exists('ui_select_classes')) {
     function ui_select_classes(): string
     {
-        return 'w-full rounded-lg border border-app-borderControlStrong bg-white bg-none px-3 py-2 pr-10 text-sm text-app-muted appearance-none outline-none transition-colors duration-200 hover:border-app-accent focus:border-app-accent focus:ring-2 focus:ring-app-accentSoft [&>option]:bg-white [&>option]:text-app-muted';
+        // Versión corregida - mantener el dropdown visible
+        return 'w-full rounded-lg border border-app-borderControlStrong bg-white px-3 py-2 pr-10 text-sm text-app-muted transition-colors duration-200 hover:border-app-accent focus:border-app-accent focus:ring-2 focus:ring-app-accentSoft';
     }
 }
 
