@@ -40,7 +40,7 @@
 </section>
 
 <!-- Tabla -->
-<section class="<?= e(ui_card_classes()) ?>">
+<section class="<?= e(ui_card_classes()) ?> !p-0 overflow-hidden">
 
     <table class="<?= e(ui_table_classes()) ?>">
         
@@ -72,7 +72,7 @@
                 </td>
 
                 <td class="<?= e(ui_td_classes()) ?>">
-                    <?= e($aprendiz['empresa'] ?? '-') ?>
+                    <?= e( $aprendiz['empresa_nombre'] ?? '-') ?>
                 </td>
 
                 <td class="<?= e(ui_td_classes()) ?> text-gray-600">
@@ -99,7 +99,7 @@
                     <?= e($aprendiz['ultima_visita'] ?? '—') ?>
                 </td>
 
-                <td class="<?= e(ui_td_classes()) ?> text-right">
+                <td class="<?= e(ui_td_classes()) ?>">
                     <a class="<?= e(ui_button_small_classes()) ?>" 
                        href="<?= e(APP_BASE_PATH) ?>/aprendices/show?id=<?= (int)$aprendiz['id'] ?>">
                         Ver perfil
