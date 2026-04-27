@@ -24,34 +24,45 @@ class Aprendiz
         $pdo = Database::connection();
         $where = [];
         $params = [];
+
         if (!empty($filters['estado'])) {
             $where[] = 'a.estado = :estado';
             $params['estado'] = $filters['estado'];
         }
+
         if (!empty($filters['q'])) {
             $where[] = '(a.nombre_completo LIKE :q OR a.numero_documento LIKE :q)';
             $params['q'] = '%' . $filters['q'] . '%';
         }
-        $sql = 'SELECT a.* FROM aprendices a';
+
+        // 🔥 AQUÍ ESTÁ EL CAMBIO
+        $sql = '
+            SELECT 
+                a.*,
+                e.nombre AS empresa_nombre,
+                e.nit
+            FROM aprendices a
+            LEFT JOIN empresas e ON a.empresa_id = e.id
+        ';
+
         if ($where !== []) {
             $sql .= ' WHERE ' . implode(' AND ', $where);
         }
+
         $sql .= ' ORDER BY a.created_at DESC LIMIT :limit OFFSET :offset';
+
         $stmt = $pdo->prepare($sql);
+
         foreach ($params as $k => $v) {
             $stmt->bindValue(':' . $k, $v);
         }
+
         $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
         $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
-        $stmt->execute();
-        return $stmt->fetchAll();
-    }
 
-    public static function findById(int $id): ?array
-    {
-        $stmt = Database::connection()->prepare('SELECT * FROM aprendices WHERE id = :id');
-        $stmt->execute(['id' => $id]);
-        return $stmt->fetch() ?: null;
+        $stmt->execute();
+
+        return $stmt->fetchAll();
     }
 
     public static function findByCedula(string $cedula): ?array
@@ -94,6 +105,28 @@ class Aprendiz
         ]);
     }
 
+    public static function findById(int $id): ?array
+    {
+        $sql = "
+            SELECT 
+                a.*,
+                e.nombre AS empresa_nombre,
+                e.nit,
+                e.direccion,
+                e.nombre_jefe,
+                e.cargo_jefe,
+                e.telefono_jefe
+            FROM aprendices a
+            LEFT JOIN empresas e ON a.empresa_id = e.id
+            WHERE a.id = :id
+        ";
+
+        $stmt = Database::connection()->prepare($sql);
+        $stmt->execute(['id' => $id]);
+
+        return $stmt->fetch() ?: null;
+    }
+
     public static function updateEstado(int $id, string $nuevoEstado, ?string $motivo = null): void
     {
         if (!in_array($nuevoEstado, self::ESTADOS_VALIDOS, true)) {
@@ -118,4 +151,6 @@ class Aprendiz
             throw $e;
         }
     }
+
+    
 }
