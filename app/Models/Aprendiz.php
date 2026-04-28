@@ -30,12 +30,16 @@ class Aprendiz
             $params['estado'] = $filters['estado'];
         }
 
+        if (!empty($filters['ficha'])) {
+            $where[] = 'a.ficha = :ficha';
+            $params['ficha'] = $filters['ficha'];
+        }
+
         if (!empty($filters['q'])) {
             $where[] = '(a.nombre_completo LIKE :q OR a.numero_documento LIKE :q)';
             $params['q'] = '%' . $filters['q'] . '%';
         }
 
-        // 🔥 AQUÍ ESTÁ EL CAMBIO
         $sql = '
             SELECT 
                 a.*,
@@ -63,6 +67,22 @@ class Aprendiz
         $stmt->execute();
 
         return $stmt->fetchAll();
+    }
+
+    // Agregar método para obtener valores únicos de fichas
+    public static function getUniqueFichas(): array
+    {
+        $stmt = Database::connection()->prepare('SELECT DISTINCT ficha FROM aprendices WHERE ficha IS NOT NULL AND ficha != "" ORDER BY ficha');
+        $stmt->execute();
+        return array_column($stmt->fetchAll(), 'ficha');
+    }
+
+    // Agregar método para obtener valores únicos de estados
+    public static function getUniqueEstados(): array
+    {
+        $stmt = Database::connection()->prepare('SELECT DISTINCT estado FROM aprendices WHERE estado IS NOT NULL ORDER BY estado');
+        $stmt->execute();
+        return array_column($stmt->fetchAll(), 'estado');
     }
 
     public static function findByCedula(string $cedula): ?array
@@ -151,6 +171,4 @@ class Aprendiz
             throw $e;
         }
     }
-
-    
 }
