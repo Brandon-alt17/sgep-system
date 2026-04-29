@@ -7,23 +7,8 @@
 - **Node.js 18+ y NPM 9+** (`node -v` y `npm -v`)
 - **MySQL 8.0+**
 - **WAMP** (Windows) o **MAMP** (macOS)
-- **Poppler (`pdftotext`)** para importación de programas PDF (`pdftotext -v`)
 
 > Entorno recomendado: **WAMP** en Windows y **MAMP** en macOS.
-
-### Dependencias por sistema operativo
-
-- **Windows (WAMP)**
-  - PHP, Apache y MySQL desde WAMP.
-  - Node.js + npm desde instalador oficial.
-  - Para importación de PDF, validar `pdftotext` disponible en el entorno (o usar parser PHP como respaldo).
-- **macOS (MAMP/Homebrew)**
-  - PHP y MySQL desde MAMP (o nativo).
-  - Node.js + npm (`brew install node` si aplica).
-  - `pdftotext`: `brew install poppler`.
-- **Linux Arch**
-  - Stack base: `sudo pacman -S php composer mariadb apache nodejs npm`.
-  - `pdftotext`: `sudo pacman -S poppler`.
 
 ### Pasos de instalación
 
@@ -99,19 +84,6 @@ php -S localhost:8000 -t public
   - Ejecutar `npm install` y repetir compilación CSS.
 - **Error de conexión a MySQL**
   - Revisar `.env` (`DB_HOST`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`).
-- **Importación de programas no detecta competencias/resultados**
-  - Verificar que `pdftotext` esté instalado (`pdftotext -v`).
-  - En **macOS** instalar con Homebrew:
-
-```bash
-brew install poppler
-```
-
-  - En **Linux (Arch)** instalar:
-
-```bash
-sudo pacman -S poppler
-```
 
 ### Documentación adicional
 
