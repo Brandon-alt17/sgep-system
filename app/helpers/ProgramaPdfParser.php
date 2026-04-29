@@ -360,11 +360,36 @@ class ProgramaPdfParser
 
     private static function detectNivel(string $text): string
     {
-        $value = self::firstMatch('/t[ií]tulo\s+o\s+certificado\s+que\s+obtendr[aá][^\n]*\n?([A-ZÁÉÍÓÚÑ ]{4,40})/iu', $text, 1);
+        // Caso ideal: encabezado seguido del nivel en la linea siguiente.
+        $value = self::firstMatch('/t[ií]tulo\s+o\s+certificado\s+que\s+obtendr[aá][^\n]*\n?([A-ZÁÉÍÓÚÑ ]{4,60})/iu', $text, 1);
         if ($value !== '') {
-            return mb_convert_case(trim($value), MB_CASE_TITLE);
+            $normalized = self::normalizeNivel($value);
+            if ($normalized !== '') {
+                return $normalized;
+            }
         }
-        return '';
+
+        // Fallback: a veces el nivel viene en la misma linea del encabezado.
+        $valueInline = self::firstMatch('/t[ií]tulo\s+o\s+certificado\s+que\s+obtendr[aá][^:\n]*[:\-]?\s*([^\n]+)/iu', $text, 1);
+        if ($valueInline !== '') {
+            $normalizedInline = self::normalizeNivel($valueInline);
+            if ($normalizedInline !== '') {
+                return $normalizedInline;
+            }
+        }
+
+        // Fallback general: buscar nivel de formacion.
+        $valueNearNivel = self::firstMatch('/nivel\s+de\s+formaci[oó]n[^:\n]*[:\-]?\s*([^\n]+)/iu', $text, 1);
+        if ($valueNearNivel !== '') {
+            $normalizedNearNivel = self::normalizeNivel($valueNearNivel);
+            if ($normalizedNearNivel !== '') {
+                return $normalizedNearNivel;
+            }
+        }
+
+        // Ultimo recurso: detectar keywords de nivel en el documento.
+        $valueGlobal = self::firstMatch('/\b(tecn[oó]logo|t[eé]cnico(?:\s+laboral)?|auxiliar|operario|especializaci[oó]n)\b/iu', $text, 1);
+        return self::normalizeNivel($valueGlobal);
     }
 
     private static function detectModalidad(string $text): string
@@ -393,6 +418,37 @@ class ProgramaPdfParser
     {
         $value = preg_replace('/\s+/', ' ', trim($value)) ?? trim($value);
         return $value;
+    }
+
+    private static function normalizeNivel(string $value): string
+    {
+        $v = trim($value);
+        if ($v === '') {
+            return '';
+        }
+        $v = preg_replace('/\s+/', ' ', $v) ?? $v;
+        $v = mb_strtolower($v);
+
+        if (preg_match('/\btecn[oó]logo\b/u', $v)) {
+            return 'Tecnólogo';
+        }
+        if (preg_match('/\bt[eé]cnico\s+laboral\b/u', $v)) {
+            return 'Técnico Laboral';
+        }
+        if (preg_match('/\bt[eé]cnico\b/u', $v)) {
+            return 'Técnico';
+        }
+        if (preg_match('/\bauxiliar\b/u', $v)) {
+            return 'Auxiliar';
+        }
+        if (preg_match('/\boperario\b/u', $v)) {
+            return 'Operario';
+        }
+        if (preg_match('/\bespecializaci[oó]n\b/u', $v)) {
+            return 'Especialización';
+        }
+
+        return '';
     }
 
     /**

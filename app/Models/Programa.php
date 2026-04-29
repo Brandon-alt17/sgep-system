@@ -32,13 +32,7 @@ class Programa
             $params['nivel'] = $nivel;
         }
 
-        $modalidad = trim((string) ($filters['modalidad'] ?? ''));
-        if ($modalidad !== '') {
-            $where[] = 'modalidad = :modalidad';
-            $params['modalidad'] = $modalidad;
-        }
-
-        $sql = 'SELECT id, codigo, nombre, nivel, modalidad FROM programas';
+        $sql = 'SELECT id, codigo, nombre, nivel FROM programas';
         if ($where !== []) {
             $sql .= ' WHERE ' . implode(' AND ', $where);
         }
@@ -76,7 +70,7 @@ class Programa
                            GROUP BY programa_id
                          ) latest ON latest.max_id = i.id";
             $hoursStmt = Database::connection()->prepare($hoursSql);
-            $hoursStmt->execute(array_merge($programaIds, $programaIds));
+            $hoursStmt->execute($programaIds);
             $hoursRows = $hoursStmt->fetchAll();
 
             $hoursByProgramaId = [];

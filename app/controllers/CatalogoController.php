@@ -18,7 +18,6 @@ class CatalogoController
         $filters = [
             'q' => trim((string) ($_GET['q'] ?? '')),
             'nivel' => trim((string) ($_GET['nivel'] ?? '')),
-            'modalidad' => trim((string) ($_GET['modalidad'] ?? '')),
         ];
         $programas = Programa::catalogo($filters);
         $pendientesCount = Programa::countPendientesEnlace();
@@ -145,6 +144,52 @@ class CatalogoController
         ]);
 
         redirect(APP_BASE_PATH . '/catalogo/programas');
+    }
+
+    public function verPrograma(): void
+    {
+        $programaId = (int) ($_GET['id'] ?? 0);
+        if ($programaId <= 0) {
+            http_response_code(404);
+            view('errors/404', ['uri' => '/catalogo/programas/ver']);
+            return;
+        }
+
+        $programa = Programa::findById($programaId);
+        if ($programa === null) {
+            http_response_code(404);
+            view('errors/404', ['uri' => '/catalogo/programas/ver']);
+            return;
+        }
+
+        $latestImport = ProgramaImportacionPdf::latestByProgramaId($programaId);
+        $parsed = [
+            'meta' => [
+                'codigo' => (string) ($programa['codigo'] ?? ''),
+                'nombre' => (string) ($programa['nombre'] ?? ''),
+                'nivel' => (string) ($programa['nivel'] ?? ''),
+                'horas_total' => '',
+            ],
+            'competencias' => ProgramaContenido::competenciasConResultados($programaId),
+            'warnings' => [],
+        ];
+
+        if ($latestImport !== null) {
+            $decoded = json_decode((string) ($latestImport['resumen_json'] ?? '{}'), true);
+            if (is_array($decoded)) {
+                $parsed['meta'] = array_merge($parsed['meta'], (array) ($decoded['meta'] ?? []));
+                if ((array) ($decoded['competencias'] ?? []) !== [] && $parsed['competencias'] === []) {
+                    $parsed['competencias'] = (array) $decoded['competencias'];
+                }
+                $parsed['warnings'] = (array) ($decoded['warnings'] ?? []);
+            }
+        }
+
+        view('catalogo/programas/show', [
+            'programa' => $programa,
+            'fileName' => (string) ($latestImport['nombre_archivo'] ?? 'Registro guardado'),
+            'parsed' => $parsed,
+        ]);
     }
 
     private function guessProgramNameFromFileName(string $fileName): string

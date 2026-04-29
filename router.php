@@ -44,6 +44,7 @@ $routes = [
     ['GET', '/catalogo/programas/importar', [CatalogoController::class, 'importarProgramaForm']],
     ['POST', '/catalogo/programas/importar/analizar', [CatalogoController::class, 'importarProgramaAnalizar']],
     ['POST', '/catalogo/programas/importar/guardar', [CatalogoController::class, 'importarProgramaGuardar']],
+    ['GET', '/catalogo/programas/ver', [CatalogoController::class, 'verPrograma']],
     ['GET', '/catalogo/grupos', [CatalogoController::class, 'grupos']],
     ['GET', '/catalogo/empresas', [CatalogoController::class, 'empresas']],
 ];
