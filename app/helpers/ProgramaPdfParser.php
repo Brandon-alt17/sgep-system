@@ -24,7 +24,6 @@ class ProgramaPdfParser
             'codigo' => self::detectCodigo($flat),
             'nombre' => self::detectNombre($flat),
             'nivel' => self::detectNivel($flat),
-            'modalidad' => self::detectModalidad($flat),
             'horas_lectiva' => self::firstMatch('/etapa\s+lectiva\s*[:\-]?\s*(\d{2,5})\s*horas/iu', $flat, 1),
             'horas_productiva' => self::firstMatch('/etapa\s+productiva\s*[:\-]?\s*(\d{2,5})\s*horas/iu', $flat, 1),
             'horas_total' => self::firstMatch('/total\s*[:\-]?\s*(\d{2,5})\s*horas/iu', $flat, 1),
@@ -360,17 +359,36 @@ class ProgramaPdfParser
 
     private static function detectNivel(string $text): string
     {
-        $value = self::firstMatch('/t[ií]tulo\s+o\s+certificado\s+que\s+obtendr[aá][^\n]*\n?([A-ZÁÉÍÓÚÑ ]{4,40})/iu', $text, 1);
+        // Caso ideal: encabezado seguido del nivel en la linea siguiente.
+        $value = self::firstMatch('/t[ií]tulo\s+o\s+certificado\s+que\s+obtendr[aá][^\n]*\n?([A-ZÁÉÍÓÚÑ ]{4,60})/iu', $text, 1);
         if ($value !== '') {
-            return mb_convert_case(trim($value), MB_CASE_TITLE);
+            $normalized = self::normalizeNivel($value);
+            if ($normalized !== '') {
+                return $normalized;
+            }
         }
-        return '';
-    }
 
-    private static function detectModalidad(string $text): string
-    {
-        $mode = self::firstMatch('/modalidad\s*[:\-]?\s*(presencial|virtual|mixta)/iu', $text, 1);
-        return $mode !== '' ? mb_convert_case(trim($mode), MB_CASE_TITLE) : '';
+        // Fallback Linux/Poppler: a veces el nivel viene en la misma linea del encabezado.
+        $valueInline = self::firstMatch('/t[ií]tulo\s+o\s+certificado\s+que\s+obtendr[aá][^:\n]*[:\-]?\s*([^\n]+)/iu', $text, 1);
+        if ($valueInline !== '') {
+            $normalizedInline = self::normalizeNivel($valueInline);
+            if ($normalizedInline !== '') {
+                return $normalizedInline;
+            }
+        }
+
+        // Fallback general: buscar el concepto de nivel cerca del texto.
+        $valueNearNivel = self::firstMatch('/nivel\s+de\s+formaci[oó]n[^:\n]*[:\-]?\s*([^\n]+)/iu', $text, 1);
+        if ($valueNearNivel !== '') {
+            $normalizedNearNivel = self::normalizeNivel($valueNearNivel);
+            if ($normalizedNearNivel !== '') {
+                return $normalizedNearNivel;
+            }
+        }
+
+        // Ultimo recurso: detectar cualquier keyword de nivel en todo el documento.
+        $valueGlobal = self::firstMatch('/\b(tecn[oó]logo|t[eé]cnico(?:\s+laboral)?|auxiliar|operario|especializaci[oó]n)\b/iu', $text, 1);
+        return self::normalizeNivel($valueGlobal);
     }
 
     private static function firstMatch(string $pattern, string $subject, int $group): string
@@ -393,6 +411,37 @@ class ProgramaPdfParser
     {
         $value = preg_replace('/\s+/', ' ', trim($value)) ?? trim($value);
         return $value;
+    }
+
+    private static function normalizeNivel(string $value): string
+    {
+        $v = trim($value);
+        if ($v === '') {
+            return '';
+        }
+        $v = preg_replace('/\s+/', ' ', $v) ?? $v;
+        $v = mb_strtolower($v);
+
+        if (preg_match('/\btecn[oó]logo\b/u', $v)) {
+            return 'Tecnólogo';
+        }
+        if (preg_match('/\bt[eé]cnico\s+laboral\b/u', $v)) {
+            return 'Técnico Laboral';
+        }
+        if (preg_match('/\bt[eé]cnico\b/u', $v)) {
+            return 'Técnico';
+        }
+        if (preg_match('/\bauxiliar\b/u', $v)) {
+            return 'Auxiliar';
+        }
+        if (preg_match('/\boperario\b/u', $v)) {
+            return 'Operario';
+        }
+        if (preg_match('/\bespecializaci[oó]n\b/u', $v)) {
+            return 'Especialización';
+        }
+
+        return '';
     }
 
     /**

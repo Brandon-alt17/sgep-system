@@ -18,7 +18,6 @@ class CatalogoController
         $filters = [
             'q' => trim((string) ($_GET['q'] ?? '')),
             'nivel' => trim((string) ($_GET['nivel'] ?? '')),
-            'modalidad' => trim((string) ($_GET['modalidad'] ?? '')),
         ];
         $programas = Programa::catalogo($filters);
         $pendientesCount = Programa::countPendientesEnlace();
