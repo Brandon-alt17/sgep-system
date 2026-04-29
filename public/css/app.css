@@ -886,16 +886,16 @@ a:hover {
   left: 0px;
 }
 
+.right-2 {
+  right: 0.5rem;
+}
+
 .right-3 {
   right: 0.75rem;
 }
 
 .top-1\/2 {
   top: 50%;
-}
-
-.right-2 {
-  right: 0.5rem;
 }
 
 .\!m-0 {
@@ -909,6 +909,11 @@ a:hover {
 .mx-auto {
   margin-left: auto;
   margin-right: auto;
+}
+
+.mx-6 {
+  margin-left: 1.5rem;
+  margin-right: 1.5rem;
 }
 
 .mb-1 {
@@ -981,6 +986,10 @@ a:hover {
 
 .mt-auto {
   margin-top: auto;
+}
+
+.mb-6 {
+  margin-bottom: 1.5rem;
 }
 
 .block {
@@ -1077,6 +1086,10 @@ a:hover {
 
 .min-h-\[70px\] {
   min-height: 70px;
+}
+
+.min-h-\[96px\] {
+  min-height: 96px;
 }
 
 .min-h-screen {
@@ -1177,6 +1190,10 @@ a:hover {
 
 .w-\[38\%\] {
   width: 38%;
+}
+
+.w-\[40\%\] {
+  width: 40%;
 }
 
 .w-\[40px\] {
@@ -1540,6 +1557,10 @@ a:hover {
   background-color: rgb(248 250 251 / var(--tw-bg-opacity, 1));
 }
 
+.bg-app-panelSubtle\/40 {
+  background-color: rgb(248 250 251 / 0.4);
+}
+
 .bg-app-sidebar {
   --tw-bg-opacity: 1;
   background-color: rgb(255 255 255 / var(--tw-bg-opacity, 1));
@@ -1691,8 +1712,8 @@ a:hover {
   padding-bottom: 0.5rem;
 }
 
-.pb-28 {
-  padding-bottom: 7rem;
+.pb-20 {
+  padding-bottom: 5rem;
 }
 
 .pb-4 {
@@ -1711,12 +1732,20 @@ a:hover {
   padding-left: 1.25rem;
 }
 
+.pl-6 {
+  padding-left: 1.5rem;
+}
+
 .pl-8 {
   padding-left: 2rem;
 }
 
 .pr-10 {
   padding-right: 2.5rem;
+}
+
+.pr-6 {
+  padding-right: 1.5rem;
 }
 
 .pt-2 {
@@ -1729,10 +1758,6 @@ a:hover {
 
 .pt-6 {
   padding-top: 1.5rem;
-}
-
-.pb-20 {
-  padding-bottom: 5rem;
 }
 
 .text-left {
@@ -1749,6 +1774,10 @@ a:hover {
 
 .align-middle {
   vertical-align: middle;
+}
+
+.font-mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 }
 
 .text-2xl {

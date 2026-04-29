@@ -47,8 +47,8 @@ foreach ($metaFieldLabels as $metaKey => $metaLabel) {
 </section>
 
 <section class="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-    <article class="<?= e(ui_card_classes()) ?> ">
-        <div class="flex items-start justify-between gap-2">
+    <article class="<?= e(ui_card_classes()) ?> min-h-[96px] p-6">
+        <div class="flex items-center justify-between gap-2 h-full">
             <div>
                 <p class="m-0 text-xs uppercase tracking-wide text-app-muted">Nivel</p>
                 <p class="mt-2 text-1xl font-semibold text-app-text"><?= e((string) (($meta['nivel'] ?? '') !== '' ? $meta['nivel'] : 'N/D')) ?></p>
@@ -57,8 +57,8 @@ foreach ($metaFieldLabels as $metaKey => $metaLabel) {
         </div>
     </article>
 
-    <article class="<?= e(ui_card_classes()) ?>">
-        <div class="flex items-start justify-between gap-2">
+    <article class="<?= e(ui_card_classes()) ?> min-h-[96px] p-6">
+        <div class="flex items-center justify-between gap-2 h-full">
             <div>
                 <p class="m-0 text-xs uppercase tracking-wide text-app-muted">Competencias</p>
                 <p class="mt-2 text-1xl font-semibold text-app-text"><?= e((string) count($competencias)) ?></p>
@@ -67,8 +67,8 @@ foreach ($metaFieldLabels as $metaKey => $metaLabel) {
         </div>
     </article>
 
-    <article class="<?= e(ui_card_classes()) ?>">
-        <div class="flex items-start justify-between gap-2">
+    <article class="<?= e(ui_card_classes()) ?> min-h-[96px] p-6">
+        <div class="flex items-center justify-between gap-2 h-full">
             <div>
                 <p class="m-0 text-xs uppercase tracking-wide text-app-muted">Resultados de aprendizaje</p>
                 <p class="mt-2 text-1xl font-semibold text-app-text"><?= e((string) $totalResultados) ?></p>
@@ -77,8 +77,8 @@ foreach ($metaFieldLabels as $metaKey => $metaLabel) {
         </div>
     </article>
 
-    <article class="<?= e(ui_card_classes()) ?>">
-        <div class="flex items-start justify-between gap-2">
+    <article class="<?= e(ui_card_classes()) ?> min-h-[96px] p-6">
+        <div class="flex items-center justify-between gap-2 h-full">
             <div>
                 <p class="m-0 text-xs uppercase tracking-wide text-app-muted">Horas totales</p>
                 <p class="mt-2 text-1xl font-semibold text-app-text"><?= e((string) (($meta['horas_total'] ?? '') !== '' ? $meta['horas_total'] . 'h' : 'N/D')) ?></p>
@@ -89,7 +89,7 @@ foreach ($metaFieldLabels as $metaKey => $metaLabel) {
 </section>
 
 <?php if ($warnings !== [] || $missingMetaFields !== []): ?>
-    <section class="mt-4 <?= e(ui_warning_card_classes()) ?> mb-4">
+    <section class="mt-4 <?= e(ui_warning_card_classes()) ?> mb-6">
         <h4 class="mb-2 mt-0 text-sm font-semibold">Campos no obtenidos del PDF (<?= e((string) count($missingMetaFields)) ?>)</h4>
         <?php if ($missingMetaFields !== []): ?>
             <div class="mb-3 flex flex-wrap gap-2">
@@ -116,35 +116,38 @@ foreach ($metaFieldLabels as $metaKey => $metaLabel) {
     </section>
 <?php endif; ?>
 
-<section class="<?= e(ui_card_classes()) ?> mb-4 mt-4">
+<?php if ($competencias !== []): ?>
+<section class="<?= e(ui_card_classes()) ?> mt-6" data-live-filter-root>
+    <div class="relative">
+        <input
+            type="text"
+            class="<?= e(ui_input_classes()) ?> pr-10"
+            placeholder="Buscar por competencia, RAE o código"
+            aria-label="Buscar por competencia, RAE o código"
+            data-live-filter-input
+        >
+        <button
+            type="button"
+            class="hidden absolute right-2 top-1/2 -translate-y-1/2 rounded-md px-2 py-1 text-sm text-app-muted hover:bg-app-panelSubtle hover:text-app-text"
+            aria-label="Limpiar búsqueda"
+            data-live-filter-clear
+        >&times;</button>
+    </div>
+    <p class="mt-2 hidden rounded-md border border-app-border bg-app-panelSubtle p-3 text-sm text-app-muted" data-live-filter-empty>
+        No hay coincidencias para la búsqueda.
+    </p>
+</section>
+<?php endif; ?>
+
+<section class="<?= e(ui_card_classes()) ?> mb-6 mt-4 p-6">
     <h4 class="m-0 text-md font-semibold text-app-text">Competencias y Resultados de Aprendizaje</h4>
 
     <?php if ($competencias === []): ?>
-        <div class="mt-4 rounded-md border border-app-border bg-app-panelSubtle p-4 text-sm text-app-muted">
+        <div class="mt-6 rounded-md border border-app-border bg-app-panelSubtle p-4 text-sm text-app-muted">
             No se detectaron competencias automáticamente.
         </div>
     <?php else: ?>
-        <div class="mt-4" data-live-filter-root>
-            <div class="relative">
-                <input
-                    type="text"
-                    class="<?= e(ui_input_classes()) ?> pr-10"
-                    placeholder="Buscar por competencia, RAE o código"
-                    aria-label="Buscar por competencia, RAE o código"
-                    data-live-filter-input
-                >
-                <button
-                    type="button"
-                    class="hidden absolute right-2 top-1/2 -translate-y-1/2 rounded-md px-2 py-1 text-sm text-app-muted hover:bg-app-panelSubtle hover:text-app-text"
-                    aria-label="Limpiar búsqueda"
-                    data-live-filter-clear
-                >&times;</button>
-            </div>
-            <p class="mt-2 hidden rounded-md border border-app-border bg-app-panelSubtle p-3 text-sm text-app-muted" data-live-filter-empty>
-                No hay coincidencias para la búsqueda.
-            </p>
-        </div>
-        <div class="mt-4 space-y-4" data-live-filter-items>
+        <div class="mt-6 space-y-6" data-live-filter-items>
             <?php foreach ($competencias as $compIndex => $comp): ?>
                 <?php
                 $resultadosComp = (array) ($comp['resultados'] ?? []);
@@ -162,7 +165,7 @@ foreach ($metaFieldLabels as $metaKey => $metaLabel) {
                     $searchParts
                 ))));
                 ?>
-                <article class="rounded-lg border border-app-border bg-app-panel p-4" data-live-filter-item data-live-filter-text="<?= e($searchText) ?>">
+                <article class="<?= e(ui_card_classes()) ?> min-h-[96px] p-6" data-live-filter-item data-live-filter-text="<?= e($searchText) ?>">
                     <div class="mb-3 flex items-start justify-between gap-3">
                         <div>
                         <?php if (trim((string) ($comp['codigo'] ?? '')) !== ''): ?>
