@@ -74,7 +74,8 @@ $bottomItems = [
                 <?php foreach ($catalogItems as $item): ?>
                     <?php
                     $normalizedItem = rtrim((string) $item['path'], '/') ?: '/';
-                    $active = $normalizedCurrent === $normalizedItem;
+                    $active = $normalizedCurrent === $normalizedItem
+                        || str_starts_with($normalizedCurrent, $normalizedItem . '/');
                     $classes = 'relative flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors duration-200 ease-out';
                     if ($active) {
                         $classes .= ' bg-app-accentSoft font-semibold text-app-accentStrong hover:bg-app-accentSoft hover:text-app-accentStrong hover:no-underline';
