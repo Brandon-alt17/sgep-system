@@ -64,8 +64,7 @@ class ProgramaPdfTextExtractor
     private static function extractWithPdftotext(string $path): string
     {
         $escaped = escapeshellarg($path);
-        $nullDevice = DIRECTORY_SEPARATOR === '\\' ? 'NUL' : '/dev/null';
-        $cmd = 'pdftotext -layout ' . $escaped . ' - 2>' . $nullDevice;
+        $cmd = 'pdftotext -layout ' . $escaped . ' - 2>NUL';
         $out = @shell_exec($cmd);
         return is_string($out) ? self::normalize($out) : '';
     }
