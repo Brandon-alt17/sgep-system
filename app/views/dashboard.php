@@ -1,112 +1,200 @@
-<div class="p-6 space-y-6">
+<?php
+// Asegurar que APP_BASE_PATH esté definida
+if (!defined('APP_BASE_PATH')) {
+    define('APP_BASE_PATH', '');
+}
 
-    <!-- HEADER -->
-    <div>
-        <h1 class="text-2xl font-bold text-gray-800">Dashboard</h1>
-        <p class="text-sm text-gray-500">Resumen general del sistema</p>
-    </div>
+// Definir funciones de UI si no existen
+if (!function_exists('e')) {
+    function e($string) {
+        return htmlspecialchars((string)$string, ENT_QUOTES, 'UTF-8');
+    }
+}
 
-    <!-- KPIs -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        
-        <!-- Aprendices -->
-        <div class="bg-white rounded-xl shadow p-5 flex items-center justify-between">
+// Definir el color de fondo para todos los iconos (como en la imagen)
+$iconBgColor = 'bg-app-primary/10'; // Ajusta según el color de tu app
+// O usa un color específico: $iconBgColor = 'bg-blue-100';
+// O usa: $iconBgColor = 'bg-teal-100';
+?>
+
+<?php partial('components/page_header', [
+    'title' => 'Dashboard',
+    'subtitle' => 'Vista general del estado de aprendices y próximas actividades.',
+]); ?>
+
+<!-- Cards de resumen principales (3 cards por fila desde pantallas medianas) -->
+<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 mb-8">
+    <!-- Card 1: Aprendices activos -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow">
+        <div class="flex items-center gap-4">
+            <div class="flex items-center justify-center w-12 h-12 <?= $iconBgColor ?> rounded-xl">
+                <span class="flex items-center justify-center text-app-primary w-[30px] h-[30px] [&_svg]:w-5 [&_svg]:h-5">
+                    <?= ui_icon('users') ?>
+                </span>
+            </div>
             <div>
-                <p class="text-sm text-gray-500">Aprendices activos</p>
-                <h2 class="text-2xl font-bold text-gray-800"><?= $totalAprendices ?></h2>
-            </div>
-            <div class="bg-blue-100 text-blue-600 p-3 rounded-lg">
-                <i data-lucide="users"></i>
-            </div>
-        </div>
-
-        <!-- Visitas -->
-        <div class="bg-white rounded-xl shadow p-5 flex items-center justify-between">
-            <div>
-                <p class="text-sm text-gray-500">Visitas esta semana</p>
-                <h2 class="text-2xl font-bold text-gray-800"><?= $visitasSemana ?></h2>
-            </div>
-            <div class="bg-yellow-100 text-yellow-600 p-3 rounded-lg">
-                <i data-lucide="map-pin"></i>
-            </div>
-        </div>
-
-        <!-- Por certificar -->
-        <div class="bg-white rounded-xl shadow p-5 flex items-center justify-between">
-            <div>
-                <p class="text-sm text-gray-500">Por certificar</p>
-                <h2 class="text-2xl font-bold text-gray-800"><?= $porCertificar ?></h2>
-            </div>
-            <div class="bg-green-100 text-green-600 p-3 rounded-lg">
-                <i data-lucide="award"></i>
+                <p class="text-3xl font-bold text-gray-800"><?= e((string)($totales['activos'] ?? 0)) ?></p>
+                <p class="text-gray-500 text-sm font-medium">Aprendices activos</p>
             </div>
         </div>
     </div>
 
-    <!-- ALERTAS / ESTADOS -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-
-        <!-- Conteo por estado -->
-        <div class="bg-white rounded-xl shadow p-5">
-            <h3 class="text-lg font-semibold text-gray-700 mb-4">Estado de aprendices</h3>
-
-            <div class="space-y-3">
-                <?php foreach ($conteoEstados as $estado => $cantidad): ?>
-                    <div class="flex justify-between items-center">
-                        <span class="text-sm text-gray-600"><?= $estado ?></span>
-                        <span class="font-semibold text-gray-800"><?= $cantidad ?></span>
-                    </div>
-                <?php endforeach; ?>
+    <!-- Card 2: Por certificar -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow">
+        <div class="flex items-center gap-4">
+            <div class="flex items-center justify-center w-12 h-12 <?= $iconBgColor ?> rounded-xl">
+                <span class="flex items-center justify-center text-app-primary w-[30px] h-[30px] [&_svg]:w-5 [&_svg]:h-5">
+                    <?= ui_icon('circle-check') ?>
+                </span>
             </div>
-        </div>
-
-        <!-- Resumen rápido -->
-        <div class="bg-white rounded-xl shadow p-5">
-            <h3 class="text-lg font-semibold text-gray-700 mb-4">Resumen rápido</h3>
-
-            <ul class="space-y-3 text-sm text-gray-600">
-                <li>📌 Tienes <strong><?= $visitasPendientes ?></strong> visitas pendientes</li>
-                <li>📌 <strong><?= $momentosPendientes ?></strong> momentos sin completar</li>
-                <li>📌 <strong><?= $aprendicesAtrasados ?></strong> aprendices con retraso</li>
-            </ul>
+            <div>
+                <p class="text-3xl font-bold text-gray-800"><?= e((string)($totales['por_certificar'] ?? 0)) ?></p>
+                <p class="text-gray-500 text-sm font-medium">Por certificar</p>
+            </div>
         </div>
     </div>
 
-    <!-- VISITAS -->
-    <div class="bg-white rounded-xl shadow p-5">
-        <div class="flex justify-between items-center mb-4">
-            <h3 class="text-lg font-semibold text-gray-700">Próximas visitas</h3>
-            <a href="/visitas" class="text-sm text-blue-600 hover:underline">Ver todas</a>
+    <!-- Card 3: En ejecución -->
+    <?php 
+    $enEjecucion = 0;
+    $pendienteIniciar = 0;
+    
+    foreach ($counts as $row) {
+        if ($row['estado'] === 'En ejecución') {
+            $enEjecucion = (int)$row['total'];
+        }
+        if ($row['estado'] === 'Pendiente por iniciar') {
+            $pendienteIniciar = (int)$row['total'];
+        }
+    }
+    ?>
+    
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow">
+        <div class="flex items-center gap-4">
+            <div class="flex items-center justify-center w-12 h-12 <?= $iconBgColor ?> rounded-xl">
+                <span class="flex items-center justify-center text-app-primary w-[30px] h-[30px] [&_svg]:w-5 [&_svg]:h-5">
+                    <?= ui_icon('briefcase') ?>
+                </span>
+            </div>
+            <div>
+                <p class="text-3xl font-bold text-gray-800"><?= e((string)$enEjecucion) ?></p>
+                <p class="text-gray-500 text-sm font-medium">En ejecución</p>
+            </div>
         </div>
+    </div>
 
-        <div class="space-y-3">
-            <?php foreach ($visitas as $v): ?>
-                <div class="flex justify-between items-center border rounded-lg p-4 hover:bg-gray-50 transition">
+    <!-- Card 4: Pendiente por iniciar -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow">
+        <div class="flex items-center gap-4">
+            <div class="flex items-center justify-center w-12 h-12 <?= $iconBgColor ?> rounded-xl">
+                <span class="flex items-center justify-center text-app-primary w-[30px] h-[30px] [&_svg]:w-5 [&_svg]:h-5">
+                    <?= ui_icon('clock') ?>
+                </span>
+            </div>
+            <div>
+                <p class="text-3xl font-bold text-gray-800"><?= e((string)$pendienteIniciar) ?></p>
+                <p class="text-gray-500 text-sm font-medium">Pendiente por iniciar</p>
+            </div>
+        </div>
+    </div>
 
-                    <div>
-                        <p class="font-medium text-gray-800"><?= $v['nombre'] ?></p>
-                        <p class="text-sm text-gray-500"><?= $v['empresa'] ?></p>
-                    </div>
+    <!-- Card 5: Total Empresas -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow">
+        <div class="flex items-center gap-4">
+            <div class="flex items-center justify-center w-12 h-12 <?= $iconBgColor ?> rounded-xl">
+                <span class="flex items-center justify-center text-app-primary w-[30px] h-[30px] [&_svg]:w-5 [&_svg]:h-5">
+                    <?= ui_icon('building') ?>
+                </span>
+            </div>
+            <div>
+                <p class="text-3xl font-bold text-gray-800"><?= e((string)($totales['total_empresas'] ?? 0)) ?></p>
+                <p class="text-gray-500 text-sm font-medium">Empresas</p>
+            </div>
+        </div>
+    </div>
 
-                    <div class="text-right space-y-1">
-                        <span class="text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded-full">
-                            <?= date('d M Y', strtotime($v['fecha'])) ?>
-                        </span>
+    <!-- Card 6: Total Programas de Formación -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow">
+        <div class="flex items-center gap-4">
+            <div class="flex items-center justify-center w-12 h-12 <?= $iconBgColor ?> rounded-xl">
+                <span class="flex items-center justify-center text-app-primary w-[30px] h-[30px] [&_svg]:w-5 [&_svg]:h-5">
+                    <?= ui_icon('book-open') ?>
+                </span>
+            </div>
+            <div>
+                <p class="text-3xl font-bold text-gray-800"><?= e((string)($totales['total_programas'] ?? 0)) ?></p>
+                <p class="text-gray-500 text-sm font-medium">Programas de formación</p>
+            </div>
+        </div>
+    </div>
+</div>
 
-                        <?php if ($v['estado'] === 'pendiente'): ?>
-                            <span class="text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full">
-                                Pendiente
+<!-- Próximas visitas programadas con contador y separación superior -->
+<div class="mt-4 bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+    <div class="px-6 py-4 border-b border-gray-100">
+        <div class="flex items-center justify-between">
+            <h3 class="text-lg font-semibold text-gray-800">Próximas visitas programadas</h3>
+            <span class="bg-blue-50 text-blue-600 text-sm font-semibold px-3 py-1 rounded-full">
+                Total: <?= count($alerts) ?>
+            </span>
+        </div>
+    </div>
+    <div class="divide-y divide-gray-100">
+        <?php if (empty($alerts)): ?>
+            <!-- Mensaje bonito cuando no hay visitas -->
+            <div class="flex flex-col items-center justify-center py-12 px-6 text-center">
+                <div class="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mb-4">
+                    <span class="flex items-center justify-center text-gray-300 w-10 h-10 [&_svg]:w-8 [&_svg]:h-8">
+                        <?= ui_icon('calendar') ?>
+                    </span>
+                </div>
+                <h4 class="text-lg font-medium text-gray-700 mb-1">No hay visitas programadas</h4>
+                <p class="text-sm text-gray-400">No hay visitas programadas en los próximos 30 días</p>
+            </div>
+        <?php else: ?>
+            <?php $counter = 1; ?>
+            <?php foreach ($alerts as $alert): 
+                $badgeColor = '';
+                $badgeText = '';
+                // Determinar estado de la visita
+                $fechaActual = new DateTime();
+                $fechaVisita = new DateTime($alert['proxima_visita']);
+                $diferencia = $fechaActual->diff($fechaVisita)->days;
+                
+                if ($diferencia <= 3) {
+                    $badgeColor = 'bg-red-50 text-red-600';
+                    $badgeText = 'Próxima';
+                } elseif ($diferencia <= 7) {
+                    $badgeColor = 'bg-yellow-50 text-yellow-600';
+                    $badgeText = 'Esta semana';
+                } else {
+                    $badgeColor = 'bg-green-50 text-green-600';
+                    $badgeText = 'Programada';
+                }
+            ?>
+                <div class="px-6 py-4 hover:bg-gray-50 transition-colors">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-4">
+                            <div class="font-bold text-gray-300 text-lg"><?= $counter++ ?>.</div>
+                            <div>
+                                <h4 class="text-md font-semibold text-gray-800"><?= e((string)$alert['nombre_completo']) ?></h4>
+                                <p class="text-sm text-gray-500"><?= e((string)($alert['empresa'] ?? 'Empresa no especificada')) ?></p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-sm font-medium text-gray-800">
+                                <?= e(date('d M Y', strtotime($alert['proxima_visita']))) ?>
+                            </p>
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium <?= $badgeColor ?>">
+                                <?= $badgeText ?>
                             </span>
-                        <?php else: ?>
-                            <span class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">
-                                Al día
-                            </span>
-                        <?php endif; ?>
+                            <?php if (!empty($alert['momento'])): ?>
+                                <p class="text-xs text-gray-400 mt-1"><?= e((string)$alert['momento']) ?></p>
+                            <?php endif; ?>
+                        </div>
                     </div>
-
                 </div>
             <?php endforeach; ?>
-        </div>
+        <?php endif; ?>
     </div>
-
 </div>

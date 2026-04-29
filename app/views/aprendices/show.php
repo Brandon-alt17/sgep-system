@@ -90,13 +90,15 @@
         <div class="md:col-span-2 space-y-6">
             <!-- 🏢 EMPRESA -->
             <section class="<?= e(ui_card_classes()) ?>">
-                <div class="inline-flex items-end gap-3">
-                    <span class="text-app-link w-[30px] h-[30px] flex items-end [&_svg]:w-5 [&_svg]:h-5">
-                        <?= ui_icon('building') ?>
-                    </span>
-                    <h3 class="<?= e(ui_heading_sm_classes()) ?>">
-                        Empresa co-formadora
-                    </h3>
+                <div class="flex mb-6">
+                    <h2 class="text-lg font-semibold flex items-center gap-2">
+                        <span class="flex items-center justify-center text-app-link w-[30px] h-[30px] [&_svg]:w-5 [&_svg]:h-5">
+                            <?= ui_icon('building') ?>
+                        </span>
+                        <h3 class="<?= e(ui_heading_sm_classes()) ?>">
+                            Empresa co-formadora
+                        </h3>
+                    </h2>
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm mt-3">
