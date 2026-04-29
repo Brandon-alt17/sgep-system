@@ -32,13 +32,7 @@ class Programa
             $params['nivel'] = $nivel;
         }
 
-        $modalidad = trim((string) ($filters['modalidad'] ?? ''));
-        if ($modalidad !== '') {
-            $where[] = 'modalidad = :modalidad';
-            $params['modalidad'] = $modalidad;
-        }
-
-        $sql = 'SELECT id, codigo, nombre, nivel, modalidad FROM programas';
+        $sql = 'SELECT id, codigo, nombre, nivel FROM programas';
         if ($where !== []) {
             $sql .= ' WHERE ' . implode(' AND ', $where);
         }
@@ -76,7 +70,7 @@ class Programa
                            GROUP BY programa_id
                          ) latest ON latest.max_id = i.id";
             $hoursStmt = Database::connection()->prepare($hoursSql);
-            $hoursStmt->execute(array_merge($programaIds, $programaIds));
+            $hoursStmt->execute($programaIds);
             $hoursRows = $hoursStmt->fetchAll();
 
             $hoursByProgramaId = [];
@@ -123,8 +117,6 @@ class Programa
         $codigo = trim((string) ($meta['codigo'] ?? ''));
         $nombre = trim((string) ($meta['nombre'] ?? ''));
         $nivel = trim((string) ($meta['nivel'] ?? ''));
-        $modalidad = trim((string) ($meta['modalidad'] ?? ''));
-
         $pdo = Database::connection();
         if ($codigo !== '') {
             $stmt = $pdo->prepare('SELECT id FROM programas WHERE codigo = :codigo LIMIT 1');
@@ -147,10 +139,9 @@ class Programa
             'codigo' => $codigo !== '' ? $codigo : null,
             'nombre' => $nombre !== '' ? $nombre : 'Programa pendiente de nombre',
             'nivel' => $nivel,
-            'modalidad' => $modalidad,
         ];
-        $sql = 'INSERT INTO programas (codigo, nombre, nivel, modalidad, created_at, updated_at)
-                VALUES (:codigo, :nombre, :nivel, :modalidad, NOW(), NOW())';
+        $sql = 'INSERT INTO programas (codigo, nombre, nivel, created_at, updated_at)
+                VALUES (:codigo, :nombre, :nivel, NOW(), NOW())';
         try {
             $pdo->prepare($sql)->execute($params);
         } catch (\PDOException $e) {
@@ -158,8 +149,8 @@ class Programa
             if ((int) $e->getCode() !== 42 || stripos($e->getMessage(), 'updated_at') === false) {
                 throw $e;
             }
-            $sqlLegacy = 'INSERT INTO programas (codigo, nombre, nivel, modalidad, created_at)
-                          VALUES (:codigo, :nombre, :nivel, :modalidad, NOW())';
+            $sqlLegacy = 'INSERT INTO programas (codigo, nombre, nivel, created_at)
+                          VALUES (:codigo, :nombre, :nivel, NOW())';
             $pdo->prepare($sqlLegacy)->execute($params);
         }
         return (int) $pdo->lastInsertId();

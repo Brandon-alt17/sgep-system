@@ -230,6 +230,8 @@ document.querySelectorAll("[data-auto-filter-form]").forEach(function (filterFor
   var activeController = null;
   var useAjax = filterForm.getAttribute("data-auto-filter-ajax") === "true";
   var targetSelector = filterForm.getAttribute("data-auto-filter-target") || "";
+  var mainInput = filterForm.querySelector("[data-auto-filter-main-input]");
+  var clearButton = filterForm.querySelector("[data-auto-filter-clear]");
 
   var runClassicSubmit = function () {
     if (typeof filterForm.requestSubmit === "function") {
@@ -300,16 +302,32 @@ document.querySelectorAll("[data-auto-filter-form]").forEach(function (filterFor
     runClassicSubmit();
   };
 
+  var refreshClearButtonState = function () {
+    if (!mainInput || !clearButton) return;
+    clearButton.classList.toggle("hidden", (mainInput.value || "").trim() === "");
+  };
+
   filterForm.querySelectorAll("[data-auto-filter-change]").forEach(function (field) {
     field.addEventListener("change", submitForm);
   });
 
   filterForm.querySelectorAll("[data-auto-filter-input]").forEach(function (field) {
     field.addEventListener("input", function () {
+      refreshClearButtonState();
       if (debounceTimer) window.clearTimeout(debounceTimer);
       debounceTimer = window.setTimeout(submitForm, 350);
     });
   });
+
+  if (clearButton && mainInput) {
+    clearButton.addEventListener("click", function () {
+      mainInput.value = "";
+      refreshClearButtonState();
+      submitForm();
+      mainInput.focus();
+    });
+    refreshClearButtonState();
+  }
 });
 
 // Selects: anima chevron al enfocar/abrir.

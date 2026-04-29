@@ -31,7 +31,6 @@ $programCode = trim((string) ($meta['codigo'] ?? ''));
 $missingMetaFields = [];
 $metaFieldLabels = [
     'nivel' => 'Nivel',
-    'modalidad' => 'Modalidad',
     'horas_total' => 'Horas total',
 ];
 foreach ($metaFieldLabels as $metaKey => $metaLabel) {
