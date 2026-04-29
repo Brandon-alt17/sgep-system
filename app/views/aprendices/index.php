@@ -58,6 +58,11 @@
         </thead>
 
         <tbody>
+        <?php if (empty($aprendices)): ?>
+            <tr class="border-b bg-app-panelSubtle/40">
+                <td class="<?= e(ui_td_classes()) ?> align-middle text-center text-app-muted" colspan="7">Sin aprendices registrados aún</td>
+            </tr>
+        <?php else: ?>
         <?php foreach (($aprendices ?? []) as $aprendiz): ?>
 
             <!-- 👇 hover suave como la imagen -->
@@ -109,6 +114,7 @@
             </tr>
 
         <?php endforeach; ?>
+        <?php endif; ?>
         </tbody>
     </table>
 
