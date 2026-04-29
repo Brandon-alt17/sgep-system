@@ -3,6 +3,7 @@ $programas = (array) ($programas ?? []);
 $filters = (array) ($filters ?? []);
 $q = trim((string) ($filters['q'] ?? ''));
 $nivel = trim((string) ($filters['nivel'] ?? ''));
+$modalidad = trim((string) ($filters['modalidad'] ?? ''));
 $totalRows = count($programas);
 $pendientesCount = (int) ($pendientesCount ?? 0);
 
@@ -39,23 +40,14 @@ partial('components/page_header', [
    
 
     <form method="get" action="<?= e(APP_BASE_PATH) ?>/catalogo/programas" class="flex w-full items-center gap-3" data-auto-filter-form data-auto-filter-ajax="true" data-auto-filter-target="#tabla-catalogo-programas tbody">
-        <div class="relative flex-1 min-w-0">
-            <input
-                type="text"
-                name="q"
-                value="<?= e($q) ?>"
-                placeholder="Buscar por código o nombre"
-                class="<?= e(ui_input_classes()) ?> mt-0 flex-1 min-w-0 pr-10"
-                data-auto-filter-input
-                data-auto-filter-main-input
-            >
-            <button
-                type="button"
-                class="<?= $q !== '' ? '' : 'hidden' ?> absolute right-2 top-1/2 -translate-y-1/2 rounded-md px-2 py-1 text-sm text-app-muted hover:bg-app-panelSubtle hover:text-app-text"
-                aria-label="Limpiar búsqueda"
-                data-auto-filter-clear
-            >&times;</button>
-        </div>
+        <input
+            type="text"
+            name="q"
+            value="<?= e($q) ?>"
+            placeholder="Buscar por código o nombre"
+            class="<?= e(ui_input_classes()) ?> mt-0 flex-1 min-w-0"
+            data-auto-filter-input
+        >
 
         <div class="<?= e(ui_select_wrapper_classes()) ?> w-64 shrink-0">
             <select name="nivel" class="<?= e(ui_select_classes()) ?>" data-auto-filter-change>
@@ -72,6 +64,18 @@ partial('components/page_header', [
             </span>
         </div>
 
+        <div class="<?= e(ui_select_wrapper_classes()) ?> w-64 shrink-0">
+            <select name="modalidad" class="<?= e(ui_select_classes()) ?>" data-auto-filter-change>
+                <option value="">Todas las modalidades</option>
+                <option value="Presencial" <?= $modalidad === 'Presencial' ? 'selected' : '' ?>>Presencial</option>
+                <option value="Virtual" <?= $modalidad === 'Virtual' ? 'selected' : '' ?>>Virtual</option>
+            </select>
+            <span class="<?= e(ui_select_chevron_classes()) ?>" data-select-chevron aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-4 w-4">
+                    <path d="m6 9 6 6 6-6"></path>
+                </svg>
+            </span>
+        </div>
     </form>
 </section>
 
@@ -81,7 +85,8 @@ partial('components/page_header', [
             <col class="w-[12%]">
             <col class="w-[38%]">
             <col class="w-[18%]">
-            <col class="w-[32%]">
+            <col class="w-[16%]">
+            <col class="w-[16%]">
         </colgroup>
         <thead>
         <tr class="bg-app-panelSubtle">
@@ -89,6 +94,7 @@ partial('components/page_header', [
             <th class="<?= e(ui_th_classes()) ?>">Nombre</th>
             <th class="<?= e(ui_th_classes()) ?>">Nivel</th>
             <th class="<?= e(ui_th_classes()) ?>">Duración</th>
+            <th class="<?= e(ui_th_classes()) ?>">Modalidad</th>
         </tr>
         </thead>
         <tbody>

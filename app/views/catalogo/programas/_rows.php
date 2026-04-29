@@ -29,7 +29,7 @@ if (!function_exists('normalize_programa_nombre_for_view')) {
 ?>
 <?php if ($programas === []): ?>
     <tr>
-        <td class="<?= e($tdClasses) ?> py-4 text-center" colspan="4">No hay programas registrados.</td>
+        <td class="<?= e($tdClasses) ?> py-4 text-center" colspan="5">No hay programas registrados.</td>
     </tr>
 <?php else: ?>
     <?php foreach ($programas as $programa): ?>
@@ -43,6 +43,7 @@ if (!function_exists('normalize_programa_nombre_for_view')) {
             <td class="<?= e($tdClasses) ?> py-3 whitespace-normal break-words leading-6 align-top"><?= e($nombrePrograma) ?></td>
             <td class="<?= e($tdClasses) ?> py-3 align-top"><?= e((string) ($programa['nivel'] ?? '')) ?></td>
             <td class="<?= e($tdClasses) ?> py-3 align-top"><?= e($horasDisplay) ?></td>
+            <td class="<?= e($tdClasses) ?> py-3 align-top"><?= e((string) ($programa['modalidad'] ?? '')) ?></td>
         </tr>
     <?php endforeach; ?>
 <?php endif; ?>
