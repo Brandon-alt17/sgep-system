@@ -92,7 +92,7 @@
                 <?php endforeach; ?>
             <?php else: ?>
                 <tr>
-                    <td class="<?= e(ui_td_classes()) ?>" colspan="4">Aún no hay importaciones registradas.</td>
+                    <td class="<?= e(ui_td_classes()) ?> align-middle text-center" colspan="4">Aún no hay importaciones registradas.</td>
                 </tr>
             <?php endif; ?>
             </tbody>

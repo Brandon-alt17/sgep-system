@@ -82,19 +82,17 @@ partial('components/page_header', [
 <section class="<?= e(ui_card_classes()) ?> !p-0 overflow-hidden">
     <table id="tabla-catalogo-programas" class="<?= e(ui_table_in_card_classes()) ?> !m-0 !p-0 table-fixed">
         <colgroup>
-            <col class="w-[12%]">
-            <col class="w-[38%]">
+            <col class="w-[16%]">
+            <col class="w-[46%]">
             <col class="w-[18%]">
-            <col class="w-[16%]">
-            <col class="w-[16%]">
+            <col class="w-[20%]">
         </colgroup>
         <thead>
         <tr class="bg-app-panelSubtle">
-            <th class="<?= e(ui_th_classes()) ?>">Código</th>
-            <th class="<?= e(ui_th_classes()) ?>">Nombre</th>
-            <th class="<?= e(ui_th_classes()) ?>">Nivel</th>
-            <th class="<?= e(ui_th_classes()) ?>">Duración</th>
-            <th class="<?= e(ui_th_classes()) ?>">Modalidad</th>
+            <th class="<?= e(ui_th_classes()) ?> px-4 pl-6">Código</th>
+            <th class="<?= e(ui_th_classes()) ?> px-4">Nombre</th>
+            <th class="<?= e(ui_th_classes()) ?> px-4">Nivel</th>
+            <th class="<?= e(ui_th_classes()) ?> px-4 pr-6">Duración</th>
         </tr>
         </thead>
         <tbody>
