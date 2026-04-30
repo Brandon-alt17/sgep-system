@@ -169,7 +169,7 @@ foreach ($metaFieldLabels as $metaKey => $metaLabel) {
                     <div class="mb-3 flex items-start justify-between gap-3">
                         <div>
                         <?php if (trim((string) ($comp['codigo'] ?? '')) !== ''): ?>
-                            <p class="m-0 text-xs font-semibold tracking-wide text-app-muted"><?= e((string) $comp['codigo']) ?></p>
+                            <p class="m-0 text-xs font-semibold tracking-wide text-app-muted ui-monospace font-mono"><?= e((string) $comp['codigo']) ?></p>
                         <?php endif; ?>
                         <p class="m-0 mt-1 text-lg font-semibold text-app-text"><?= e((string) (($comp['nombre'] ?? '') !== '' ? $comp['nombre'] : 'Competencia ' . ($compIndex + 1))) ?></p>
                         </div>
@@ -193,7 +193,7 @@ foreach ($metaFieldLabels as $metaKey => $metaLabel) {
                             <?php else: ?>
                                 <?php foreach ($resultadosComp as $raIndex => $resultado): ?>
                                     <tr class="<?= $raIndex < (count($resultadosComp) - 1) ? 'border-b border-app-borderSoft' : '' ?>">
-                                        <td class="<?= e(str_replace('border-b border-app-borderSoft ', '', ui_td_classes())) ?> w-32"><?= e('RA' . ($raIndex + 1)) ?></td>
+                                        <td class="<?= e(str_replace('border-b border-app-borderSoft ', '', ui_td_classes())) ?> w-32 ui-monospace font-mono"><?= e((string) (($resultado['codigo'] ?? '') !== '' ? $resultado['codigo'] : ('RA' . ($raIndex + 1)))) ?></td>
                                         <td class="<?= e(str_replace('border-b border-app-borderSoft ', '', ui_td_classes())) ?>"><?= e((string) ($resultado['descripcion'] ?? '')) ?></td>
                                     </tr>
                                 <?php endforeach; ?>

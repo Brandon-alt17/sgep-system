@@ -94,6 +94,14 @@ class ProgramaPdfParser
                         $current['codigo'] = trim($line);
                     }
                     continue;
+                } elseif (
+                    $line !== ''
+                    && preg_match('/(?:c[oó]digo(?:\s+de)?\s+competencia|competencia)\s*[:\-]?\s*(\d{6,12})/iu', $line, $mCodigoComp)
+                ) {
+                    if (trim((string) ($current['codigo'] ?? '')) === '') {
+                        $current['codigo'] = trim((string) ($mCodigoComp[1] ?? ''));
+                    }
+                    continue;
                 } elseif ($line !== '' && !preg_match('/^4\./', $line)) {
                     $piece = self::normalizeSentence($line);
                     $prevUnidad = trim((string) ($current['_unidad_norma'] ?? ''));
@@ -144,6 +152,14 @@ class ProgramaPdfParser
 
             if ($current['codigo'] === '' && preg_match('/^\d{6,12}$/', $line)) {
                 $current['codigo'] = trim($line);
+                continue;
+            }
+
+            if (
+                $current['codigo'] === ''
+                && preg_match('/(?:c[oó]digo(?:\s+de)?\s+competencia|competencia)\s*[:\-]?\s*(\d{6,12})/iu', $line, $mCodigoComp)
+            ) {
+                $current['codigo'] = trim((string) ($mCodigoComp[1] ?? ''));
                 continue;
             }
 
@@ -214,6 +230,15 @@ class ProgramaPdfParser
                     $current['resultados'][] = [
                         'codigo' => strtoupper(str_replace(' ', '', trim((string) $mRaNoColon[1]))),
                         'descripcion' => self::cleanResultadoDescripcion((string) $mRaNoColon[2]),
+                    ];
+                    continue;
+                }
+
+                if (preg_match('/^(\d{2})\s+(.+)$/u', $segment, $mRaNumeric)) {
+                    $raNumber = (int) ($mRaNumeric[1] ?? 0);
+                    $current['resultados'][] = [
+                        'codigo' => 'RA' . ($raNumber > 0 ? (string) $raNumber : (string) (count($current['resultados']) + 1)),
+                        'descripcion' => self::cleanResultadoDescripcion((string) ($mRaNumeric[2] ?? '')),
                     ];
                     continue;
                 }
@@ -575,6 +600,8 @@ class ProgramaPdfParser
             return [];
         }
 
+        // Divide cuando aparecen codigos numericos de RAE embebidos en la misma linea (01, 02, 03...).
+        $normalized = preg_replace('/(?<!^)\s+(\d{2})\s+(?=[A-ZÁÉÍÓÚÑ])/u', "\n$1 ", $normalized) ?? $normalized;
         $normalized = preg_replace('/([.;)])\s+(RA\s*\d+\s*[:\-])/iu', '$1' . "\n" . '$2', $normalized) ?? $normalized;
         $parts = array_values(array_filter(array_map(
             static fn ($part): string => trim((string) $part),
