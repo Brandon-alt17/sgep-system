@@ -101,6 +101,41 @@ class Programa
         return $stmt->fetch() ?: null;
     }
 
+    public static function create(array $data): int
+    {
+        $pdo = Database::connection();
+        $stmt = $pdo->prepare(
+            'INSERT INTO programas (codigo, nombre, nivel, modalidad, created_at)
+             VALUES (:codigo, :nombre, :nivel, :modalidad, NOW())'
+        );
+        $stmt->execute([
+            'codigo' => self::nullableTrim($data['codigo'] ?? ''),
+            'nombre' => trim((string) ($data['nombre'] ?? '')),
+            'nivel' => self::nullableTrim($data['nivel'] ?? ''),
+            'modalidad' => self::nullableTrim($data['modalidad'] ?? ''),
+        ]);
+        return (int) $pdo->lastInsertId();
+    }
+
+    public static function update(int $id, array $data): void
+    {
+        $stmt = Database::connection()->prepare(
+            'UPDATE programas
+             SET codigo = :codigo,
+                 nombre = :nombre,
+                 nivel = :nivel,
+                 modalidad = :modalidad
+             WHERE id = :id'
+        );
+        $stmt->execute([
+            'id' => $id,
+            'codigo' => self::nullableTrim($data['codigo'] ?? ''),
+            'nombre' => trim((string) ($data['nombre'] ?? '')),
+            'nivel' => self::nullableTrim($data['nivel'] ?? ''),
+            'modalidad' => self::nullableTrim($data['modalidad'] ?? ''),
+        ]);
+    }
+
     public static function countPendientesEnlace(): int
     {
         try {
@@ -157,5 +192,11 @@ class Programa
             $pdo->prepare($sqlLegacy)->execute($params);
         }
         return (int) $pdo->lastInsertId();
+    }
+
+    private static function nullableTrim(mixed $value): ?string
+    {
+        $trimmed = trim((string) $value);
+        return $trimmed === '' ? null : $trimmed;
     }
 }

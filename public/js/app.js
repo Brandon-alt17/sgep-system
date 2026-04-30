@@ -505,3 +505,190 @@ document.querySelectorAll(".js-custom-select").forEach(function (wrapper) {
   wrapper.appendChild(trigger);
   wrapper.appendChild(menu);
 });
+
+// Editor de programas: permite agregar/eliminar competencias y RAEs.
+document.querySelectorAll("[data-programa-editor]").forEach(function (form) {
+  var competenciasContainer = form.querySelector("[data-competencias-container]");
+  var addCompetenciaButton = form.querySelector("[data-add-competencia]");
+  var horasLectivaInput = form.querySelector("[data-programa-horas-lectiva]");
+  var horasProductivaInput = form.querySelector("[data-programa-horas-productiva]");
+  var horasTotalInput = form.querySelector("[data-programa-horas-total-input]");
+  var totalCompetenciasEl = document.querySelector("[data-programa-total-competencias]");
+  var totalRaesEl = document.querySelector("[data-programa-total-raes]");
+  var totalHorasEl = document.querySelector("[data-programa-total-horas]");
+  if (!competenciasContainer || !addCompetenciaButton) return;
+
+  var buildRaeNode = function () {
+    var row = document.createElement("div");
+    row.className = "grid gap-2 md:grid-cols-[160px_1fr_auto]";
+    row.setAttribute("data-rae-item", "");
+    row.innerHTML = '' +
+      '<input type="text" class="w-full rounded-lg border border-app-borderControlStrong bg-white px-3 py-2 text-sm text-app-muted outline-none transition-colors duration-200 focus:border-app-accent focus:ring-2 focus:ring-app-accentSoft hover:border-app-accent" placeholder="Código RAE" data-field="rae-codigo">' +
+      '<input type="text" class="w-full rounded-lg border border-app-borderControlStrong bg-white px-3 py-2 text-sm text-app-muted outline-none transition-colors duration-200 focus:border-app-accent focus:ring-2 focus:ring-app-accentSoft hover:border-app-accent" placeholder="Descripción del RAE" data-field="rae-descripcion">' +
+      '<button type="button" class="inline-flex h-8 min-w-8 items-center justify-center rounded-md border border-app-border text-sm text-app-muted hover:border-app-accent hover:text-app-text transition-colors duration-200 ease-in-out" data-remove-rae aria-label="Eliminar RAE">&times;</button>';
+    return row;
+  };
+
+  var buildCompetenciaNode = function () {
+    var article = document.createElement("article");
+    article.className = "rounded-xl border border-app-border bg-app-panel p-4 shadow-xsSoft bg-app-panelSubtle";
+    article.setAttribute("data-competencia-item", "");
+    article.innerHTML = '' +
+      '<div class="grid gap-3 md:grid-cols-2">' +
+      '  <label class="text-sm font-medium text-app-text">Código competencia' +
+      '    <input type="text" class="w-full rounded-lg border border-app-borderControlStrong bg-white px-3 py-2 text-sm text-app-muted outline-none transition-colors duration-200 focus:border-app-accent focus:ring-2 focus:ring-app-accentSoft hover:border-app-accent" data-field="competencia-codigo">' +
+      '  </label>' +
+      '  <label class="text-sm font-medium text-app-text">Nombre competencia' +
+      '    <input type="text" class="w-full rounded-lg border border-app-borderControlStrong bg-white px-3 py-2 text-sm text-app-muted outline-none transition-colors duration-200 focus:border-app-accent focus:ring-2 focus:ring-app-accentSoft hover:border-app-accent" data-field="competencia-nombre">' +
+      '  </label>' +
+      '</div>' +
+      '<div class="mt-4 space-y-2" data-raes-container></div>' +
+      '<div class="mt-4 flex gap-2">' +
+      '  <button type="button" class="inline-flex h-8 min-w-8 items-center justify-center rounded-md border border-app-border text-sm text-app-muted hover:border-app-accent hover:text-app-text transition-colors duration-200 ease-in-out px-3" data-add-rae>Nuevo RAE</button>' +
+      '  <button type="button" class="inline-flex h-8 min-w-8 items-center justify-center rounded-md border border-app-border text-sm text-app-muted hover:border-app-accent hover:text-app-text transition-colors duration-200 ease-in-out px-3" data-remove-competencia>Eliminar competencia</button>' +
+      '</div>';
+    article.querySelector("[data-raes-container]").appendChild(buildRaeNode());
+    return article;
+  };
+
+  var updateHours = function () {
+    var lectiva = parseInt((horasLectivaInput && horasLectivaInput.value) || "0", 10);
+    var productiva = parseInt((horasProductivaInput && horasProductivaInput.value) || "0", 10);
+    if (isNaN(lectiva)) lectiva = 0;
+    if (isNaN(productiva)) productiva = 0;
+    var total = lectiva + productiva;
+    var totalText = total > 0 ? String(total) : "N/D";
+    if (horasTotalInput) horasTotalInput.value = totalText;
+    if (totalHorasEl) totalHorasEl.textContent = total > 0 ? totalText + "h" : "N/D";
+  };
+
+  var refreshCounters = function () {
+    var competencias = Array.prototype.slice.call(competenciasContainer.querySelectorAll("[data-competencia-item]"));
+    var totalCompetencias = competencias.length;
+    var totalRaes = 0;
+    competencias.forEach(function (competenciaNode, compIndex) {
+      var codigoInput = competenciaNode.querySelector("[data-field='competencia-codigo']");
+      var nombreInput = competenciaNode.querySelector("[data-field='competencia-nombre']");
+      if (codigoInput) codigoInput.name = "competencias[" + compIndex + "][codigo]";
+      if (nombreInput) nombreInput.name = "competencias[" + compIndex + "][nombre]";
+
+      var raes = Array.prototype.slice.call(competenciaNode.querySelectorAll("[data-rae-item]"));
+      raes.forEach(function (raeNode, raeIndex) {
+        var raeCodigo = raeNode.querySelector("[data-field='rae-codigo']");
+        var raeDescripcion = raeNode.querySelector("[data-field='rae-descripcion']");
+        if (raeCodigo) raeCodigo.name = "competencias[" + compIndex + "][resultados][" + raeIndex + "][codigo]";
+        if (raeDescripcion) raeDescripcion.name = "competencias[" + compIndex + "][resultados][" + raeIndex + "][descripcion]";
+      });
+      totalRaes += raes.length;
+    });
+
+    if (totalCompetenciasEl) totalCompetenciasEl.textContent = String(totalCompetencias);
+    if (totalRaesEl) totalRaesEl.textContent = String(totalRaes);
+  };
+
+  if (horasLectivaInput) horasLectivaInput.addEventListener("input", updateHours);
+  if (horasProductivaInput) horasProductivaInput.addEventListener("input", updateHours);
+
+  addCompetenciaButton.addEventListener("click", function () {
+    competenciasContainer.appendChild(buildCompetenciaNode());
+    refreshCounters();
+  });
+
+  competenciasContainer.addEventListener("click", function (event) {
+    var target = event.target;
+    if (!(target instanceof HTMLElement)) return;
+
+    var addRaeButton = target.closest("[data-add-rae]");
+    if (addRaeButton) {
+      var competencia = addRaeButton.closest("[data-competencia-item]");
+      if (!competencia) return;
+      var raesContainer = competencia.querySelector("[data-raes-container]");
+      if (!raesContainer) return;
+      raesContainer.appendChild(buildRaeNode());
+      refreshCounters();
+      return;
+    }
+
+    var removeRaeButton = target.closest("[data-remove-rae]");
+    if (removeRaeButton) {
+      var raeNode = removeRaeButton.closest("[data-rae-item]");
+      if (!raeNode) return;
+      var parentContainer = raeNode.parentElement;
+      raeNode.remove();
+      if (parentContainer && parentContainer.querySelectorAll("[data-rae-item]").length === 0) {
+        parentContainer.appendChild(buildRaeNode());
+      }
+      refreshCounters();
+      return;
+    }
+
+    var removeCompetenciaButton = target.closest("[data-remove-competencia]");
+    if (removeCompetenciaButton) {
+      var compNode = removeCompetenciaButton.closest("[data-competencia-item]");
+      if (!compNode) return;
+      compNode.remove();
+      if (competenciasContainer.querySelectorAll("[data-competencia-item]").length === 0) {
+        competenciasContainer.appendChild(buildCompetenciaNode());
+      }
+      refreshCounters();
+    }
+  });
+
+  if (competenciasContainer.querySelectorAll("[data-competencia-item]").length === 0) {
+    competenciasContainer.appendChild(buildCompetenciaNode());
+  }
+
+  updateHours();
+  refreshCounters();
+});
+
+// Edicion puntual en vista "ver programa" (pencil -> check/x).
+document.querySelectorAll("[data-inline-edit-root]").forEach(function (root) {
+  var openButton = root.querySelector("[data-inline-edit-open]");
+  var saveButton = root.querySelector("[data-inline-edit-save]");
+  var cancelButton = root.querySelector("[data-inline-edit-cancel]");
+  var inputs = Array.prototype.slice.call(root.querySelectorAll("[data-inline-input]"));
+  var form = root.querySelector("[data-inline-edit-form]");
+  var viewBlock = root.querySelector("[data-inline-view]");
+  if (!openButton || !cancelButton || !saveButton || inputs.length === 0 || !form) return;
+
+  var originalValues = {};
+  var isEditing = false;
+
+  var setEditingState = function (editing) {
+    isEditing = editing;
+    if (viewBlock) viewBlock.classList.toggle("hidden", editing);
+    form.classList.toggle("hidden", !editing);
+    openButton.classList.toggle("hidden", editing);
+    saveButton.classList.toggle("hidden", !editing);
+    cancelButton.classList.toggle("hidden", !editing);
+  };
+
+  openButton.addEventListener("click", function () {
+    document.querySelectorAll("[data-inline-edit-root].is-editing").forEach(function (otherRoot) {
+      if (otherRoot === root) return;
+      var otherCancel = otherRoot.querySelector("[data-inline-edit-cancel]");
+      if (otherCancel) otherCancel.click();
+    });
+
+    root.classList.add("is-editing");
+    inputs.forEach(function (input) {
+      originalValues[input.name] = input.value;
+    });
+    setEditingState(true);
+  });
+
+  cancelButton.addEventListener("click", function () {
+    if (isEditing) {
+      inputs.forEach(function (input) {
+        if (Object.prototype.hasOwnProperty.call(originalValues, input.name)) {
+          input.value = originalValues[input.name];
+        }
+      });
+    }
+    root.classList.remove("is-editing");
+    setEditingState(false);
+  });
+
+  setEditingState(false);
+});

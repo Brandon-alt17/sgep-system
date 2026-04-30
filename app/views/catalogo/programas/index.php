@@ -11,10 +11,16 @@ $tdClasses = str_replace('h-[50px] ', '', ui_td_classes());
 
 ob_start();
 ?>
-<a class="<?= e(ui_button_primary_classes()) ?> inline-flex items-center gap-2 text-app-textOnBrand" href="<?= e(APP_BASE_PATH) ?>/catalogo/programas/importar">
-    <span class="inline-flex h-4 w-4 [&_svg]:h-4 [&_svg]:w-4"><?= ui_icon('file-up') ?></span>
-    Importar PDF del programa
-</a>
+<div class="flex flex-wrap items-center gap-2">
+    <a class="<?= e(ui_button_primary_classes()) ?> inline-flex items-center gap-2 text-app-textOnBrand" href="<?= e(APP_BASE_PATH) ?>/catalogo/programas/importar">
+        <span class="inline-flex h-4 w-4 [&_svg]:h-4 [&_svg]:w-4"><?= ui_icon('file-up') ?></span>
+        Importar PDF
+    </a>
+    <a class="<?= e(ui_button_small_classes()) ?> inline-flex items-center gap-2" href="<?= e(APP_BASE_PATH) ?>/catalogo/programas/nuevo">
+        <span class="inline-flex h-4 w-4 [&_svg]:h-4 [&_svg]:w-4"><?= ui_icon('pencil') ?></span>
+        Nuevo programa manual
+    </a>
+</div>
 <?php
 $headerActions = (string) ob_get_clean();
 

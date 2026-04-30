@@ -86,4 +86,52 @@ class ProgramaContenido
             throw $e;
         }
     }
+
+    /** @param array<int,array<string,string>> $resultados */
+    public static function updateCompetenciaConResultados(int $programaId, int $competenciaId, string $codigo, string $nombre, array $resultados): void
+    {
+        $pdo = Database::connection();
+        $pdo->beginTransaction();
+        try {
+            $pdo->prepare(
+                'UPDATE programa_competencias
+                 SET codigo = :codigo, nombre = :nombre, updated_at = NOW()
+                 WHERE id = :id AND programa_id = :programa_id'
+            )->execute([
+                'codigo' => trim($codigo),
+                'nombre' => trim($nombre),
+                'id' => $competenciaId,
+                'programa_id' => $programaId,
+            ]);
+
+            $pdo->prepare(
+                'DELETE FROM programa_resultados_aprendizaje
+                 WHERE competencia_id = :competencia_id AND programa_id = :programa_id'
+            )->execute([
+                'competencia_id' => $competenciaId,
+                'programa_id' => $programaId,
+            ]);
+
+            $insertStmt = $pdo->prepare(
+                'INSERT INTO programa_resultados_aprendizaje
+                 (programa_id, competencia_id, codigo, descripcion, orden, created_at, updated_at)
+                 VALUES
+                 (:programa_id, :competencia_id, :codigo, :descripcion, :orden, NOW(), NOW())'
+            );
+            foreach ($resultados as $idx => $resultado) {
+                $insertStmt->execute([
+                    'programa_id' => $programaId,
+                    'competencia_id' => $competenciaId,
+                    'codigo' => trim((string) ($resultado['codigo'] ?? '')),
+                    'descripcion' => trim((string) ($resultado['descripcion'] ?? '')),
+                    'orden' => $idx + 1,
+                ]);
+            }
+
+            $pdo->commit();
+        } catch (\Throwable $e) {
+            $pdo->rollBack();
+            throw $e;
+        }
+    }
 }
