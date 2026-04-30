@@ -650,14 +650,32 @@ document.querySelectorAll("[data-inline-edit-root]").forEach(function (root) {
   var inputs = Array.prototype.slice.call(root.querySelectorAll("[data-inline-input]"));
   var form = root.querySelector("[data-inline-edit-form]");
   var viewBlock = root.querySelector("[data-inline-view]");
+  var headerBlocks = Array.prototype.slice.call(root.querySelectorAll("[data-inline-header]"));
   if (!openButton || !cancelButton || !saveButton || inputs.length === 0 || !form) return;
 
   var originalValues = {};
   var isEditing = false;
+  var showToast = function (message) {
+    var toastRoot = document.querySelector("[data-toast-root]");
+    var toast = toastRoot ? toastRoot.querySelector("[data-toast]") : null;
+    if (!toast) return;
+    var textNode = toast.querySelector("p");
+    if (textNode) textNode.textContent = message;
+    toast.classList.add("sg-toast-visible");
+    window.clearTimeout(toast.__hideTimer);
+    toast.__hideTimer = window.setTimeout(function () {
+      toast.classList.remove("sg-toast-visible");
+    }, 3200);
+  };
 
   var setEditingState = function (editing) {
     isEditing = editing;
+    root.classList.toggle("border-app-borderControlStrong", editing);
+    root.classList.toggle("shadow-xsSoft", editing);
     if (viewBlock) viewBlock.classList.toggle("hidden", editing);
+    headerBlocks.forEach(function (headerBlock) {
+      headerBlock.classList.toggle("hidden", editing);
+    });
     form.classList.toggle("hidden", !editing);
     openButton.classList.toggle("hidden", editing);
     saveButton.classList.toggle("hidden", !editing);
@@ -676,6 +694,7 @@ document.querySelectorAll("[data-inline-edit-root]").forEach(function (root) {
       originalValues[input.name] = input.value;
     });
     setEditingState(true);
+    showToast("Modo edición activado.");
   });
 
   cancelButton.addEventListener("click", function () {
@@ -688,7 +707,19 @@ document.querySelectorAll("[data-inline-edit-root]").forEach(function (root) {
     }
     root.classList.remove("is-editing");
     setEditingState(false);
+    showToast("Edición cancelada. No se guardaron cambios.");
   });
 
   setEditingState(false);
+
+  if (root.getAttribute("data-inline-auto-open") === "1") {
+    openButton.click();
+  }
+});
+
+// Toast de servidor: animación de salida automática.
+document.querySelectorAll("[data-toast-root] [data-toast].sg-toast-visible").forEach(function (toast) {
+  window.setTimeout(function () {
+    toast.classList.remove("sg-toast-visible");
+  }, 3200);
 });

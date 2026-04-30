@@ -136,6 +136,12 @@ class Programa
         ]);
     }
 
+    public static function deleteById(int $id): void
+    {
+        $stmt = Database::connection()->prepare('DELETE FROM programas WHERE id = :id');
+        $stmt->execute(['id' => $id]);
+    }
+
     public static function countPendientesEnlace(): int
     {
         try {

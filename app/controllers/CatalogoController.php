@@ -205,7 +205,8 @@ class CatalogoController
             return;
         }
 
-        if ($programaId > 0) {
+        $isUpdate = $programaId > 0;
+        if ($isUpdate) {
             Programa::update($programaId, $meta);
         } else {
             $programaId = Programa::create($meta);
@@ -227,7 +228,8 @@ class CatalogoController
             'resumen_json' => json_encode($summary, JSON_UNESCAPED_UNICODE),
         ]);
 
-        redirect(APP_BASE_PATH . '/catalogo/programas/ver?id=' . $programaId . '&saved=1');
+        $toast = $isUpdate ? 'programa_actualizado' : 'programa_creado';
+        redirect(APP_BASE_PATH . '/catalogo/programas/ver?id=' . $programaId . '&saved=1&toast=' . $toast);
     }
 
     public function verPrograma(): void
@@ -262,8 +264,48 @@ class CatalogoController
             $decoded = json_decode((string) ($latestImport['resumen_json'] ?? '{}'), true);
             if (is_array($decoded)) {
                 $parsed['meta'] = array_merge($parsed['meta'], (array) ($decoded['meta'] ?? []));
-                if ((array) ($decoded['competencias'] ?? []) !== [] && $parsed['competencias'] === []) {
-                    $parsed['competencias'] = (array) $decoded['competencias'];
+                $decodedCompetencias = (array) ($decoded['competencias'] ?? []);
+                if ($decodedCompetencias !== [] && $parsed['competencias'] === []) {
+                    $parsed['competencias'] = $decodedCompetencias;
+                } elseif ($decodedCompetencias !== [] && $parsed['competencias'] !== []) {
+                    $hoursByKey = [];
+                    foreach ($decodedCompetencias as $decodedComp) {
+                        if (!is_array($decodedComp)) {
+                            continue;
+                        }
+                        $decodedId = (int) ($decodedComp['id'] ?? 0);
+                        if ($decodedId > 0) {
+                            $hoursByKey['id:' . $decodedId] = trim((string) ($decodedComp['horas'] ?? ''));
+                        }
+                        $keyByCode = trim((string) ($decodedComp['codigo'] ?? ''));
+                        if ($keyByCode !== '') {
+                            $hoursByKey['code:' . $keyByCode] = trim((string) ($decodedComp['horas'] ?? ''));
+                        }
+                        $keyByName = trim((string) ($decodedComp['nombre'] ?? ''));
+                        if ($keyByName !== '') {
+                            $hoursByKey['name:' . mb_strtolower($keyByName)] = trim((string) ($decodedComp['horas'] ?? ''));
+                        }
+                    }
+
+                    foreach ($parsed['competencias'] as $idx => $comp) {
+                        if (!is_array($comp)) {
+                            continue;
+                        }
+                        $code = trim((string) ($comp['codigo'] ?? ''));
+                        $name = trim((string) ($comp['nombre'] ?? ''));
+                        $compId = (int) ($comp['id'] ?? 0);
+                        $hours = '';
+                        if ($compId > 0 && isset($hoursByKey['id:' . $compId])) {
+                            $hours = (string) $hoursByKey['id:' . $compId];
+                        } elseif ($code !== '' && isset($hoursByKey['code:' . $code])) {
+                            $hours = (string) $hoursByKey['code:' . $code];
+                        } elseif ($name !== '' && isset($hoursByKey['name:' . mb_strtolower($name)])) {
+                            $hours = (string) $hoursByKey['name:' . mb_strtolower($name)];
+                        }
+                        if ($hours !== '') {
+                            $parsed['competencias'][$idx]['horas'] = $hours;
+                        }
+                    }
                 }
                 $parsed['warnings'] = (array) ($decoded['warnings'] ?? []);
             }
@@ -300,6 +342,8 @@ class CatalogoController
 
         Programa::update($programaId, $meta);
         $currentCompetencias = ProgramaContenido::competenciasConResultados($programaId);
+        $latestSummary = $this->latestSummaryDecoded($programaId);
+        $currentCompetencias = $this->mergeHorasIntoCompetencias($currentCompetencias, (array) ($latestSummary['competencias'] ?? []));
         ProgramaImportacionPdf::create([
             'programa_id' => $programaId,
             'nombre_archivo' => 'edicion_datos_programa',
@@ -314,7 +358,7 @@ class CatalogoController
             ], JSON_UNESCAPED_UNICODE),
         ]);
 
-        redirect(APP_BASE_PATH . '/catalogo/programas/ver?id=' . $programaId . '&saved=1');
+        redirect(APP_BASE_PATH . '/catalogo/programas/ver?id=' . $programaId . '&saved=1&toast=programa_actualizado');
     }
 
     public function actualizarProgramaCompetencia(): void
@@ -327,6 +371,7 @@ class CatalogoController
 
         $codigo = trim((string) ($_POST['codigo'] ?? ''));
         $nombre = trim((string) ($_POST['nombre'] ?? ''));
+        $horas = trim((string) ($_POST['horas'] ?? ''));
         $resultadosInput = (array) ($_POST['resultados'] ?? []);
         $resultados = [];
         foreach ($resultadosInput as $resultado) {
@@ -357,7 +402,15 @@ class CatalogoController
                 $meta = array_merge($meta, (array) ($decodedLatest['meta'] ?? []));
             }
         }
+        $latestSummary = $this->latestSummaryDecoded($programaId);
         $competencias = ProgramaContenido::competenciasConResultados($programaId);
+        $competencias = $this->mergeHorasIntoCompetencias($competencias, (array) ($latestSummary['competencias'] ?? []));
+        foreach ($competencias as $idx => $competencia) {
+            if ((int) ($competencia['id'] ?? 0) === $competenciaId) {
+                $competencias[$idx]['horas'] = $horas;
+                break;
+            }
+        }
         ProgramaImportacionPdf::create([
             'programa_id' => $programaId,
             'nombre_archivo' => 'edicion_competencia',
@@ -372,7 +425,95 @@ class CatalogoController
             ], JSON_UNESCAPED_UNICODE),
         ]);
 
-        redirect(APP_BASE_PATH . '/catalogo/programas/ver?id=' . $programaId . '&saved=1');
+        redirect(APP_BASE_PATH . '/catalogo/programas/ver?id=' . $programaId . '&saved=1&toast=competencia_actualizada');
+    }
+
+    public function agregarProgramaCompetencia(): void
+    {
+        $programaId = (int) ($_POST['programa_id'] ?? 0);
+        if ($programaId <= 0) {
+            redirect(APP_BASE_PATH . '/catalogo/programas');
+        }
+
+        $competenciaId = ProgramaContenido::createCompetenciaVacia($programaId);
+        $programa = Programa::findById($programaId) ?? [];
+        $latestSummary = $this->latestSummaryDecoded($programaId);
+        $meta = array_merge([
+            'codigo' => (string) ($programa['codigo'] ?? ''),
+            'nombre' => (string) ($programa['nombre'] ?? ''),
+            'nivel' => (string) ($programa['nivel'] ?? ''),
+            'modalidad' => (string) ($programa['modalidad'] ?? ''),
+        ], (array) ($latestSummary['meta'] ?? []));
+
+        $competencias = ProgramaContenido::competenciasConResultados($programaId);
+        $competencias = $this->mergeHorasIntoCompetencias($competencias, (array) ($latestSummary['competencias'] ?? []));
+        foreach ($competencias as $idx => $competencia) {
+            if ((int) ($competencia['id'] ?? 0) === $competenciaId) {
+                $competencias[$idx]['horas'] = '';
+            }
+        }
+
+        ProgramaImportacionPdf::create([
+            'programa_id' => $programaId,
+            'nombre_archivo' => 'agregar_competencia',
+            'codigo_programa' => (string) ($programa['codigo'] ?? ''),
+            'nombre_programa' => (string) ($programa['nombre'] ?? ''),
+            'estado' => 'manual',
+            'advertencias_json' => '[]',
+            'resumen_json' => json_encode([
+                'meta' => $meta,
+                'competencias' => $competencias,
+                'warnings' => [],
+            ], JSON_UNESCAPED_UNICODE),
+        ]);
+
+        redirect(APP_BASE_PATH . '/catalogo/programas/ver?id=' . $programaId . '&saved=1&edit_competencia=' . $competenciaId . '&toast=competencia_creada');
+    }
+
+    public function eliminarProgramaCompetencia(): void
+    {
+        $programaId = (int) ($_POST['programa_id'] ?? 0);
+        $competenciaId = (int) ($_POST['competencia_id'] ?? 0);
+        if ($programaId <= 0 || $competenciaId <= 0) {
+            redirect(APP_BASE_PATH . '/catalogo/programas');
+        }
+
+        ProgramaContenido::deleteCompetencia($programaId, $competenciaId);
+        $programa = Programa::findById($programaId) ?? [];
+        $latestSummary = $this->latestSummaryDecoded($programaId);
+        $meta = array_merge([
+            'codigo' => (string) ($programa['codigo'] ?? ''),
+            'nombre' => (string) ($programa['nombre'] ?? ''),
+            'nivel' => (string) ($programa['nivel'] ?? ''),
+            'modalidad' => (string) ($programa['modalidad'] ?? ''),
+        ], (array) ($latestSummary['meta'] ?? []));
+        $competencias = ProgramaContenido::competenciasConResultados($programaId);
+        $competencias = $this->mergeHorasIntoCompetencias($competencias, (array) ($latestSummary['competencias'] ?? []));
+
+        ProgramaImportacionPdf::create([
+            'programa_id' => $programaId,
+            'nombre_archivo' => 'eliminar_competencia',
+            'codigo_programa' => (string) ($programa['codigo'] ?? ''),
+            'nombre_programa' => (string) ($programa['nombre'] ?? ''),
+            'estado' => 'manual',
+            'advertencias_json' => '[]',
+            'resumen_json' => json_encode([
+                'meta' => $meta,
+                'competencias' => $competencias,
+                'warnings' => [],
+            ], JSON_UNESCAPED_UNICODE),
+        ]);
+
+        redirect(APP_BASE_PATH . '/catalogo/programas/ver?id=' . $programaId . '&saved=1&toast=competencia_eliminada');
+    }
+
+    public function eliminarPrograma(): void
+    {
+        $programaId = (int) ($_POST['programa_id'] ?? 0);
+        if ($programaId > 0) {
+            Programa::deleteById($programaId);
+        }
+        redirect(APP_BASE_PATH . '/catalogo/programas');
     }
 
     private function guessProgramNameFromFileName(string $fileName): string
@@ -438,6 +579,64 @@ class CatalogoController
         $productivaNum = ctype_digit($productiva) ? (int) $productiva : 0;
         $total = $lectivaNum + $productivaNum;
         return $total > 0 ? (string) $total : '';
+    }
+
+    /** @return array<string,mixed> */
+    private function latestSummaryDecoded(int $programaId): array
+    {
+        $latestImport = ProgramaImportacionPdf::latestByProgramaId($programaId);
+        if ($latestImport === null) {
+            return [];
+        }
+        $decoded = json_decode((string) ($latestImport['resumen_json'] ?? '{}'), true);
+        return is_array($decoded) ? $decoded : [];
+    }
+
+    /**
+     * @param array<int,array<string,mixed>> $current
+     * @param array<int,mixed> $fromSummary
+     * @return array<int,array<string,mixed>>
+     */
+    private function mergeHorasIntoCompetencias(array $current, array $fromSummary): array
+    {
+        $hoursByKey = [];
+        foreach ($fromSummary as $summaryComp) {
+            if (!is_array($summaryComp)) {
+                continue;
+            }
+            $summaryHours = trim((string) ($summaryComp['horas'] ?? ''));
+            $summaryId = (int) ($summaryComp['id'] ?? 0);
+            if ($summaryId > 0) {
+                $hoursByKey['id:' . $summaryId] = $summaryHours;
+            }
+            $summaryCode = trim((string) ($summaryComp['codigo'] ?? ''));
+            if ($summaryCode !== '') {
+                $hoursByKey['code:' . $summaryCode] = $summaryHours;
+            }
+            $summaryName = trim((string) ($summaryComp['nombre'] ?? ''));
+            if ($summaryName !== '') {
+                $hoursByKey['name:' . mb_strtolower($summaryName)] = $summaryHours;
+            }
+        }
+
+        foreach ($current as $idx => $comp) {
+            $compId = (int) ($comp['id'] ?? 0);
+            $compCode = trim((string) ($comp['codigo'] ?? ''));
+            $compName = trim((string) ($comp['nombre'] ?? ''));
+            $hours = '';
+            if ($compId > 0 && isset($hoursByKey['id:' . $compId])) {
+                $hours = (string) $hoursByKey['id:' . $compId];
+            } elseif ($compCode !== '' && isset($hoursByKey['code:' . $compCode])) {
+                $hours = (string) $hoursByKey['code:' . $compCode];
+            } elseif ($compName !== '' && isset($hoursByKey['name:' . mb_strtolower($compName)])) {
+                $hours = (string) $hoursByKey['name:' . mb_strtolower($compName)];
+            }
+            if ($hours !== '') {
+                $current[$idx]['horas'] = $hours;
+            }
+        }
+
+        return $current;
     }
 
 }
