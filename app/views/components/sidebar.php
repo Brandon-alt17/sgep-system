@@ -19,7 +19,7 @@ $bottomItems = [
     ['label' => 'Configuración', 'path' => '/documentos/generar', 'icon' => 'settings'],
 ];
 ?>
-<aside class="hidden border-r border-app-border bg-app-sidebar md:flex md:flex-col">
+<aside class="hidden border-r border-app-border bg-app-sidebar md:fixed md:inset-y-0 md:left-0 md:z-50 md:flex md:h-screen md:w-[260px] md:flex-col md:overflow-y-auto">
     <div class="border-b border-app-border px-[24px] py-[18.5px] text-lg font-bold leading-none text-app-brand">SGEP</div>
     <nav class="grid gap-1 p-3" aria-label="Navegación principal">
         <?php $normalizedCurrent = rtrim((string) ($currentPath ?? '/'), '/') ?: '/'; ?>

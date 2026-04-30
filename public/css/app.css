@@ -2241,12 +2241,37 @@ a:hover {
 }
 
 @media (min-width: 768px) {
+  .md\:fixed {
+    position: fixed;
+  }
+
+  .md\:inset-y-0 {
+    top: 0px;
+    bottom: 0px;
+  }
+
+  .md\:left-0 {
+    left: 0px;
+  }
+
+  .md\:z-50 {
+    z-index: 50;
+  }
+
   .md\:col-span-2 {
     grid-column: span 2 / span 2;
   }
 
   .md\:flex {
     display: flex;
+  }
+
+  .md\:h-screen {
+    height: 100vh;
+  }
+
+  .md\:w-\[260px\] {
+    width: 260px;
   }
 
   .md\:max-w-xs {
@@ -2275,6 +2300,14 @@ a:hover {
 
   .md\:items-end {
     align-items: flex-end;
+  }
+
+  .md\:overflow-y-auto {
+    overflow-y: auto;
+  }
+
+  .md\:pl-\[260px\] {
+    padding-left: 260px;
   }
 }
 
