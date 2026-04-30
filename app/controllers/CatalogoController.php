@@ -374,6 +374,9 @@ class CatalogoController
         $horas = trim((string) ($_POST['horas'] ?? ''));
         $resultadosInput = (array) ($_POST['resultados'] ?? []);
         $resultados = [];
+        $hasPartialResultado = false;
+        $hasDuplicateCodigoRae = false;
+        $seenRaeCodes = [];
         foreach ($resultadosInput as $resultado) {
             if (!is_array($resultado)) {
                 continue;
@@ -383,7 +386,23 @@ class CatalogoController
             if ($raCodigo === '' && $raDescripcion === '') {
                 continue;
             }
+            if ($raCodigo === '' || $raDescripcion === '') {
+                $hasPartialResultado = true;
+            }
+            $raCodigoKey = mb_strtolower($raCodigo);
+            if ($raCodigoKey !== '' && isset($seenRaeCodes[$raCodigoKey])) {
+                $hasDuplicateCodigoRae = true;
+            }
+            if ($raCodigoKey !== '') {
+                $seenRaeCodes[$raCodigoKey] = true;
+            }
             $resultados[] = ['codigo' => $raCodigo, 'descripcion' => $raDescripcion];
+        }
+        if ($hasDuplicateCodigoRae) {
+            redirect(APP_BASE_PATH . '/catalogo/programas/ver?id=' . $programaId . '&edit_competencia=' . $competenciaId . '&toast=competencia_codigo_duplicado');
+        }
+        if ($codigo === '' || $nombre === '' || $horas === '' || $resultados === [] || $hasPartialResultado) {
+            redirect(APP_BASE_PATH . '/catalogo/programas/ver?id=' . $programaId . '&edit_competencia=' . $competenciaId . '&toast=competencia_invalidada');
         }
 
         ProgramaContenido::updateCompetenciaConResultados($programaId, $competenciaId, $codigo, $nombre, $resultados);
@@ -447,9 +466,19 @@ class CatalogoController
 
         $competencias = ProgramaContenido::competenciasConResultados($programaId);
         $competencias = $this->mergeHorasIntoCompetencias($competencias, (array) ($latestSummary['competencias'] ?? []));
+        usort($competencias, static function (array $a, array $b) use ($competenciaId): int {
+            if ((int) ($a['id'] ?? 0) === $competenciaId) {
+                return -1;
+            }
+            if ((int) ($b['id'] ?? 0) === $competenciaId) {
+                return 1;
+            }
+            return 0;
+        });
         foreach ($competencias as $idx => $competencia) {
             if ((int) ($competencia['id'] ?? 0) === $competenciaId) {
                 $competencias[$idx]['horas'] = '';
+                break;
             }
         }
 

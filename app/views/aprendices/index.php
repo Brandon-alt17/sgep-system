@@ -11,7 +11,12 @@
 <section class="<?= e(ui_card_classes()) ?> mb-4">
     <div class="flex items-center gap-3 w-full">
         <!-- 🔍 Buscador -->
-        <input type="text" placeholder="Buscar por nombre o documento" class="<?= e(ui_input_classes()) ?> flex-1 min-w-0">
+        <div class="relative flex-1 min-w-0">
+            <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-app-muted [&_svg]:h-4 [&_svg]:w-4">
+                <?= ui_icon('search') ?>
+            </span>
+            <input type="text" placeholder="Buscar por nombre o documento" class="<?= e(ui_input_classes()) ?> flex-1 min-w-0 pl-10">
+        </div>
 
         <div class="<?= e(ui_select_wrapper_classes()) ?> w-64 shrink-0">
             <select class="<?= e(ui_select_classes()) ?>">

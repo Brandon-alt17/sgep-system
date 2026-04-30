@@ -138,22 +138,32 @@ class ProgramaContenido
     public static function createCompetenciaVacia(int $programaId): int
     {
         $pdo = Database::connection();
-        $orderStmt = $pdo->prepare('SELECT COALESCE(MAX(orden), 0) + 1 AS next_order FROM programa_competencias WHERE programa_id = :programa_id');
-        $orderStmt->execute(['programa_id' => $programaId]);
-        $nextOrder = (int) (($orderStmt->fetch()['next_order'] ?? 1));
+        $pdo->beginTransaction();
+        try {
+            $pdo->prepare(
+                'UPDATE programa_competencias
+                 SET orden = orden + 1, updated_at = NOW()
+                 WHERE programa_id = :programa_id'
+            )->execute(['programa_id' => $programaId]);
 
-        $insertStmt = $pdo->prepare(
-            'INSERT INTO programa_competencias (programa_id, codigo, nombre, orden, created_at, updated_at)
-             VALUES (:programa_id, :codigo, :nombre, :orden, NOW(), NOW())'
-        );
-        $insertStmt->execute([
-            'programa_id' => $programaId,
-            'codigo' => '',
-            'nombre' => 'Nueva competencia',
-            'orden' => $nextOrder,
-        ]);
+            $insertStmt = $pdo->prepare(
+                'INSERT INTO programa_competencias (programa_id, codigo, nombre, orden, created_at, updated_at)
+                 VALUES (:programa_id, :codigo, :nombre, :orden, NOW(), NOW())'
+            );
+            $insertStmt->execute([
+                'programa_id' => $programaId,
+                'codigo' => '',
+                'nombre' => '',
+                'orden' => 1,
+            ]);
 
-        return (int) $pdo->lastInsertId();
+            $id = (int) $pdo->lastInsertId();
+            $pdo->commit();
+            return $id;
+        } catch (\Throwable $e) {
+            $pdo->rollBack();
+            throw $e;
+        }
     }
 
     public static function deleteCompetencia(int $programaId, int $competenciaId): void

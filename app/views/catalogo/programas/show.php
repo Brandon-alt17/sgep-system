@@ -23,6 +23,8 @@ $toastMessage = match ($toastKey) {
     'competencia_creada' => 'Competencia creada y lista para edición.',
     'competencia_actualizada' => 'Competencia actualizada correctamente.',
     'competencia_eliminada' => 'Competencia eliminada correctamente.',
+    'competencia_invalidada' => 'Completa todos los campos de la competencia y sus RAEs antes de guardar.',
+    'competencia_codigo_duplicado' => 'No se permiten códigos RAE duplicados dentro de la misma competencia.',
     default => '',
 };
 ?>
@@ -37,15 +39,18 @@ $toastMessage = match ($toastKey) {
     </div>
 </section>
 
-<?php if ($saved && $toastMessage === ''): ?>
-    <section class="mb-4 rounded-[10px] border border-app-borderSuccess bg-app-successBg p-4 text-sm text-app-successText">Cambios guardados correctamente.</section>
-<?php endif; ?>
-
 <section class="mt-4" data-inline-edit-root>
     <div>
         <div data-inline-view>
-            <h3 class="m-0 text-2xl font-semibold text-app-text"><?= e($programName) ?></h3>
-            <p class="mt-1 text-sm text-app-muted">Código: <?= e($programCode !== '' ? $programCode : 'No detectado') ?></p>
+            <div class="flex items-start gap-2">
+                <div>
+                    <h3 class="m-0 text-2xl font-semibold text-app-text"><?= e($programName) ?></h3>
+                    <p class="mt-1 text-sm text-app-muted">Código: <?= e($programCode !== '' ? $programCode : 'No detectado') ?></p>
+                </div>
+                <button type="button" class="<?= e(ui_button_icon_classes()) ?>" data-inline-edit-open aria-label="Editar título del programa">
+                    <span class="inline-flex h-4 w-4 [&_svg]:h-4 [&_svg]:w-4"><?= ui_icon('pencil') ?></span>
+                </button>
+            </div>
         </div>
     </div>
     <form id="programa-cabecera-form" method="post" action="<?= e(APP_BASE_PATH) ?>/catalogo/programas/actualizar-datos" data-inline-edit-form class="hidden mt-3 max-w-3xl">
@@ -53,27 +58,31 @@ $toastMessage = match ($toastKey) {
         <input type="hidden" name="modalidad" value="<?= e((string) ($meta['modalidad'] ?? '')) ?>">
         <input type="hidden" name="horas_lectiva" value="<?= e((string) ($meta['horas_lectiva'] ?? '')) ?>">
         <input type="hidden" name="horas_productiva" value="<?= e((string) ($meta['horas_productiva'] ?? '')) ?>">
-        <div class="flex items-start justify-between gap-3">
-            <div class="grid gap-3 max-w-xl w-full">
-                <label class="<?= e(ui_label_classes()) ?>">Nombre del programa
-                    <input type="text" name="nombre" value="<?= e((string) ($meta['nombre'] ?? '')) ?>" class="<?= e(ui_input_classes()) ?>" data-inline-input>
-                </label>
-                <label class="<?= e(ui_label_classes()) ?>">Código
-                    <input type="text" name="codigo" value="<?= e($programCode) ?>" class="<?= e(ui_input_classes()) ?>" data-inline-input>
-                </label>
-                <label class="<?= e(ui_label_classes()) ?>">Nivel
-                    <span class="<?= e(ui_select_wrapper_classes()) ?>">
-                        <select name="nivel" class="<?= e(ui_select_classes()) ?>" data-inline-input>
-                            <option value="Técnico" <?= $currentNivel === 'Técnico' ? 'selected' : '' ?>>Técnico</option>
-                            <option value="Tecnólogo" <?= $currentNivel === 'Tecnólogo' ? 'selected' : '' ?>>Tecnólogo</option>
-                        </select>
-                        <span class="<?= e(ui_select_chevron_classes()) ?>" data-select-chevron aria-hidden="true">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-4 w-4"><path d="m6 9 6 6 6-6"></path></svg>
-                        </span>
+        <div class="grid gap-3 max-w-xl w-full">
+            <label class="<?= e(ui_label_classes()) ?>">Nombre del programa
+                <input type="text" name="nombre" value="<?= e((string) ($meta['nombre'] ?? '')) ?>" class="<?= e(ui_input_classes()) ?>" data-inline-input>
+            </label>
+            <label class="<?= e(ui_label_classes()) ?>">Código
+                <input type="text" name="codigo" value="<?= e($programCode) ?>" class="<?= e(ui_input_classes()) ?>" data-inline-input>
+            </label>
+            <label class="<?= e(ui_label_classes()) ?>">Nivel
+                <span class="<?= e(ui_select_wrapper_classes()) ?>">
+                    <select name="nivel" class="<?= e(ui_select_classes()) ?>" data-inline-input>
+                        <option value="Técnico" <?= $currentNivel === 'Técnico' ? 'selected' : '' ?>>Técnico</option>
+                        <option value="Tecnólogo" <?= $currentNivel === 'Tecnólogo' ? 'selected' : '' ?>>Tecnólogo</option>
+                    </select>
+                    <span class="<?= e(ui_select_chevron_classes()) ?>" data-select-chevron aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-4 w-4"><path d="m6 9 6 6 6-6"></path></svg>
                     </span>
-                </label>
-            </div>
-            <div class="flex gap-2 pt-7">
+                </span>
+            </label>
+        </div>
+        <div class="mt-3 flex items-center justify-between gap-3 max-w-xl w-full">
+            <button type="submit" formaction="<?= e(APP_BASE_PATH) ?>/catalogo/programas/eliminar" formmethod="post" class="inline-flex items-center gap-2 rounded-md border border-rose-300 bg-rose-50 px-[18px] py-2 text-sm font-medium text-rose-700 no-underline transition-colors duration-200 hover:border-rose-400 hover:bg-rose-100 hover:text-rose-700" onclick="return confirm('¿Eliminar este programa? Esta acción no se puede deshacer.');">
+                <span class="inline-flex h-4 w-4 [&_svg]:h-4 [&_svg]:w-4"><?= ui_icon('trash-2') ?></span>
+                Eliminar programa
+            </button>
+            <div class="flex gap-2">
                 <button type="submit" form="programa-cabecera-form" class="<?= e(ui_button_icon_classes()) ?> hidden border-green-600 bg-green-600 text-white hover:border-green-700 hover:bg-green-700 hover:text-white" data-inline-edit-save aria-label="Guardar título del programa">
                     <span class="inline-flex h-4 w-4 [&_svg]:h-4 [&_svg]:w-4"><?= ui_icon('check') ?></span>
                 </button>
@@ -82,18 +91,7 @@ $toastMessage = match ($toastKey) {
                 </button>
             </div>
         </div>
-        <div class="mt-3 flex items-center justify-between gap-3">
-            <button type="submit" formaction="<?= e(APP_BASE_PATH) ?>/catalogo/programas/eliminar" formmethod="post" class="inline-flex items-center gap-2 rounded-md border border-rose-300 bg-rose-50 px-[18px] py-2 text-sm font-medium text-rose-700 no-underline transition-colors duration-200 hover:border-rose-400 hover:bg-rose-100 hover:text-rose-700" onclick="return confirm('¿Eliminar este programa? Esta acción no se puede deshacer.');">
-                <span class="inline-flex h-4 w-4 [&_svg]:h-4 [&_svg]:w-4"><?= ui_icon('trash-2') ?></span>
-                Eliminar programa
-            </button>
-        </div>
     </form>
-    <div class="mt-2 flex gap-2">
-        <button type="button" class="<?= e(ui_button_icon_classes()) ?>" data-inline-edit-open aria-label="Editar título del programa">
-            <span class="inline-flex h-4 w-4 [&_svg]:h-4 [&_svg]:w-4"><?= ui_icon('pencil') ?></span>
-        </button>
-    </div>
 </section>
 
 <section class="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -147,24 +145,66 @@ $toastMessage = match ($toastKey) {
     </section>
 <?php endif; ?>
 
+<?php if ($competencias !== []): ?>
+<section class="<?= e(ui_card_classes()) ?> mt-6 " data-live-filter-root>
+    <div class="relative">
+        <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-app-muted [&_svg]:h-4 [&_svg]:w-4">
+            <?= ui_icon('search') ?>
+        </span>
+        <input
+            type="text"
+            class="<?= e(ui_input_classes()) ?> pl-10 pr-10"
+            placeholder="Buscar por competencia, RAE o código"
+            aria-label="Buscar por competencia, RAE o código"
+            data-live-filter-input
+        >
+        <button
+            type="button"
+            class="hidden absolute right-2 top-1/2 -translate-y-1/2 rounded-md px-2 py-1 text-sm text-app-muted hover:bg-app-panelSubtle hover:text-app-text"
+            aria-label="Limpiar búsqueda"
+            data-live-filter-clear
+        >&times;</button>
+    </div>
+    <p class="mt-2 hidden rounded-md border border-app-border bg-app-panelSubtle p-3 text-sm text-app-muted" data-live-filter-empty>
+        No hay coincidencias para la búsqueda.
+    </p>
+</section>
+<?php endif; ?>
+
 <section class="<?= e(ui_card_classes()) ?> mb-6 mt-4 p-6">
     <div class="flex items-center justify-between gap-2">
         <h4 class="m-0 text-md font-semibold text-app-text">Competencias y Resultados de Aprendizaje</h4>
         <form method="post" action="<?= e(APP_BASE_PATH) ?>/catalogo/programas/agregar-competencia">
             <input type="hidden" name="programa_id" value="<?= (int) $programId ?>">
             <button type="submit" class="<?= e(ui_button_small_classes()) ?> inline-flex items-center gap-2">
-                <span class="inline-flex h-4 w-4 [&_svg]:h-4 [&_svg]:w-4"><?= ui_icon('pencil') ?></span>
-                Agregar competencia
+                <span class="inline-flex h-4 w-4 [&_svg]:h-4 [&_svg]:w-4"><?= ui_icon('plus') ?></span>
+                Nueva competencia
             </button>
         </form>
     </div>
     <?php if ($competencias === []): ?>
         <div class="mt-6 rounded-md border border-app-border bg-app-panelSubtle p-4 text-sm text-app-muted">No se detectaron competencias automáticamente.</div>
     <?php else: ?>
-        <div class="mt-6 space-y-6">
+        <div class="mt-6 space-y-6" data-live-filter-items>
             <?php foreach ($competencias as $compIndex => $comp): ?>
-                <?php $resultadosComp = (array) ($comp['resultados'] ?? []); ?>
-                <article class="<?= e(ui_card_classes()) ?> min-h-[96px] p-6" data-inline-edit-root <?= $autoEditCompetenciaId === (int) ($comp['id'] ?? 0) ? 'data-inline-auto-open="1"' : '' ?>>
+                <?php
+                $resultadosComp = (array) ($comp['resultados'] ?? []);
+                $searchParts = [
+                    (string) ($comp['codigo'] ?? ''),
+                    (string) ($comp['nombre'] ?? ''),
+                    (string) ($comp['horas'] ?? ''),
+                ];
+                foreach ($resultadosComp as $raIndex => $resultado) {
+                    $searchParts[] = 'RA' . ($raIndex + 1);
+                    $searchParts[] = (string) ($resultado['descripcion'] ?? '');
+                    $searchParts[] = (string) ($resultado['codigo'] ?? '');
+                }
+                $searchText = trim(implode(' ', array_filter(array_map(
+                    static fn ($value): string => trim((string) $value),
+                    $searchParts
+                ))));
+                ?>
+                <article class="<?= e(ui_card_classes()) ?> min-h-[96px] p-6" data-inline-edit-root data-live-filter-item data-live-filter-text="<?= e($searchText) ?>" <?= $autoEditCompetenciaId === (int) ($comp['id'] ?? 0) ? 'data-inline-auto-open="1"' : '' ?>>
                     <div class="mb-3 flex items-start justify-between gap-3">
                         <div data-inline-header>
                             <?php if (trim((string) ($comp['codigo'] ?? '')) !== ''): ?>
@@ -187,7 +227,7 @@ $toastMessage = match ($toastKey) {
                             <table class="<?= e(ui_table_classes()) ?>">
                                 <thead>
                                 <tr>
-                                    <th class="h-[50px] px-2 text-left text-sm font-semibold text-app-muted align-middle">Código RA</th>
+                                    <th class="h-[50px] px-2 text-left text-sm font-semibold text-app-muted align-middle">Código RAE</th>
                                     <th class="h-[50px] px-2 text-left text-sm font-semibold text-app-muted align-middle">Resultado de aprendizaje</th>
                                 </tr>
                                 </thead>
@@ -212,39 +252,60 @@ $toastMessage = match ($toastKey) {
                     <form id="competencia-form-<?= (int) ($comp['id'] ?? 0) ?>" method="post" action="<?= e(APP_BASE_PATH) ?>/catalogo/programas/actualizar-competencia" data-inline-edit-form class="hidden">
                         <input type="hidden" name="programa_id" value="<?= (int) $programId ?>">
                         <input type="hidden" name="competencia_id" value="<?= (int) ($comp['id'] ?? 0) ?>">
-                        <div class="mb-3 w-full grid gap-3">
-                            <label class="<?= e(ui_label_classes()) ?>">Nombre competencia
+                        <div class="mb-3 w-full grid grid-cols-10 gap-3">
+                            <label class="<?= e(ui_label_classes()) ?> col-span-10">Nombre competencia
                                 <input type="text" name="nombre" value="<?= e((string) ($comp['nombre'] ?? '')) ?>" class="<?= e(ui_input_classes()) ?>" data-inline-input>
                             </label>
-                            <label class="<?= e(ui_label_classes()) ?>">Código competencia
+                            <label class="<?= e(ui_label_classes()) ?> col-span-7">Código competencia
                                 <input type="text" name="codigo" value="<?= e((string) ($comp['codigo'] ?? '')) ?>" class="<?= e(ui_input_classes()) ?>" data-inline-input>
                             </label>
-                            <label class="<?= e(ui_label_classes()) ?>">Horas competencia
+                            <label class="<?= e(ui_label_classes()) ?> col-span-3">Horas competencia
                                 <input type="number" min="0" name="horas" value="<?= e((string) ($comp['horas'] ?? '')) ?>" class="<?= e(ui_input_classes()) ?>" data-inline-input>
                             </label>
                         </div>
-
-                        <div class="overflow-hidden rounded-md">
+                        <div class="mt-3 border-t border-app-borderSoft pt-6 flex justify-end">
+                            <button type="button" class="<?= e(ui_button_small_classes()) ?> items-center justify-center gap-2" data-inline-add-rae>
+                                <span class="inline-flex h-4 w-4 items-center justify-center [&_svg]:h-4 [&_svg]:w-4"><?= ui_icon('plus') ?></span>
+                                Nuevo RAE
+                            </button>
+                        </div>
+                        <div class="overflow-hidden">
                             <table class="<?= e(ui_table_classes()) ?>">
                                 <thead>
                                 <tr>
-                                    <th class="h-[50px] px-2 text-left text-sm font-semibold text-app-muted align-middle">Código RA</th>
+                                    <th class="h-[50px] px-2 text-left text-sm font-semibold text-app-muted align-middle">Código RAE</th>
                                     <th class="h-[50px] px-2 text-left text-sm font-semibold text-app-muted align-middle">Resultado de aprendizaje</th>
+                                    <th class="h-[50px] px-2 text-left text-sm font-semibold text-app-muted align-middle w-10">Acción</th>
                                 </tr>
                                 </thead>
-                                <tbody>
+                                <tbody data-inline-raes-body>
                                 <?php if ($resultadosComp === []): ?>
-                                    <tr>
-                                        <td class="<?= e(str_replace('border-b border-app-borderSoft ', '', ui_td_classes())) ?>" colspan="2">Sin resultados detectados para esta competencia.</td>
+                                    <tr class="border-b border-app-borderSoft">
+                                        <td class="<?= e(str_replace('border-b border-app-borderSoft ', '', ui_td_classes())) ?> w-32">
+                                            <input type="text" name="resultados[0][codigo]" value="" class="<?= e(ui_input_classes()) ?>" data-inline-input>
+                                        </td>
+                                        <td class="<?= e(str_replace('border-b border-app-borderSoft ', '', ui_td_classes())) ?>">
+                                            <input type="text" name="resultados[0][descripcion]" value="" class="<?= e(ui_input_classes()) ?>" data-inline-input>
+                                        </td>
+                                        <td class="<?= e(str_replace('border-b border-app-borderSoft ', '', ui_td_classes())) ?>">
+                                            <button type="button" class="<?= e(ui_button_icon_classes()) ?> border-rose-300 bg-rose-50 text-rose-700 hover:border-rose-400 hover:bg-rose-100 hover:text-rose-700" data-inline-remove-rae aria-label="Eliminar RAE">
+                                                <span class="inline-flex h-4 w-4 [&_svg]:h-4 [&_svg]:w-4"><?= ui_icon('trash-2') ?></span>
+                                            </button>
+                                        </td>
                                     </tr>
                                 <?php else: ?>
                                     <?php foreach ($resultadosComp as $raIndex => $resultado): ?>
-                                        <tr class="<?= $raIndex < (count($resultadosComp) - 1) ? 'border-b border-app-borderSoft' : '' ?>">
+                                        <tr class="<?= $raIndex < (count($resultadosComp) - 1) ? '' : '' ?>">
                                             <td class="<?= e(str_replace('border-b border-app-borderSoft ', '', ui_td_classes())) ?> w-32">
                                                 <input type="text" name="resultados[<?= (int) $raIndex ?>][codigo]" value="<?= e((string) (($resultado['codigo'] ?? '') !== '' ? $resultado['codigo'] : ('RA' . ($raIndex + 1)))) ?>" class="<?= e(ui_input_classes()) ?>" data-inline-input>
                                             </td>
                                             <td class="<?= e(str_replace('border-b border-app-borderSoft ', '', ui_td_classes())) ?>">
                                                 <input type="text" name="resultados[<?= (int) $raIndex ?>][descripcion]" value="<?= e((string) ($resultado['descripcion'] ?? '')) ?>" class="<?= e(ui_input_classes()) ?>" data-inline-input>
+                                            </td>
+                                            <td class="<?= e(str_replace('border-b border-app-borderSoft ', '', ui_td_classes())) ?>">
+                                                <button type="button" class="<?= e(ui_button_icon_classes()) ?> border-rose-300 bg-rose-50 text-rose-700 hover:border-rose-400 hover:bg-rose-100 hover:text-rose-700" data-inline-remove-rae aria-label="Eliminar RAE">
+                                                    <span class="inline-flex h-4 w-4 [&_svg]:h-4 [&_svg]:w-4"><?= ui_icon('trash-2') ?></span>
+                                                </button>
                                             </td>
                                         </tr>
                                     <?php endforeach; ?>
@@ -252,7 +313,7 @@ $toastMessage = match ($toastKey) {
                                 </tbody>
                             </table>
                         </div>
-                        <div class="mt-3 flex items-center justify-between gap-3">
+                        <div class="mt-3 border-t border-app-borderSoft pt-3 flex items-center justify-between gap-3">
                             <button type="submit" formaction="<?= e(APP_BASE_PATH) ?>/catalogo/programas/eliminar-competencia" formmethod="post" class="inline-flex items-center gap-2 rounded-md border border-rose-300 bg-rose-50 px-[18px] py-2 text-sm font-medium text-rose-700 no-underline transition-colors duration-200 hover:border-rose-400 hover:bg-rose-100 hover:text-rose-700" onclick="return confirm('¿Eliminar esta competencia?');">
                                 <span class="inline-flex h-4 w-4 [&_svg]:h-4 [&_svg]:w-4"><?= ui_icon('trash-2') ?></span>
                                 Eliminar competencia

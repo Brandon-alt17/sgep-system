@@ -655,6 +655,8 @@ document.querySelectorAll("[data-inline-edit-root]").forEach(function (root) {
 
   var originalValues = {};
   var isEditing = false;
+  var isCompetenciaEdit = !!form.querySelector("input[name='competencia_id']");
+  var originalRaeRowsHtml = null;
   var showToast = function (message) {
     var toastRoot = document.querySelector("[data-toast-root]");
     var toast = toastRoot ? toastRoot.querySelector("[data-toast]") : null;
@@ -668,10 +670,18 @@ document.querySelectorAll("[data-inline-edit-root]").forEach(function (root) {
     }, 3200);
   };
 
+  var refreshInlineRaeNames = function () {
+    var rows = Array.prototype.slice.call(form.querySelectorAll("[data-inline-raes-body] tr"));
+    rows.forEach(function (row, rowIndex) {
+      var codigoInput = row.querySelector("input[name*='[codigo]']");
+      var descripcionInput = row.querySelector("input[name*='[descripcion]']");
+      if (codigoInput) codigoInput.name = "resultados[" + rowIndex + "][codigo]";
+      if (descripcionInput) descripcionInput.name = "resultados[" + rowIndex + "][descripcion]";
+    });
+  };
+
   var setEditingState = function (editing) {
     isEditing = editing;
-    root.classList.toggle("border-app-borderControlStrong", editing);
-    root.classList.toggle("shadow-xsSoft", editing);
     if (viewBlock) viewBlock.classList.toggle("hidden", editing);
     headerBlocks.forEach(function (headerBlock) {
       headerBlock.classList.toggle("hidden", editing);
@@ -680,6 +690,16 @@ document.querySelectorAll("[data-inline-edit-root]").forEach(function (root) {
     openButton.classList.toggle("hidden", editing);
     saveButton.classList.toggle("hidden", !editing);
     cancelButton.classList.toggle("hidden", !editing);
+    if (isCompetenciaEdit) {
+      root.classList.toggle("sg-inline-editing-competencia", editing);
+      if (editing) {
+        root.style.borderColor = "rgb(10 139 129 / 1)";
+        root.style.boxShadow = "0 0 0 2px rgb(232 253 251 / 1), 0 1px 2px rgba(16, 24, 40, 0.06)";
+      } else {
+        root.style.borderColor = "";
+        root.style.boxShadow = "";
+      }
+    }
   };
 
   openButton.addEventListener("click", function () {
@@ -690,11 +710,13 @@ document.querySelectorAll("[data-inline-edit-root]").forEach(function (root) {
     });
 
     root.classList.add("is-editing");
+    var raesBody = form.querySelector("[data-inline-raes-body]");
+    originalRaeRowsHtml = raesBody ? raesBody.innerHTML : null;
     inputs.forEach(function (input) {
       originalValues[input.name] = input.value;
     });
+
     setEditingState(true);
-    showToast("Modo edición activado.");
   });
 
   cancelButton.addEventListener("click", function () {
@@ -706,8 +728,114 @@ document.querySelectorAll("[data-inline-edit-root]").forEach(function (root) {
       });
     }
     root.classList.remove("is-editing");
+    var raesBody = form.querySelector("[data-inline-raes-body]");
+    if (raesBody && originalRaeRowsHtml !== null) {
+      raesBody.innerHTML = originalRaeRowsHtml;
+    }
+    refreshInlineRaeNames();
     setEditingState(false);
-    showToast("Edición cancelada. No se guardaron cambios.");
+  });
+
+  var addRaeButton = form.querySelector("[data-inline-add-rae]");
+  if (addRaeButton) {
+    addRaeButton.addEventListener("click", function () {
+      var tbody = form.querySelector("[data-inline-raes-body]");
+      if (!tbody) return;
+      var nextIndex = tbody.querySelectorAll("tr").length;
+      var row = document.createElement("tr");
+      row.className = "border-b border-app-borderSoft";
+      row.setAttribute("data-inline-new-rae", "1");
+      row.innerHTML = '' +
+        '<td class="px-2 py-3 align-top w-32">' +
+        '<input type="text" name="resultados[' + nextIndex + '][codigo]" value="" class="w-full rounded-lg border border-app-borderControlStrong bg-white px-3 py-2 text-sm text-app-muted outline-none transition-colors duration-200 hover:border-app-accent focus:border-app-accent focus:ring-2 focus:ring-app-accentSoft" data-inline-input>' +
+        '</td>' +
+        '<td class="px-2 py-3 align-top">' +
+        '<input type="text" name="resultados[' + nextIndex + '][descripcion]" value="" class="w-full rounded-lg border border-app-borderControlStrong bg-white px-3 py-2 text-sm text-app-muted outline-none transition-colors duration-200 hover:border-app-accent focus:border-app-accent focus:ring-2 focus:ring-app-accentSoft" data-inline-input>' +
+        '</td>' +
+        '<td class="px-2 py-3 align-top">' +
+        '<button type="button" class="font-app inline-flex h-10 w-10 items-center justify-center rounded-md border border-rose-300 bg-rose-50 text-rose-700 no-underline transition-colors duration-200 hover:border-rose-400 hover:bg-rose-100 hover:text-rose-700" data-inline-remove-rae aria-label="Eliminar RAE">' +
+        '<span class="inline-flex h-4 w-4 [&_svg]:h-4 [&_svg]:w-4"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path><path d="M3 6h18"></path><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></span>' +
+        '</button>' +
+        '</td>';
+      tbody.appendChild(row);
+      refreshInlineRaeNames();
+      var firstInput = row.querySelector("input");
+      if (firstInput) firstInput.focus();
+    });
+  }
+
+  form.addEventListener("click", function (event) {
+    var target = event.target;
+    if (!(target instanceof Element)) return;
+    var removeButton = target.closest("[data-inline-remove-rae]");
+    if (!removeButton) return;
+
+    var row = removeButton.closest("tr");
+    var tbody = form.querySelector("[data-inline-raes-body]");
+    if (!row || !tbody) return;
+
+    var rows = tbody.querySelectorAll("tr");
+    if (rows.length <= 1) {
+      var codigoInput = row.querySelector("input[name*='[codigo]']");
+      var descripcionInput = row.querySelector("input[name*='[descripcion]']");
+      if (codigoInput) codigoInput.value = "";
+      if (descripcionInput) descripcionInput.value = "";
+    } else {
+      row.remove();
+      refreshInlineRaeNames();
+    }
+  });
+
+  form.addEventListener("submit", function (event) {
+    var competenciaIdField = form.querySelector("input[name='competencia_id']");
+    if (!competenciaIdField) return;
+
+    var nombreInput = form.querySelector("input[name='nombre']");
+    var codigoInput = form.querySelector("input[name='codigo']");
+    var horasInput = form.querySelector("input[name='horas']");
+    var nombre = nombreInput ? (nombreInput.value || "").trim() : "";
+    var codigo = codigoInput ? (codigoInput.value || "").trim() : "";
+    var horas = horasInput ? (horasInput.value || "").trim() : "";
+
+    if (nombre === "" || codigo === "" || horas === "") {
+      event.preventDefault();
+      showToast("Completa nombre, código y horas de la competencia.");
+      return;
+    }
+
+    var rows = Array.prototype.slice.call(form.querySelectorAll("[data-inline-raes-body] tr"));
+    if (rows.length === 0) {
+      event.preventDefault();
+      showToast("Agrega al menos un RAE.");
+      return;
+    }
+
+    var hasInvalidRae = rows.some(function (row) {
+      var codigoRaeInput = row.querySelector("input[name*='[codigo]']");
+      var descripcionRaeInput = row.querySelector("input[name*='[descripcion]']");
+      var codigoRae = codigoRaeInput ? (codigoRaeInput.value || "").trim() : "";
+      var descripcionRae = descripcionRaeInput ? (descripcionRaeInput.value || "").trim() : "";
+      return codigoRae === "" || descripcionRae === "";
+    });
+    if (hasInvalidRae) {
+      event.preventDefault();
+      showToast("Completa código y descripción en todos los RAEs.");
+      return;
+    }
+
+    var seenCodes = {};
+    var hasDuplicateCodes = rows.some(function (row) {
+      var codigoRaeInput = row.querySelector("input[name*='[codigo]']");
+      var codigoRae = codigoRaeInput ? (codigoRaeInput.value || "").trim().toLowerCase() : "";
+      if (codigoRae === "") return false;
+      if (seenCodes[codigoRae]) return true;
+      seenCodes[codigoRae] = true;
+      return false;
+    });
+    if (hasDuplicateCodes) {
+      event.preventDefault();
+      showToast("No se permiten códigos RAE duplicados.");
+    }
   });
 
   setEditingState(false);

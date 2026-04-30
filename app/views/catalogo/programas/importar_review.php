@@ -119,9 +119,12 @@ foreach ($metaFieldLabels as $metaKey => $metaLabel) {
 <?php if ($competencias !== []): ?>
 <section class="<?= e(ui_card_classes()) ?> mt-6" data-live-filter-root>
     <div class="relative">
+        <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-app-muted [&_svg]:h-4 [&_svg]:w-4">
+            <?= ui_icon('search') ?>
+        </span>
         <input
             type="text"
-            class="<?= e(ui_input_classes()) ?> pr-10"
+            class="<?= e(ui_input_classes()) ?> pl-10 pr-10"
             placeholder="Buscar por competencia, RAE o código"
             aria-label="Buscar por competencia, RAE o código"
             data-live-filter-input

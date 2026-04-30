@@ -46,12 +46,15 @@ partial('components/page_header', [
 
     <form method="get" action="<?= e(APP_BASE_PATH) ?>/catalogo/programas" class="flex w-full items-center gap-3" data-auto-filter-form data-auto-filter-ajax="true" data-auto-filter-target="#tabla-catalogo-programas tbody">
         <div class="relative flex-1 min-w-0">
+            <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-app-muted [&_svg]:h-4 [&_svg]:w-4">
+                <?= ui_icon('search') ?>
+            </span>
             <input
                 type="text"
                 name="q"
                 value="<?= e($q) ?>"
                 placeholder="Buscar por código o nombre"
-                class="<?= e(ui_input_classes()) ?> mt-0 flex-1 min-w-0 pr-10"
+                class="<?= e(ui_input_classes()) ?> mt-0 flex-1 min-w-0 pl-10 pr-10"
                 data-auto-filter-input
                 data-auto-filter-main-input
             >
