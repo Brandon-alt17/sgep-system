@@ -46,6 +46,7 @@ class ProgramaPdfParser
         $inResultados = false;
         $expectNombreCompetencia = false;
         $expectUnidadCompetencia = false;
+        $expectCodigoCompetencia = false;
         $pendingRaCode = null;
         $competenciaAutoIndex = 1;
         foreach ($lines as $line) {
@@ -65,6 +66,7 @@ class ProgramaPdfParser
                 $inResultados = false;
                 $expectNombreCompetencia = false;
                 $expectUnidadCompetencia = false;
+                $expectCodigoCompetencia = false;
                 continue;
             }
 
@@ -75,6 +77,7 @@ class ProgramaPdfParser
             if (preg_match('/^4\.1\b/i', $line)) {
                 $expectUnidadCompetencia = true;
                 $expectNombreCompetencia = false;
+                $expectCodigoCompetencia = false;
                 $inResultados = false;
                 if (preg_match('/^4\.1\b.*?(?:norma|unidad)[^\n:]*[:\-]\s*(.+)$/iu', $line, $mUnidadInline)) {
                     $restUnidad = trim((string) ($mUnidadInline[1] ?? ''));
@@ -114,6 +117,7 @@ class ProgramaPdfParser
 
             if (preg_match('/^4\.3\b/i', $line)) {
                 $expectNombreCompetencia = true;
+                $expectCodigoCompetencia = false;
                 $inResultados = false;
                 continue;
             }
@@ -122,12 +126,21 @@ class ProgramaPdfParser
                 $inResultados = false;
                 $expectNombreCompetencia = false;
                 $expectUnidadCompetencia = false;
+                $expectCodigoCompetencia = true;
+                if (
+                    trim((string) ($current['codigo'] ?? '')) === ''
+                    && preg_match('/^4\.2\b[^\d]*(\d{6,12})/iu', $line, $mCode42Inline)
+                ) {
+                    $current['codigo'] = trim((string) ($mCode42Inline[1] ?? ''));
+                    $expectCodigoCompetencia = false;
+                }
                 continue;
             }
 
             if (preg_match('/^4\.4\b/i', $line)) {
                 $expectNombreCompetencia = false;
                 $expectUnidadCompetencia = false;
+                $expectCodigoCompetencia = false;
                 continue;
             }
 
@@ -142,6 +155,7 @@ class ProgramaPdfParser
                 $inResultados = false;
                 $expectNombreCompetencia = false;
                 $expectUnidadCompetencia = false;
+                $expectCodigoCompetencia = false;
                 $pendingRaCode = null;
                 continue;
             }
@@ -152,6 +166,7 @@ class ProgramaPdfParser
 
             if ($current['codigo'] === '' && preg_match('/^\d{6,12}$/', $line)) {
                 $current['codigo'] = trim($line);
+                $expectCodigoCompetencia = false;
                 continue;
             }
 
@@ -160,7 +175,25 @@ class ProgramaPdfParser
                 && preg_match('/(?:c[oó]digo(?:\s+de)?\s+competencia|competencia)\s*[:\-]?\s*(\d{6,12})/iu', $line, $mCodigoComp)
             ) {
                 $current['codigo'] = trim((string) ($mCodigoComp[1] ?? ''));
+                $expectCodigoCompetencia = false;
                 continue;
+            }
+
+            if ($expectCodigoCompetencia) {
+                if (preg_match('/^4\.[3-9]\b/iu', $line)) {
+                    $expectCodigoCompetencia = false;
+                } elseif (preg_match('/(\d{6,12})/u', $line, $mCode42)) {
+                    if (trim((string) ($current['codigo'] ?? '')) === '') {
+                        $current['codigo'] = trim((string) ($mCode42[1] ?? ''));
+                    }
+                    $expectCodigoCompetencia = false;
+                    continue;
+                } elseif ($line !== '' && preg_match('/^(c[oó]digo|norma|de|competencia|laboral)\b/iu', $line) === 1) {
+                    // Encabezado partido en varias lineas: seguir esperando el valor.
+                    continue;
+                } else {
+                    $expectCodigoCompetencia = false;
+                }
             }
 
             if ($current['horas'] === '' && preg_match('/(\d{1,4})\s*horas?/iu', $line, $mHorasComp)) {
@@ -204,6 +237,11 @@ class ProgramaPdfParser
             }
 
             foreach (self::splitPotentialRaSegments($line) as $segment) {
+                if (self::isNoiseSegment($segment)) {
+                    $pendingRaCode = null;
+                    continue;
+                }
+
                 if (preg_match('/^(RA\s*\d+)\s*[:\-]?$/iu', $segment, $mRaOnly)) {
                     $pendingRaCode = strtoupper(str_replace(' ', '', trim((string) $mRaOnly[1])));
                     continue;
@@ -314,7 +352,16 @@ class ProgramaPdfParser
             if (preg_match('/^p[aá]gina\s+\d+\s+de\s+\d+/iu', $line)) {
                 continue;
             }
+            if (preg_match('/\b\d{1,2}\/\d{1,2}\/\d{2,4}\s+\d{1,2}:\d{2}\b/u', $line)) {
+                continue;
+            }
+            if (preg_match('/^\d{1,2}:\d{2}$/u', $line)) {
+                continue;
+            }
             if (preg_match('/^--\s*\d+\s+of\s+\d+\s*--$/i', $line)) {
+                continue;
+            }
+            if (preg_match('/^sena$/iu', $line)) {
                 continue;
             }
             $filtered[] = $line;
@@ -586,10 +633,35 @@ class ProgramaPdfParser
         if ($prev === '' || $curr === '') {
             return false;
         }
+        if (self::isNoiseSegment($curr)) {
+            return false;
+        }
         if (preg_match('/[.!?)]$/u', $prev)) {
             return false;
         }
         return true;
+    }
+
+    private static function isNoiseSegment(string $segment): bool
+    {
+        $value = trim($segment);
+        if ($value === '') {
+            return true;
+        }
+        if (preg_match('/\bp[aá]gina\s+\d+\s+de\s+\d+\b/iu', $value)) {
+            return true;
+        }
+        if (preg_match('/\b\d{1,2}\/\d{1,2}\/\d{2,4}\s+\d{1,2}:\d{2}\b/u', $value)) {
+            return true;
+        }
+        if (preg_match('/\b(l[ií]nea\s+tecnol[oó]gica|red\s+tecnol[oó]gica|red\s+de\s+conocimiento)\b/iu', $value)) {
+            return true;
+        }
+        if (preg_match('/\b(gesti[oó]n\s+de\s+la\s+informaci[oó]n|software\s+de\s+software)\b/iu', $value)) {
+            return true;
+        }
+
+        return false;
     }
 
     /** @return array<int,string> */
