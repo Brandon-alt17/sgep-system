@@ -143,7 +143,7 @@ class CatalogoController
             'resumen_json' => json_encode($decoded, JSON_UNESCAPED_UNICODE),
         ]);
 
-        redirect(APP_BASE_PATH . '/catalogo/programas');
+        redirect(APP_BASE_PATH . '/catalogo/programas?toast=programa_importado');
     }
 
     public function nuevoProgramaForm(): void
@@ -542,7 +542,7 @@ class CatalogoController
         if ($programaId > 0) {
             Programa::deleteById($programaId);
         }
-        redirect(APP_BASE_PATH . '/catalogo/programas');
+        redirect(APP_BASE_PATH . '/catalogo/programas?toast=programa_eliminado');
     }
 
     private function guessProgramNameFromFileName(string $fileName): string

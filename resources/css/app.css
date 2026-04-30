@@ -42,4 +42,32 @@
       repeating-linear-gradient(180deg, #d5dbe3 0 8px, transparent 8px 12px) left / 2px 100% no-repeat,
       repeating-linear-gradient(180deg, #d5dbe3 0 8px, transparent 8px 12px) right / 2px 100% no-repeat;
   }
+
+}
+
+.sg-toast {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  border: 1px solid rgb(221 225 230 / 1);
+  background-color: rgb(248 250 251 / 1);
+  box-shadow: 0 8px 22px rgba(16, 24, 40, 0.12);
+  border-radius: 0.625rem;
+  padding: 0.875rem 1rem;
+  opacity: 0;
+  transform: translateY(14px);
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 220ms ease, transform 220ms ease, visibility 220ms ease;
+}
+
+.sg-toast-visible {
+  opacity: 1;
+  transform: translateY(0);
+  visibility: visible;
+}
+
+.sg-inline-editing-competencia {
+  border-color: rgb(10 139 129 / 1) !important;
+  box-shadow: 0 0 0 2px rgb(232 253 251 / 1), 0 1px 2px rgba(16, 24, 40, 0.06);
 }

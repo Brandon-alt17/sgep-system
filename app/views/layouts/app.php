@@ -43,6 +43,7 @@ $currentUserName = (string) ($_SESSION['user_name'] ?? 'Usuario no registrado');
         </main>
     </div>
 </div>
+<?php partial('components/confirm_modal'); ?>
 <script src="<?= e(APP_BASE_PATH) ?>/js/app.js"></script>
 <script>window.APP_BASE_PATH = "<?= e((string) APP_BASE_PATH) ?>";</script>
 <script src="<?= e(APP_BASE_PATH) ?>/js/modal-manager.js"></script>

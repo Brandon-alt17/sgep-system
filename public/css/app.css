@@ -882,12 +882,20 @@ a:hover {
   position: relative;
 }
 
+.inset-0 {
+  inset: 0px;
+}
+
 .bottom-6 {
   bottom: 1.5rem;
 }
 
 .left-0 {
   left: 0px;
+}
+
+.left-3 {
+  left: 0.75rem;
 }
 
 .right-2 {
@@ -904,14 +912,6 @@ a:hover {
 
 .top-1\/2 {
   top: 50%;
-}
-
-.right-10 {
-  right: 2.5rem;
-}
-
-.left-3 {
-  left: 0.75rem;
 }
 
 .z-50 {
@@ -981,10 +981,6 @@ a:hover {
 
 .mr-1 {
   margin-right: 0.25rem;
-}
-
-.mr-2 {
-  margin-right: 0.5rem;
 }
 
 .mt-0 {
@@ -1135,10 +1131,6 @@ a:hover {
   width: 0.25rem;
 }
 
-.w-1\/4 {
-  width: 25%;
-}
-
 .w-10 {
   width: 2.5rem;
 }
@@ -1247,14 +1239,6 @@ a:hover {
   width: 100%;
 }
 
-.w-1\/3 {
-  width: 33.333333%;
-}
-
-.w-1\/2 {
-  width: 50%;
-}
-
 .min-w-0 {
   min-width: 0px;
 }
@@ -1277,6 +1261,10 @@ a:hover {
 
 .max-w-xl {
   max-width: 36rem;
+}
+
+.max-w-md {
+  max-width: 28rem;
 }
 
 .flex-1 {
@@ -1639,6 +1627,11 @@ a:hover {
   background-color: rgb(233 248 239 / var(--tw-bg-opacity, 1));
 }
 
+.bg-app-text {
+  --tw-bg-opacity: 1;
+  background-color: rgb(31 41 55 / var(--tw-bg-opacity, 1));
+}
+
 .bg-app-topbar {
   --tw-bg-opacity: 1;
   background-color: rgb(255 255 255 / var(--tw-bg-opacity, 1));
@@ -1672,6 +1665,10 @@ a:hover {
 .bg-white {
   --tw-bg-opacity: 1;
   background-color: rgb(255 255 255 / var(--tw-bg-opacity, 1));
+}
+
+.bg-app-text\/40 {
+  background-color: rgb(31 41 55 / 0.4);
 }
 
 .bg-none {
@@ -1798,6 +1795,10 @@ a:hover {
   padding-bottom: 1rem;
 }
 
+.pl-10 {
+  padding-left: 2.5rem;
+}
+
 .pl-2 {
   padding-left: 0.5rem;
 }
@@ -1840,10 +1841,6 @@ a:hover {
 
 .pt-6 {
   padding-top: 1.5rem;
-}
-
-.pl-10 {
-  padding-left: 2.5rem;
 }
 
 .text-left {
@@ -2114,6 +2111,33 @@ a:hover {
   transition-timing-function: cubic-bezier(0, 0, 0.2, 1);
 }
 
+.sg-toast {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  border: 1px solid rgb(221 225 230 / 1);
+  background-color: rgb(248 250 251 / 1);
+  box-shadow: 0 8px 22px rgba(16, 24, 40, 0.12);
+  border-radius: 0.625rem;
+  padding: 0.875rem 1rem;
+  opacity: 0;
+  transform: translateY(14px);
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 220ms ease, transform 220ms ease, visibility 220ms ease;
+}
+
+.sg-toast-visible {
+  opacity: 1;
+  transform: translateY(0);
+  visibility: visible;
+}
+
+.sg-inline-editing-competencia {
+  border-color: rgb(10 139 129 / 1) !important;
+  box-shadow: 0 0 0 2px rgb(232 253 251 / 1), 0 1px 2px rgba(16, 24, 40, 0.06);
+}
+
 .hover\:border-app-accent:hover {
   --tw-border-opacity: 1;
   border-color: rgb(10 139 129 / var(--tw-border-opacity, 1));
@@ -2288,10 +2312,6 @@ a:hover {
 
   .md\:grid-cols-\[1fr_1fr_auto\] {
     grid-template-columns: 1fr 1fr auto;
-  }
-
-  .md\:grid-cols-\[260px_1fr\] {
-    grid-template-columns: 260px 1fr;
   }
 
   .md\:flex-col {

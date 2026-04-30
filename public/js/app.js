@@ -8,6 +8,37 @@ document.querySelectorAll("[data-max]").forEach(function (element) {
   });
 });
 
+// Desactiva sugerencias/autorrelleno del navegador en inputs de texto.
+document.querySelectorAll("form").forEach(function (form) {
+  if (!(form instanceof HTMLElement)) return;
+  form.setAttribute("autocomplete", "off");
+});
+
+document.querySelectorAll("input, textarea").forEach(function (field) {
+  if (!(field instanceof HTMLElement)) return;
+  var tag = field.tagName.toLowerCase();
+  if (tag === "textarea") {
+    field.setAttribute("autocomplete", "new-password");
+    field.setAttribute("autocorrect", "off");
+    field.setAttribute("autocapitalize", "off");
+    field.setAttribute("spellcheck", "false");
+    return;
+  }
+
+  var input = field;
+  var type = ((input.getAttribute("type") || "text") + "").toLowerCase();
+  var skipTypes = ["hidden", "checkbox", "radio", "file", "submit", "button", "reset", "color", "range"];
+  if (skipTypes.indexOf(type) !== -1) return;
+
+  // "off" suele ser ignorado por algunos navegadores para historial de campos;
+  // "new-password" reduce mucho las sugerencias de autocompletado.
+  input.setAttribute("autocomplete", "new-password");
+  input.setAttribute("autocorrect", "off");
+  input.setAttribute("autocapitalize", "off");
+  input.setAttribute("spellcheck", "false");
+  input.setAttribute("data-lpignore", "true");
+});
+
 // Buscador local reusable: filtra items en vivo y permite limpiar con X.
 document.querySelectorAll("[data-live-filter-root]").forEach(function (root) {
   var input = root.querySelector("[data-live-filter-input]");
@@ -657,6 +688,7 @@ document.querySelectorAll("[data-inline-edit-root]").forEach(function (root) {
   var isEditing = false;
   var isCompetenciaEdit = !!form.querySelector("input[name='competencia_id']");
   var originalRaeRowsHtml = null;
+  var originalCompetenciaSnapshot = "";
   var showToast = function (message) {
     var toastRoot = document.querySelector("[data-toast-root]");
     var toast = toastRoot ? toastRoot.querySelector("[data-toast]") : null;
@@ -678,6 +710,16 @@ document.querySelectorAll("[data-inline-edit-root]").forEach(function (root) {
       if (codigoInput) codigoInput.name = "resultados[" + rowIndex + "][codigo]";
       if (descripcionInput) descripcionInput.name = "resultados[" + rowIndex + "][descripcion]";
     });
+  };
+
+  var competenciaSnapshot = function () {
+    var trackedInputs = Array.prototype.slice.call(form.querySelectorAll("[data-inline-input]"));
+    var parts = trackedInputs.map(function (input) {
+      var name = input.name || "";
+      var value = (input.value || "").trim();
+      return name + "=" + value;
+    });
+    return parts.join("|");
   };
 
   var setEditingState = function (editing) {
@@ -712,9 +754,11 @@ document.querySelectorAll("[data-inline-edit-root]").forEach(function (root) {
     root.classList.add("is-editing");
     var raesBody = form.querySelector("[data-inline-raes-body]");
     originalRaeRowsHtml = raesBody ? raesBody.innerHTML : null;
+    refreshInlineRaeNames();
     inputs.forEach(function (input) {
       originalValues[input.name] = input.value;
     });
+    originalCompetenciaSnapshot = competenciaSnapshot();
 
     setEditingState(true);
   });
@@ -835,6 +879,12 @@ document.querySelectorAll("[data-inline-edit-root]").forEach(function (root) {
     if (hasDuplicateCodes) {
       event.preventDefault();
       showToast("No se permiten códigos RAE duplicados.");
+      return;
+    }
+
+    if (competenciaSnapshot() === originalCompetenciaSnapshot) {
+      event.preventDefault();
+      showToast("No hay cambios para guardar en esta competencia.");
     }
   });
 
@@ -845,9 +895,28 @@ document.querySelectorAll("[data-inline-edit-root]").forEach(function (root) {
   }
 });
 
-// Toast de servidor: animación de salida automática.
-document.querySelectorAll("[data-toast-root] [data-toast].sg-toast-visible").forEach(function (toast) {
+// Toast de servidor: animación de entrada/salida + limpieza de query params.
+document.querySelectorAll("[data-toast-root] [data-toast]").forEach(function (toast) {
+  var message = (toast.getAttribute("data-toast-message") || "").trim();
+  if (message === "") return;
+  var textNode = toast.querySelector("p");
+  if (textNode) textNode.textContent = message;
+  window.requestAnimationFrame(function () {
+    toast.classList.add("sg-toast-visible");
+  });
   window.setTimeout(function () {
     toast.classList.remove("sg-toast-visible");
   }, 3200);
+
+  if (window.history && typeof window.history.replaceState === "function") {
+    try {
+      var cleanUrl = new URL(window.location.href);
+      cleanUrl.searchParams.delete("toast");
+      cleanUrl.searchParams.delete("saved");
+      cleanUrl.searchParams.delete("edit_competencia");
+      window.history.replaceState(null, "", cleanUrl.pathname + cleanUrl.search + cleanUrl.hash);
+    } catch (e) {
+      // no-op
+    }
+  }
 });

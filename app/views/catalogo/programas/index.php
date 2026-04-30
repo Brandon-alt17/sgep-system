@@ -3,6 +3,12 @@ $programas = (array) ($programas ?? []);
 $filters = (array) ($filters ?? []);
 $q = trim((string) ($filters['q'] ?? ''));
 $nivel = trim((string) ($filters['nivel'] ?? ''));
+$toastKey = trim((string) ($_GET['toast'] ?? ''));
+$toastMessage = match ($toastKey) {
+    'programa_importado' => 'PDF del programa importado correctamente.',
+    'programa_eliminado' => 'Programa eliminado correctamente.',
+    default => '',
+};
 $totalRows = count($programas);
 $pendientesCount = (int) ($pendientesCount ?? 0);
 
@@ -83,6 +89,8 @@ partial('components/page_header', [
 
     </form>
 </section>
+
+<?php partial('components/toast', ['message' => $toastMessage]); ?>
 
 <section class="<?= e(ui_card_classes()) ?> !p-0 overflow-hidden">
     <table id="tabla-catalogo-programas" class="<?= e(ui_table_in_card_classes()) ?> !m-0 !p-0 table-fixed">

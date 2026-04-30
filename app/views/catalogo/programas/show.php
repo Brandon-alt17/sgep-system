@@ -78,7 +78,7 @@ $toastMessage = match ($toastKey) {
             </label>
         </div>
         <div class="mt-3 flex items-center justify-between gap-3 max-w-xl w-full">
-            <button type="submit" formaction="<?= e(APP_BASE_PATH) ?>/catalogo/programas/eliminar" formmethod="post" class="inline-flex items-center gap-2 rounded-md border border-rose-300 bg-rose-50 px-[18px] py-2 text-sm font-medium text-rose-700 no-underline transition-colors duration-200 hover:border-rose-400 hover:bg-rose-100 hover:text-rose-700" onclick="return confirm('¿Eliminar este programa? Esta acción no se puede deshacer.');">
+            <button type="submit" formaction="<?= e(APP_BASE_PATH) ?>/catalogo/programas/eliminar" formmethod="post" class="inline-flex items-center gap-2 rounded-md border border-rose-300 bg-rose-50 px-[18px] py-2 text-sm font-medium text-rose-700 no-underline transition-colors duration-200 hover:border-rose-400 hover:bg-rose-100 hover:text-rose-700" data-confirm-modal data-confirm-title="Eliminar programa" data-confirm-message="¿Eliminar este programa? Esta acción no se puede deshacer.">
                 <span class="inline-flex h-4 w-4 [&_svg]:h-4 [&_svg]:w-4"><?= ui_icon('trash-2') ?></span>
                 Eliminar programa
             </button>
@@ -314,7 +314,7 @@ $toastMessage = match ($toastKey) {
                             </table>
                         </div>
                         <div class="mt-3 border-t border-app-borderSoft pt-3 flex items-center justify-between gap-3">
-                            <button type="submit" formaction="<?= e(APP_BASE_PATH) ?>/catalogo/programas/eliminar-competencia" formmethod="post" class="inline-flex items-center gap-2 rounded-md border border-rose-300 bg-rose-50 px-[18px] py-2 text-sm font-medium text-rose-700 no-underline transition-colors duration-200 hover:border-rose-400 hover:bg-rose-100 hover:text-rose-700" onclick="return confirm('¿Eliminar esta competencia?');">
+                            <button type="submit" formaction="<?= e(APP_BASE_PATH) ?>/catalogo/programas/eliminar-competencia" formmethod="post" class="inline-flex items-center gap-2 rounded-md border border-rose-300 bg-rose-50 px-[18px] py-2 text-sm font-medium text-rose-700 no-underline transition-colors duration-200 hover:border-rose-400 hover:bg-rose-100 hover:text-rose-700" data-confirm-modal data-confirm-title="Eliminar competencia" data-confirm-message="¿Eliminar esta competencia?">
                                 <span class="inline-flex h-4 w-4 [&_svg]:h-4 [&_svg]:w-4"><?= ui_icon('trash-2') ?></span>
                                 Eliminar competencia
                             </button>
@@ -334,9 +334,4 @@ $toastMessage = match ($toastKey) {
     <?php endif; ?>
 </section>
 
-<section class="pointer-events-none fixed bottom-6 right-6 z-50 w-full max-w-sm px-4 sm:px-0" data-toast-root>
-    <div class="sg-toast<?= $toastMessage !== '' ? ' sg-toast-visible' : '' ?>" data-toast role="status" aria-live="polite">
-        <span class="inline-flex h-4 w-4 shrink-0 text-app-accent [&_svg]:h-4 [&_svg]:w-4"><?= ui_icon('circle-check') ?></span>
-        <p class="m-0 text-sm text-app-text"><?= e($toastMessage) ?></p>
-    </div>
-</section>
+<?php partial('components/toast', ['message' => $toastMessage]); ?>
