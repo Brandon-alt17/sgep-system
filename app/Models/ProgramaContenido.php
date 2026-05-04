@@ -8,6 +8,27 @@ use App\Helpers\Database;
 
 class ProgramaContenido
 {
+    public static function existeCodigoCompetenciaEnPrograma(int $programaId, string $codigo, int $excludeCompetenciaId = 0): bool
+    {
+        $codigo = trim($codigo);
+        if ($codigo === '') {
+            return false;
+        }
+        $sql = 'SELECT COUNT(*) AS total
+                FROM programa_competencias
+                WHERE programa_id = :programa_id
+                  AND LOWER(TRIM(codigo)) = LOWER(TRIM(:codigo))
+                  AND (:exclude_id = 0 OR id <> :exclude_id)';
+        $stmt = Database::connection()->prepare($sql);
+        $stmt->execute([
+            'programa_id' => $programaId,
+            'codigo' => $codigo,
+            'exclude_id' => $excludeCompetenciaId,
+        ]);
+        $row = $stmt->fetch();
+        return ((int) ($row['total'] ?? 0)) > 0;
+    }
+
     /** @return array<int,array<string,mixed>> */
     public static function competenciasConResultados(int $programaId): array
     {
@@ -160,6 +181,54 @@ class ProgramaContenido
             $id = (int) $pdo->lastInsertId();
             $pdo->commit();
             return $id;
+        } catch (\Throwable $e) {
+            $pdo->rollBack();
+            throw $e;
+        }
+    }
+
+    /** @param array<int,array<string,string>> $resultados */
+    public static function createCompetenciaConResultados(int $programaId, string $codigo, string $nombre, array $resultados): int
+    {
+        $pdo = Database::connection();
+        $pdo->beginTransaction();
+        try {
+            $pdo->prepare(
+                'UPDATE programa_competencias
+                 SET orden = orden + 1, updated_at = NOW()
+                 WHERE programa_id = :programa_id'
+            )->execute(['programa_id' => $programaId]);
+
+            $insertCompetencia = $pdo->prepare(
+                'INSERT INTO programa_competencias (programa_id, codigo, nombre, orden, created_at, updated_at)
+                 VALUES (:programa_id, :codigo, :nombre, :orden, NOW(), NOW())'
+            );
+            $insertCompetencia->execute([
+                'programa_id' => $programaId,
+                'codigo' => trim($codigo),
+                'nombre' => trim($nombre),
+                'orden' => 1,
+            ]);
+
+            $competenciaId = (int) $pdo->lastInsertId();
+            $insertResultado = $pdo->prepare(
+                'INSERT INTO programa_resultados_aprendizaje
+                 (programa_id, competencia_id, codigo, descripcion, orden, created_at, updated_at)
+                 VALUES
+                 (:programa_id, :competencia_id, :codigo, :descripcion, :orden, NOW(), NOW())'
+            );
+            foreach ($resultados as $idx => $resultado) {
+                $insertResultado->execute([
+                    'programa_id' => $programaId,
+                    'competencia_id' => $competenciaId,
+                    'codigo' => trim((string) ($resultado['codigo'] ?? '')),
+                    'descripcion' => trim((string) ($resultado['descripcion'] ?? '')),
+                    'orden' => $idx + 1,
+                ]);
+            }
+
+            $pdo->commit();
+            return $competenciaId;
         } catch (\Throwable $e) {
             $pdo->rollBack();
             throw $e;

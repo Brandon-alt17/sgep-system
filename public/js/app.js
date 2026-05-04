@@ -8,6 +8,20 @@ document.querySelectorAll("[data-max]").forEach(function (element) {
   });
 });
 
+// Toast global reutilizable (cuando existe data-toast-root en la vista).
+var showGlobalToast = function (message) {
+  var toastRoot = document.querySelector("[data-toast-root]");
+  var toast = toastRoot ? toastRoot.querySelector("[data-toast]") : null;
+  if (!toast) return;
+  var textNode = toast.querySelector("p");
+  if (textNode) textNode.textContent = message;
+  toast.classList.add("sg-toast-visible");
+  window.clearTimeout(toast.__hideTimer);
+  toast.__hideTimer = window.setTimeout(function () {
+    toast.classList.remove("sg-toast-visible");
+  }, 3200);
+};
+
 // Desactiva sugerencias/autorrelleno del navegador en inputs de texto.
 document.querySelectorAll("form").forEach(function (form) {
   if (!(form instanceof HTMLElement)) return;
@@ -37,6 +51,14 @@ document.querySelectorAll("input, textarea").forEach(function (field) {
   input.setAttribute("autocapitalize", "off");
   input.setAttribute("spellcheck", "false");
   input.setAttribute("data-lpignore", "true");
+  var typeForReadonly = ((input.getAttribute("type") || "text") + "").toLowerCase();
+  if (["text", "search", "number", "email", "url", "tel"].indexOf(typeForReadonly) !== -1) {
+    input.readOnly = true;
+    input.addEventListener("focus", function onFocusUnlock() {
+      input.readOnly = false;
+      input.removeEventListener("focus", onFocusUnlock);
+    });
+  }
 });
 
 // Buscador local reusable: filtra items en vivo y permite limpiar con X.
@@ -833,6 +855,10 @@ document.querySelectorAll("[data-inline-edit-root]").forEach(function (root) {
   form.addEventListener("submit", function (event) {
     var competenciaIdField = form.querySelector("input[name='competencia_id']");
     if (!competenciaIdField) return;
+    var submitter = event.submitter;
+    if (submitter && submitter.hasAttribute("formaction") && (submitter.getAttribute("formaction") || "").indexOf("/catalogo/programas/eliminar-competencia") !== -1) {
+      return;
+    }
 
     var nombreInput = form.querySelector("input[name='nombre']");
     var codigoInput = form.querySelector("input[name='codigo']");
@@ -919,4 +945,116 @@ document.querySelectorAll("[data-toast-root] [data-toast]").forEach(function (to
       // no-op
     }
   }
+});
+
+// Nueva competencia (borrador): RAEs dinámicos sin persistir hasta guardar.
+document.querySelectorAll("[data-new-competencia-form]").forEach(function (form) {
+  var tbody = form.querySelector("[data-new-competencia-raes-body]");
+  var addButton = form.querySelector("[data-new-competencia-add-rae]");
+  if (!tbody || !addButton) return;
+
+  var refreshNames = function () {
+    Array.prototype.slice.call(tbody.querySelectorAll("tr")).forEach(function (row, idx) {
+      var codigoInput = row.querySelector("input[name*='[codigo]']");
+      var descripcionInput = row.querySelector("input[name*='[descripcion]']");
+      if (codigoInput) codigoInput.name = "resultados[" + idx + "][codigo]";
+      if (descripcionInput) descripcionInput.name = "resultados[" + idx + "][descripcion]";
+    });
+  };
+  var existingCodes = [];
+  try {
+    existingCodes = JSON.parse(form.getAttribute("data-existing-competencia-codes") || "[]");
+  } catch (e) {
+    existingCodes = [];
+  }
+
+  addButton.addEventListener("click", function () {
+    var idx = tbody.querySelectorAll("tr").length;
+    var row = document.createElement("tr");
+    row.className = "border-b border-app-borderSoft";
+    row.innerHTML = '' +
+      '<td class="px-2 py-3 align-top w-32"><input type="text" name="resultados[' + idx + '][codigo]" value="" autocomplete="new-password" autocorrect="off" autocapitalize="off" spellcheck="false" class="w-full rounded-lg border border-app-borderControlStrong bg-white px-3 py-2 text-sm text-app-muted outline-none transition-colors duration-200 hover:border-app-accent focus:border-app-accent focus:ring-2 focus:ring-app-accentSoft"></td>' +
+      '<td class="px-2 py-3 align-top"><input type="text" name="resultados[' + idx + '][descripcion]" value="" autocomplete="new-password" autocorrect="off" autocapitalize="off" spellcheck="false" class="w-full rounded-lg border border-app-borderControlStrong bg-white px-3 py-2 text-sm text-app-muted outline-none transition-colors duration-200 hover:border-app-accent focus:border-app-accent focus:ring-2 focus:ring-app-accentSoft"></td>' +
+      '<td class="px-2 py-3 align-top"><button type="button" class="font-app inline-flex h-10 w-10 items-center justify-center rounded-md border border-rose-300 bg-rose-50 text-rose-700 no-underline transition-colors duration-200 hover:border-rose-400 hover:bg-rose-100 hover:text-rose-700" data-new-competencia-remove-rae aria-label="Eliminar RAE"><span class="inline-flex h-4 w-4 [&_svg]:h-4 [&_svg]:w-4"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path><path d="M3 6h18"></path><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></span></button></td>';
+    tbody.appendChild(row);
+    refreshNames();
+  });
+
+  form.addEventListener("click", function (event) {
+    var target = event.target;
+    if (!(target instanceof Element)) return;
+    var removeButton = target.closest("[data-new-competencia-remove-rae]");
+    if (!removeButton) return;
+    var row = removeButton.closest("tr");
+    if (!row) return;
+    var rows = tbody.querySelectorAll("tr");
+    if (rows.length <= 1) {
+      var codigoInput = row.querySelector("input[name*='[codigo]']");
+      var descripcionInput = row.querySelector("input[name*='[descripcion]']");
+      if (codigoInput) codigoInput.value = "";
+      if (descripcionInput) descripcionInput.value = "";
+    } else {
+      row.remove();
+      refreshNames();
+    }
+  });
+
+  form.addEventListener("submit", function (event) {
+    var nombreInput = form.querySelector("input[name='nombre']");
+    var codigoInput = form.querySelector("input[name='codigo']");
+    var horasInput = form.querySelector("input[name='horas']");
+    var nombre = nombreInput ? (nombreInput.value || "").trim() : "";
+    var codigo = codigoInput ? (codigoInput.value || "").trim() : "";
+    var horas = horasInput ? (horasInput.value || "").trim() : "";
+
+    if (nombre === "" || codigo === "" || horas === "") {
+      event.preventDefault();
+      showGlobalToast("Completa nombre, código y horas de la competencia.");
+      return;
+    }
+
+    var rows = Array.prototype.slice.call(tbody.querySelectorAll("tr"));
+    if (rows.length === 0) {
+      event.preventDefault();
+      showGlobalToast("Agrega al menos un RAE.");
+      return;
+    }
+
+    var hasInvalidRae = rows.some(function (row) {
+      var codigoRaeInput = row.querySelector("input[name*='[codigo]']");
+      var descripcionRaeInput = row.querySelector("input[name*='[descripcion]']");
+      var codigoRae = codigoRaeInput ? (codigoRaeInput.value || "").trim() : "";
+      var descripcionRae = descripcionRaeInput ? (descripcionRaeInput.value || "").trim() : "";
+      return codigoRae === "" || descripcionRae === "";
+    });
+    if (hasInvalidRae) {
+      event.preventDefault();
+      showGlobalToast("Completa código y descripción en todos los RAEs.");
+      return;
+    }
+
+    var seenCodes = {};
+    var hasDuplicateCodes = rows.some(function (row) {
+      var codigoRaeInput = row.querySelector("input[name*='[codigo]']");
+      var codigoRae = codigoRaeInput ? (codigoRaeInput.value || "").trim().toLowerCase() : "";
+      if (codigoRae === "") return false;
+      if (seenCodes[codigoRae]) return true;
+      seenCodes[codigoRae] = true;
+      return false;
+    });
+    if (hasDuplicateCodes) {
+      event.preventDefault();
+      showGlobalToast("No se permiten códigos RAE duplicados.");
+      return;
+    }
+
+    var competenciaCode = codigo.toLowerCase();
+    var duplicateCompetenciaCode = existingCodes.some(function (existingCode) {
+      return ((existingCode || "") + "").trim().toLowerCase() === competenciaCode;
+    });
+    if (duplicateCompetenciaCode) {
+      event.preventDefault();
+      showGlobalToast("No se permiten códigos de competencia duplicados.");
+    }
+  });
 });

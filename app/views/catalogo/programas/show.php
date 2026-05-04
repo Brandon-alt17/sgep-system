@@ -6,8 +6,13 @@ $warnings = (array) ($parsed['warnings'] ?? []);
 $saved = ((string) ($_GET['saved'] ?? '')) === '1';
 $programId = (int) (($programa['id'] ?? 0));
 $totalResultados = 0;
+$totalHorasCompetencias = 0;
 foreach ($competencias as $comp) {
     $totalResultados += count((array) ($comp['resultados'] ?? []));
+    $horasComp = trim((string) ($comp['horas'] ?? ''));
+    if ($horasComp !== '' && is_numeric($horasComp)) {
+        $totalHorasCompetencias += (int) $horasComp;
+    }
 }
 $programName = trim((string) ($meta['nombre'] ?? ''));
 if ($programName === '') {
@@ -16,6 +21,11 @@ if ($programName === '') {
 $programCode = trim((string) ($meta['codigo'] ?? ''));
 $currentNivel = trim((string) ($meta['nivel'] ?? ''));
 $autoEditCompetenciaId = (int) ($_GET['edit_competencia'] ?? 0);
+$newCompetenciaDraft = ((string) ($_GET['new_competencia'] ?? '')) === '1';
+$existingCompetenciaCodes = array_values(array_filter(array_map(
+    static fn (array $comp): string => trim((string) ($comp['codigo'] ?? '')),
+    $competencias
+), static fn (string $code): bool => $code !== ''));
 $toastKey = trim((string) ($_GET['toast'] ?? ''));
 $toastMessage = match ($toastKey) {
     'programa_creado' => 'Programa creado correctamente.',
@@ -25,8 +35,12 @@ $toastMessage = match ($toastKey) {
     'competencia_eliminada' => 'Competencia eliminada correctamente.',
     'competencia_invalidada' => 'Completa todos los campos de la competencia y sus RAEs antes de guardar.',
     'competencia_codigo_duplicado' => 'No se permiten códigos RAE duplicados dentro de la misma competencia.',
+    'competencia_codigo_competencia_duplicado' => 'No se permiten códigos de competencia duplicados.',
     default => '',
 };
+$horasTotalesDisplay = $totalHorasCompetencias > 0
+    ? (string) $totalHorasCompetencias
+    : (string) ($meta['horas_total'] ?? '');
 ?>
 
 <section class="bg-app-bg flex flex-row items-start gap-2">
@@ -126,7 +140,7 @@ $toastMessage = match ($toastKey) {
         <div class="flex items-center justify-between gap-2 h-full">
             <div>
                 <p class="m-0 text-xs uppercase tracking-wide text-app-muted">Horas totales</p>
-                <p class="mt-2 text-1xl font-semibold text-app-text"><?= e((string) (($meta['horas_total'] ?? '') !== '' ? $meta['horas_total'] . 'h' : 'N/D')) ?></p>
+                <p class="mt-2 text-1xl font-semibold text-app-text"><?= e((string) ($horasTotalesDisplay !== '' ? $horasTotalesDisplay . 'h' : 'N/D')) ?></p>
             </div>
             <span class="inline-flex h-6 w-6 text-app-accent [&_svg]:h-6 [&_svg]:w-6"><?= ui_icon('clock') ?></span>
         </div>
@@ -174,14 +188,70 @@ $toastMessage = match ($toastKey) {
 <section class="<?= e(ui_card_classes()) ?> mb-6 mt-4 p-6">
     <div class="flex items-center justify-between gap-2">
         <h4 class="m-0 text-md font-semibold text-app-text">Competencias y Resultados de Aprendizaje</h4>
-        <form method="post" action="<?= e(APP_BASE_PATH) ?>/catalogo/programas/agregar-competencia">
-            <input type="hidden" name="programa_id" value="<?= (int) $programId ?>">
-            <button type="submit" class="<?= e(ui_button_small_classes()) ?> inline-flex items-center gap-2">
+        <a href="<?= e(APP_BASE_PATH) ?>/catalogo/programas/ver?id=<?= (int) $programId ?>&new_competencia=1" class="<?= e(ui_button_small_classes()) ?> inline-flex items-center gap-2">
                 <span class="inline-flex h-4 w-4 [&_svg]:h-4 [&_svg]:w-4"><?= ui_icon('plus') ?></span>
                 Nueva competencia
-            </button>
-        </form>
+        </a>
     </div>
+    <?php if ($newCompetenciaDraft): ?>
+        <article class="<?= e(ui_card_classes()) ?> mt-4 min-h-[96px] p-6 border-app-accent shadow-xsSoft">
+            <form method="post" action="<?= e(APP_BASE_PATH) ?>/catalogo/programas/agregar-competencia" data-new-competencia-form data-existing-competencia-codes="<?= e((string) json_encode($existingCompetenciaCodes, JSON_UNESCAPED_UNICODE)) ?>">
+                <input type="hidden" name="programa_id" value="<?= (int) $programId ?>">
+                <div class="mb-3 w-full grid grid-cols-10 gap-3">
+                    <label class="<?= e(ui_label_classes()) ?> col-span-10">Nombre competencia
+                        <input type="text" name="nombre" value="" class="<?= e(ui_input_classes()) ?>" autocomplete="new-password" autocorrect="off" autocapitalize="off" spellcheck="false">
+                    </label>
+                    <label class="<?= e(ui_label_classes()) ?> col-span-7">Código competencia
+                        <input type="text" name="codigo" value="" class="<?= e(ui_input_classes()) ?>" autocomplete="new-password" autocorrect="off" autocapitalize="off" spellcheck="false">
+                    </label>
+                    <label class="<?= e(ui_label_classes()) ?> col-span-3">Horas competencia
+                        <input type="number" min="0" name="horas" value="" class="<?= e(ui_input_classes()) ?>" autocomplete="new-password" autocorrect="off" autocapitalize="off" spellcheck="false">
+                    </label>
+                </div>
+                <div class="mt-3 border-t border-app-borderSoft pt-6 flex justify-end">
+                    <button type="button" class="<?= e(ui_button_small_classes()) ?> items-center justify-center gap-2" data-new-competencia-add-rae>
+                        <span class="inline-flex h-4 w-4 items-center justify-center [&_svg]:h-4 [&_svg]:w-4"><?= ui_icon('plus') ?></span>
+                        Nuevo RAE
+                    </button>
+                </div>
+                <div class="overflow-hidden">
+                    <table class="<?= e(ui_table_classes()) ?>">
+                        <thead>
+                        <tr>
+                            <th class="h-[50px] px-2 text-left text-sm font-semibold text-app-muted align-middle">Código RAE</th>
+                            <th class="h-[50px] px-2 text-left text-sm font-semibold text-app-muted align-middle">Resultado de aprendizaje</th>
+                            <th class="h-[50px] px-2 text-left text-sm font-semibold text-app-muted align-middle w-10">Acción</th>
+                        </tr>
+                        </thead>
+                        <tbody data-new-competencia-raes-body>
+                            <tr class="border-b border-app-borderSoft">
+                                <td class="<?= e(str_replace('border-b border-app-borderSoft ', '', ui_td_classes())) ?> w-32">
+                                    <input type="text" name="resultados[0][codigo]" value="" class="<?= e(ui_input_classes()) ?>" autocomplete="new-password" autocorrect="off" autocapitalize="off" spellcheck="false">
+                                </td>
+                                <td class="<?= e(str_replace('border-b border-app-borderSoft ', '', ui_td_classes())) ?>">
+                                    <input type="text" name="resultados[0][descripcion]" value="" class="<?= e(ui_input_classes()) ?>" autocomplete="new-password" autocorrect="off" autocapitalize="off" spellcheck="false">
+                                </td>
+                                <td class="<?= e(str_replace('border-b border-app-borderSoft ', '', ui_td_classes())) ?>">
+                                    <button type="button" class="<?= e(ui_button_icon_classes()) ?> border-rose-300 bg-rose-50 text-rose-700 hover:border-rose-400 hover:bg-rose-100 hover:text-rose-700" data-new-competencia-remove-rae aria-label="Eliminar RAE">
+                                        <span class="inline-flex h-4 w-4 [&_svg]:h-4 [&_svg]:w-4"><?= ui_icon('trash-2') ?></span>
+                                    </button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="mt-3 border-t border-app-borderSoft pt-3 flex items-center justify-end gap-2">
+                    <a href="<?= e(APP_BASE_PATH) ?>/catalogo/programas/ver?id=<?= (int) $programId ?>" class="<?= e(ui_button_small_classes()) ?> inline-flex items-center gap-2">
+                        <span class="inline-flex h-4 w-4 [&_svg]:h-4 [&_svg]:w-4"><?= ui_icon('x') ?></span>
+                        Cancelar
+                    </a>
+                    <button type="submit" class="<?= e(ui_button_icon_classes()) ?> border-green-600 bg-green-600 text-white hover:border-green-700 hover:bg-green-700 hover:text-white" aria-label="Guardar nueva competencia">
+                        <span class="inline-flex h-4 w-4 [&_svg]:h-4 [&_svg]:w-4"><?= ui_icon('check') ?></span>
+                    </button>
+                </div>
+            </form>
+        </article>
+    <?php endif; ?>
     <?php if ($competencias === []): ?>
         <div class="mt-6 rounded-md border border-app-border bg-app-panelSubtle p-4 text-sm text-app-muted">No se detectaron competencias automáticamente.</div>
     <?php else: ?>

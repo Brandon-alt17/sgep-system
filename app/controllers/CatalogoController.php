@@ -401,6 +401,9 @@ class CatalogoController
         if ($hasDuplicateCodigoRae) {
             redirect(APP_BASE_PATH . '/catalogo/programas/ver?id=' . $programaId . '&edit_competencia=' . $competenciaId . '&toast=competencia_codigo_duplicado');
         }
+        if (ProgramaContenido::existeCodigoCompetenciaEnPrograma($programaId, $codigo, $competenciaId)) {
+            redirect(APP_BASE_PATH . '/catalogo/programas/ver?id=' . $programaId . '&edit_competencia=' . $competenciaId . '&toast=competencia_codigo_competencia_duplicado');
+        }
         if ($codigo === '' || $nombre === '' || $horas === '' || $resultados === [] || $hasPartialResultado) {
             redirect(APP_BASE_PATH . '/catalogo/programas/ver?id=' . $programaId . '&edit_competencia=' . $competenciaId . '&toast=competencia_invalidada');
         }
@@ -453,8 +456,44 @@ class CatalogoController
         if ($programaId <= 0) {
             redirect(APP_BASE_PATH . '/catalogo/programas');
         }
+        $codigo = trim((string) ($_POST['codigo'] ?? ''));
+        $nombre = trim((string) ($_POST['nombre'] ?? ''));
+        $horas = trim((string) ($_POST['horas'] ?? ''));
+        $resultadosInput = (array) ($_POST['resultados'] ?? []);
+        $resultados = [];
+        $hasPartialResultado = false;
+        $hasDuplicateCodigoRae = false;
+        $seenRaeCodes = [];
+        foreach ($resultadosInput as $resultado) {
+            if (!is_array($resultado)) {
+                continue;
+            }
+            $raCodigo = trim((string) ($resultado['codigo'] ?? ''));
+            $raDescripcion = trim((string) ($resultado['descripcion'] ?? ''));
+            if ($raCodigo === '' && $raDescripcion === '') {
+                continue;
+            }
+            if ($raCodigo === '' || $raDescripcion === '') {
+                $hasPartialResultado = true;
+            }
+            $raCodigoKey = mb_strtolower($raCodigo);
+            if ($raCodigoKey !== '' && isset($seenRaeCodes[$raCodigoKey])) {
+                $hasDuplicateCodigoRae = true;
+            }
+            if ($raCodigoKey !== '') {
+                $seenRaeCodes[$raCodigoKey] = true;
+            }
+            $resultados[] = ['codigo' => $raCodigo, 'descripcion' => $raDescripcion];
+        }
+        if ($codigo === '' || $nombre === '' || $horas === '' || $resultados === [] || $hasPartialResultado || $hasDuplicateCodigoRae) {
+            $toast = $hasDuplicateCodigoRae ? 'competencia_codigo_duplicado' : 'competencia_invalidada';
+            redirect(APP_BASE_PATH . '/catalogo/programas/ver?id=' . $programaId . '&new_competencia=1&toast=' . $toast);
+        }
+        if (ProgramaContenido::existeCodigoCompetenciaEnPrograma($programaId, $codigo)) {
+            redirect(APP_BASE_PATH . '/catalogo/programas/ver?id=' . $programaId . '&new_competencia=1&toast=competencia_codigo_competencia_duplicado');
+        }
 
-        $competenciaId = ProgramaContenido::createCompetenciaVacia($programaId);
+        $competenciaId = ProgramaContenido::createCompetenciaConResultados($programaId, $codigo, $nombre, $resultados);
         $programa = Programa::findById($programaId) ?? [];
         $latestSummary = $this->latestSummaryDecoded($programaId);
         $meta = array_merge([
@@ -477,7 +516,7 @@ class CatalogoController
         });
         foreach ($competencias as $idx => $competencia) {
             if ((int) ($competencia['id'] ?? 0) === $competenciaId) {
-                $competencias[$idx]['horas'] = '';
+                $competencias[$idx]['horas'] = $horas;
                 break;
             }
         }
@@ -496,7 +535,7 @@ class CatalogoController
             ], JSON_UNESCAPED_UNICODE),
         ]);
 
-        redirect(APP_BASE_PATH . '/catalogo/programas/ver?id=' . $programaId . '&saved=1&edit_competencia=' . $competenciaId . '&toast=competencia_creada');
+        redirect(APP_BASE_PATH . '/catalogo/programas/ver?id=' . $programaId . '&saved=1&toast=competencia_creada');
     }
 
     public function eliminarProgramaCompetencia(): void
