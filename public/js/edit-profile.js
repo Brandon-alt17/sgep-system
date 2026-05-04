@@ -80,3 +80,19 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+
+function abrirModalVisitas() {
+    const modal = document.getElementById('modal-visitas');
+    if (!modal) return;
+
+    modal.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+}
+
+function cerrarModalVisitas() {
+    const modal = document.getElementById('modal-visitas');
+    if (!modal) return;
+
+    modal.classList.add('hidden');
+    document.body.style.overflow = '';
+}

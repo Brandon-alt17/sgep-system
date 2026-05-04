@@ -27,7 +27,7 @@ if (!function_exists('e')) {
             </div>
             <div>
                 <p class="text-3xl font-bold text-gray-800"><?= e((string)($totales['activos'] ?? 0)) ?></p>
-                <p class="text-gray-500 text-sm font-medium">Aprendices activos</p>
+                <p class="text-gray-500 text-sm font-medium">Aprendices en el sistema</p>
             </div>
         </div>
     </div>
@@ -41,7 +41,7 @@ if (!function_exists('e')) {
             </div>
             <div>
                 <p class="text-3xl font-bold text-gray-800"><?= e((string)($totales['por_certificar'] ?? 0)) ?></p>
-                <p class="text-gray-500 text-sm font-medium">Por certificar</p>
+                <p class="text-gray-500 text-sm font-medium">Aprendices por certificar</p>
             </div>
         </div>
     </div>
@@ -67,7 +67,7 @@ if (!function_exists('e')) {
             </div>
             <div>
                 <p class="text-3xl font-bold text-gray-800"><?= e((string)$enEjecucion) ?></p>
-                <p class="text-gray-500 text-sm font-medium">En ejecución</p>
+                <p class="text-gray-500 text-sm font-medium">Aprendices en ejecución</p>
             </div>
         </div>
     </div>
@@ -81,7 +81,7 @@ if (!function_exists('e')) {
             </div>
             <div>
                 <p class="text-3xl font-bold text-gray-800"><?= e((string)$pendienteIniciar) ?></p>
-                <p class="text-gray-500 text-sm font-medium">Pendiente por iniciar</p>
+                <p class="text-gray-500 text-sm font-medium">Aprendices pendientes por iniciar</p>
             </div>
         </div>
     </div>

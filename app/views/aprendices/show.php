@@ -1,4 +1,5 @@
 <?php include __DIR__ . '/modal-editar-perfil.php'; ?>
+<?php include __DIR__ . '/modal-agendar-visitas.php'; ?>
 <script src="<?= e(APP_BASE_PATH) ?>../public/js/edit-profile.js"></script>
 
 <?php partial('components/page_header', [
@@ -15,12 +16,20 @@
         class="mt-6 text-sm text-app-link hover:underline">
             ← Listado
         </a>
+        
+        <div>
+            <button type="button" onclick="abrirModalVisitas()"
+            class="items-center <?= e(ui_button_small_classes()) ?> gap-2">
+                <span class="w-4 h-4 [&_svg]:w-4 [&_svg]:h-4"><?= ui_icon('calendar') ?></span>
+                Programar visitas
+            </button>
 
-        <button type="button" onclick="abrirModalEditar()"
-        class="items-center <?= e(ui_button_small_classes()) ?> gap-2">
-            <span class="w-4 h-4 [&_svg]:w-4 [&_svg]:h-4"><?= ui_icon('user-round') ?></span>
-            Editar datos del aprendiz
-        </button>
+            <button type="button" onclick="abrirModalEditar()"
+            class="items-center <?= e(ui_button_small_classes()) ?> gap-2">
+                <span class="w-4 h-4 [&_svg]:w-4 [&_svg]:h-4"><?= ui_icon('user-round') ?></span>
+                Editar datos del aprendiz
+            </button>
+        </div>
     </div>
 
     <!-- 🧩 GRID PRINCIPAL -->
@@ -91,13 +100,11 @@
             <!-- 🏢 EMPRESA -->
             <section class="<?= e(ui_card_classes()) ?>">
                 <div class="flex mb-6">
-                    <h2 class="text-lg font-semibold flex items-center gap-2">
-                        <span class="flex items-center justify-center text-app-link w-[30px] h-[30px] [&_svg]:w-5 [&_svg]:h-5">
+                    <h2 class="flex items-center gap-2 text-lg font-semibold text-gray-900">
+                        <span class=" text-app-link [&_svg]:w-5 [&_svg]:h-5">
                             <?= ui_icon('building') ?>
                         </span>
-                        <h3 class="<?= e(ui_heading_sm_classes()) ?>">
-                            Empresa co-formadora
-                        </h3>
+                        Empresa co-formadora
                     </h2>
                 </div>
 
