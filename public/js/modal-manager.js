@@ -82,7 +82,60 @@ function resolveConflictRow(row, action) {
 }
 
 (function () {
+  var pendingConfirmTrigger = null;
+  var handleConfirmAction = function () {
+    var trigger = pendingConfirmTrigger;
+    pendingConfirmTrigger = null;
+    closeModal("confirm-action");
+    if (!trigger) return;
+
+    if (trigger instanceof HTMLButtonElement && trigger.type === "submit" && trigger.form) {
+      if (typeof trigger.form.requestSubmit === "function") {
+        trigger.form.requestSubmit(trigger);
+      } else {
+        trigger.form.submit();
+      }
+      return;
+    }
+
+    if (trigger instanceof HTMLAnchorElement && trigger.href) {
+      window.location.href = trigger.href;
+      return;
+    }
+
+    trigger.click();
+  };
+
   document.addEventListener("click", function (event) {
+    var confirmTarget = event.target.closest("[data-confirm-modal]");
+    if (confirmTarget) {
+      event.preventDefault();
+      pendingConfirmTrigger = confirmTarget;
+      var modal = document.getElementById("modal-confirm-action");
+      if (!modal) return;
+      var titleNode = modal.querySelector("[data-confirm-title]");
+      var messageNode = modal.querySelector("[data-confirm-message]");
+      if (titleNode) titleNode.textContent = confirmTarget.getAttribute("data-confirm-title") || "Confirmar acción";
+      if (messageNode) messageNode.textContent = confirmTarget.getAttribute("data-confirm-message") || "¿Deseas continuar?";
+      openModal("confirm-action");
+      return;
+    }
+
+    var confirmAccept = event.target.closest("[data-confirm-accept]");
+    if (confirmAccept) {
+      event.preventDefault();
+      handleConfirmAction();
+      return;
+    }
+
+    var confirmCancel = event.target.closest("[data-confirm-cancel]");
+    if (confirmCancel) {
+      event.preventDefault();
+      pendingConfirmTrigger = null;
+      closeModal("confirm-action");
+      return;
+    }
+
     var openTarget = event.target.closest("[data-modal-open]");
     if (openTarget) {
       openModal(openTarget.getAttribute("data-modal-open"));
@@ -122,6 +175,9 @@ function resolveConflictRow(row, action) {
 
     var overlay = event.target.closest("[data-modal-overlay]");
     if (overlay && event.target === overlay) {
+      if (overlay.getAttribute("data-modal-overlay") === "confirm-action") {
+        pendingConfirmTrigger = null;
+      }
       closeModal(overlay.getAttribute("data-modal-overlay"));
     }
   });
@@ -132,6 +188,9 @@ function resolveConflictRow(row, action) {
     if (!openModals.length) return;
     var topModal = openModals[openModals.length - 1];
     var id = topModal.id.replace("modal-", "");
+    if (id === "confirm-action") {
+      pendingConfirmTrigger = null;
+    }
     closeModal(id);
   });
 })();

@@ -8,6 +8,27 @@ use App\Helpers\Database;
 
 class ProgramaContenido
 {
+    public static function existeCodigoCompetenciaEnPrograma(int $programaId, string $codigo, int $excludeCompetenciaId = 0): bool
+    {
+        $codigo = trim($codigo);
+        if ($codigo === '') {
+            return false;
+        }
+        $sql = 'SELECT COUNT(*) AS total
+                FROM programa_competencias
+                WHERE programa_id = :programa_id
+                  AND LOWER(TRIM(codigo)) = LOWER(TRIM(:codigo))
+                  AND (:exclude_id = 0 OR id <> :exclude_id)';
+        $stmt = Database::connection()->prepare($sql);
+        $stmt->execute([
+            'programa_id' => $programaId,
+            'codigo' => $codigo,
+            'exclude_id' => $excludeCompetenciaId,
+        ]);
+        $row = $stmt->fetch();
+        return ((int) ($row['total'] ?? 0)) > 0;
+    }
+
     /** @return array<int,array<string,mixed>> */
     public static function competenciasConResultados(int $programaId): array
     {
@@ -85,5 +106,144 @@ class ProgramaContenido
             $pdo->rollBack();
             throw $e;
         }
+    }
+
+    /** @param array<int,array<string,string>> $resultados */
+    public static function updateCompetenciaConResultados(int $programaId, int $competenciaId, string $codigo, string $nombre, array $resultados): void
+    {
+        $pdo = Database::connection();
+        $pdo->beginTransaction();
+        try {
+            $pdo->prepare(
+                'UPDATE programa_competencias
+                 SET codigo = :codigo, nombre = :nombre, updated_at = NOW()
+                 WHERE id = :id AND programa_id = :programa_id'
+            )->execute([
+                'codigo' => trim($codigo),
+                'nombre' => trim($nombre),
+                'id' => $competenciaId,
+                'programa_id' => $programaId,
+            ]);
+
+            $pdo->prepare(
+                'DELETE FROM programa_resultados_aprendizaje
+                 WHERE competencia_id = :competencia_id AND programa_id = :programa_id'
+            )->execute([
+                'competencia_id' => $competenciaId,
+                'programa_id' => $programaId,
+            ]);
+
+            $insertStmt = $pdo->prepare(
+                'INSERT INTO programa_resultados_aprendizaje
+                 (programa_id, competencia_id, codigo, descripcion, orden, created_at, updated_at)
+                 VALUES
+                 (:programa_id, :competencia_id, :codigo, :descripcion, :orden, NOW(), NOW())'
+            );
+            foreach ($resultados as $idx => $resultado) {
+                $insertStmt->execute([
+                    'programa_id' => $programaId,
+                    'competencia_id' => $competenciaId,
+                    'codigo' => trim((string) ($resultado['codigo'] ?? '')),
+                    'descripcion' => trim((string) ($resultado['descripcion'] ?? '')),
+                    'orden' => $idx + 1,
+                ]);
+            }
+
+            $pdo->commit();
+        } catch (\Throwable $e) {
+            $pdo->rollBack();
+            throw $e;
+        }
+    }
+
+    public static function createCompetenciaVacia(int $programaId): int
+    {
+        $pdo = Database::connection();
+        $pdo->beginTransaction();
+        try {
+            $pdo->prepare(
+                'UPDATE programa_competencias
+                 SET orden = orden + 1, updated_at = NOW()
+                 WHERE programa_id = :programa_id'
+            )->execute(['programa_id' => $programaId]);
+
+            $insertStmt = $pdo->prepare(
+                'INSERT INTO programa_competencias (programa_id, codigo, nombre, orden, created_at, updated_at)
+                 VALUES (:programa_id, :codigo, :nombre, :orden, NOW(), NOW())'
+            );
+            $insertStmt->execute([
+                'programa_id' => $programaId,
+                'codigo' => '',
+                'nombre' => '',
+                'orden' => 1,
+            ]);
+
+            $id = (int) $pdo->lastInsertId();
+            $pdo->commit();
+            return $id;
+        } catch (\Throwable $e) {
+            $pdo->rollBack();
+            throw $e;
+        }
+    }
+
+    /** @param array<int,array<string,string>> $resultados */
+    public static function createCompetenciaConResultados(int $programaId, string $codigo, string $nombre, array $resultados): int
+    {
+        $pdo = Database::connection();
+        $pdo->beginTransaction();
+        try {
+            $pdo->prepare(
+                'UPDATE programa_competencias
+                 SET orden = orden + 1, updated_at = NOW()
+                 WHERE programa_id = :programa_id'
+            )->execute(['programa_id' => $programaId]);
+
+            $insertCompetencia = $pdo->prepare(
+                'INSERT INTO programa_competencias (programa_id, codigo, nombre, orden, created_at, updated_at)
+                 VALUES (:programa_id, :codigo, :nombre, :orden, NOW(), NOW())'
+            );
+            $insertCompetencia->execute([
+                'programa_id' => $programaId,
+                'codigo' => trim($codigo),
+                'nombre' => trim($nombre),
+                'orden' => 1,
+            ]);
+
+            $competenciaId = (int) $pdo->lastInsertId();
+            $insertResultado = $pdo->prepare(
+                'INSERT INTO programa_resultados_aprendizaje
+                 (programa_id, competencia_id, codigo, descripcion, orden, created_at, updated_at)
+                 VALUES
+                 (:programa_id, :competencia_id, :codigo, :descripcion, :orden, NOW(), NOW())'
+            );
+            foreach ($resultados as $idx => $resultado) {
+                $insertResultado->execute([
+                    'programa_id' => $programaId,
+                    'competencia_id' => $competenciaId,
+                    'codigo' => trim((string) ($resultado['codigo'] ?? '')),
+                    'descripcion' => trim((string) ($resultado['descripcion'] ?? '')),
+                    'orden' => $idx + 1,
+                ]);
+            }
+
+            $pdo->commit();
+            return $competenciaId;
+        } catch (\Throwable $e) {
+            $pdo->rollBack();
+            throw $e;
+        }
+    }
+
+    public static function deleteCompetencia(int $programaId, int $competenciaId): void
+    {
+        $stmt = Database::connection()->prepare(
+            'DELETE FROM programa_competencias
+             WHERE id = :id AND programa_id = :programa_id'
+        );
+        $stmt->execute([
+            'id' => $competenciaId,
+            'programa_id' => $programaId,
+        ]);
     }
 }

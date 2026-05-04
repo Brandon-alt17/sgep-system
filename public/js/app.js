@@ -8,6 +8,59 @@ document.querySelectorAll("[data-max]").forEach(function (element) {
   });
 });
 
+// Toast global reutilizable (cuando existe data-toast-root en la vista).
+var showGlobalToast = function (message) {
+  var toastRoot = document.querySelector("[data-toast-root]");
+  var toast = toastRoot ? toastRoot.querySelector("[data-toast]") : null;
+  if (!toast) return;
+  var textNode = toast.querySelector("p");
+  if (textNode) textNode.textContent = message;
+  toast.classList.add("sg-toast-visible");
+  window.clearTimeout(toast.__hideTimer);
+  toast.__hideTimer = window.setTimeout(function () {
+    toast.classList.remove("sg-toast-visible");
+  }, 3200);
+};
+
+// Desactiva sugerencias/autorrelleno del navegador en inputs de texto.
+document.querySelectorAll("form").forEach(function (form) {
+  if (!(form instanceof HTMLElement)) return;
+  form.setAttribute("autocomplete", "off");
+});
+
+document.querySelectorAll("input, textarea").forEach(function (field) {
+  if (!(field instanceof HTMLElement)) return;
+  var tag = field.tagName.toLowerCase();
+  if (tag === "textarea") {
+    field.setAttribute("autocomplete", "new-password");
+    field.setAttribute("autocorrect", "off");
+    field.setAttribute("autocapitalize", "off");
+    field.setAttribute("spellcheck", "false");
+    return;
+  }
+
+  var input = field;
+  var type = ((input.getAttribute("type") || "text") + "").toLowerCase();
+  var skipTypes = ["hidden", "checkbox", "radio", "file", "submit", "button", "reset", "color", "range"];
+  if (skipTypes.indexOf(type) !== -1) return;
+
+  // "off" suele ser ignorado por algunos navegadores para historial de campos;
+  // "new-password" reduce mucho las sugerencias de autocompletado.
+  input.setAttribute("autocomplete", "new-password");
+  input.setAttribute("autocorrect", "off");
+  input.setAttribute("autocapitalize", "off");
+  input.setAttribute("spellcheck", "false");
+  input.setAttribute("data-lpignore", "true");
+  var typeForReadonly = ((input.getAttribute("type") || "text") + "").toLowerCase();
+  if (["text", "search", "number", "email", "url", "tel"].indexOf(typeForReadonly) !== -1) {
+    input.readOnly = true;
+    input.addEventListener("focus", function onFocusUnlock() {
+      input.readOnly = false;
+      input.removeEventListener("focus", onFocusUnlock);
+    });
+  }
+});
+
 // Buscador local reusable: filtra items en vivo y permite limpiar con X.
 document.querySelectorAll("[data-live-filter-root]").forEach(function (root) {
   var input = root.querySelector("[data-live-filter-input]");
@@ -230,6 +283,8 @@ document.querySelectorAll("[data-auto-filter-form]").forEach(function (filterFor
   var activeController = null;
   var useAjax = filterForm.getAttribute("data-auto-filter-ajax") === "true";
   var targetSelector = filterForm.getAttribute("data-auto-filter-target") || "";
+  var mainInput = filterForm.querySelector("[data-auto-filter-main-input]");
+  var clearButton = filterForm.querySelector("[data-auto-filter-clear]");
 
   var runClassicSubmit = function () {
     if (typeof filterForm.requestSubmit === "function") {
@@ -300,16 +355,32 @@ document.querySelectorAll("[data-auto-filter-form]").forEach(function (filterFor
     runClassicSubmit();
   };
 
+  var refreshClearButtonState = function () {
+    if (!mainInput || !clearButton) return;
+    clearButton.classList.toggle("hidden", (mainInput.value || "").trim() === "");
+  };
+
   filterForm.querySelectorAll("[data-auto-filter-change]").forEach(function (field) {
     field.addEventListener("change", submitForm);
   });
 
   filterForm.querySelectorAll("[data-auto-filter-input]").forEach(function (field) {
     field.addEventListener("input", function () {
+      refreshClearButtonState();
       if (debounceTimer) window.clearTimeout(debounceTimer);
       debounceTimer = window.setTimeout(submitForm, 350);
     });
   });
+
+  if (clearButton && mainInput) {
+    clearButton.addEventListener("click", function () {
+      mainInput.value = "";
+      refreshClearButtonState();
+      submitForm();
+      mainInput.focus();
+    });
+    refreshClearButtonState();
+  }
 });
 
 // Selects: anima chevron al enfocar/abrir.
@@ -486,4 +557,504 @@ document.querySelectorAll(".js-custom-select").forEach(function (wrapper) {
   menu.appendChild(list);
   wrapper.appendChild(trigger);
   wrapper.appendChild(menu);
+});
+
+// Editor de programas: permite agregar/eliminar competencias y RAEs.
+document.querySelectorAll("[data-programa-editor]").forEach(function (form) {
+  var competenciasContainer = form.querySelector("[data-competencias-container]");
+  var addCompetenciaButton = form.querySelector("[data-add-competencia]");
+  var horasLectivaInput = form.querySelector("[data-programa-horas-lectiva]");
+  var horasProductivaInput = form.querySelector("[data-programa-horas-productiva]");
+  var horasTotalInput = form.querySelector("[data-programa-horas-total-input]");
+  var totalCompetenciasEl = document.querySelector("[data-programa-total-competencias]");
+  var totalRaesEl = document.querySelector("[data-programa-total-raes]");
+  var totalHorasEl = document.querySelector("[data-programa-total-horas]");
+  if (!competenciasContainer || !addCompetenciaButton) return;
+
+  var buildRaeNode = function () {
+    var row = document.createElement("div");
+    row.className = "grid gap-2 md:grid-cols-[160px_1fr_auto]";
+    row.setAttribute("data-rae-item", "");
+    row.innerHTML = '' +
+      '<input type="text" class="w-full rounded-lg border border-app-borderControlStrong bg-white px-3 py-2 text-sm text-app-muted outline-none transition-colors duration-200 focus:border-app-accent focus:ring-2 focus:ring-app-accentSoft hover:border-app-accent" placeholder="Código RAE" data-field="rae-codigo">' +
+      '<input type="text" class="w-full rounded-lg border border-app-borderControlStrong bg-white px-3 py-2 text-sm text-app-muted outline-none transition-colors duration-200 focus:border-app-accent focus:ring-2 focus:ring-app-accentSoft hover:border-app-accent" placeholder="Descripción del RAE" data-field="rae-descripcion">' +
+      '<button type="button" class="inline-flex h-8 min-w-8 items-center justify-center rounded-md border border-app-border text-sm text-app-muted hover:border-app-accent hover:text-app-text transition-colors duration-200 ease-in-out" data-remove-rae aria-label="Eliminar RAE">&times;</button>';
+    return row;
+  };
+
+  var buildCompetenciaNode = function () {
+    var article = document.createElement("article");
+    article.className = "rounded-xl border border-app-border bg-app-panel p-4 shadow-xsSoft bg-app-panelSubtle";
+    article.setAttribute("data-competencia-item", "");
+    article.innerHTML = '' +
+      '<div class="grid gap-3 md:grid-cols-2">' +
+      '  <label class="text-sm font-medium text-app-text">Código competencia' +
+      '    <input type="text" class="w-full rounded-lg border border-app-borderControlStrong bg-white px-3 py-2 text-sm text-app-muted outline-none transition-colors duration-200 focus:border-app-accent focus:ring-2 focus:ring-app-accentSoft hover:border-app-accent" data-field="competencia-codigo">' +
+      '  </label>' +
+      '  <label class="text-sm font-medium text-app-text">Nombre competencia' +
+      '    <input type="text" class="w-full rounded-lg border border-app-borderControlStrong bg-white px-3 py-2 text-sm text-app-muted outline-none transition-colors duration-200 focus:border-app-accent focus:ring-2 focus:ring-app-accentSoft hover:border-app-accent" data-field="competencia-nombre">' +
+      '  </label>' +
+      '</div>' +
+      '<div class="mt-4 space-y-2" data-raes-container></div>' +
+      '<div class="mt-4 flex gap-2">' +
+      '  <button type="button" class="inline-flex h-8 min-w-8 items-center justify-center rounded-md border border-app-border text-sm text-app-muted hover:border-app-accent hover:text-app-text transition-colors duration-200 ease-in-out px-3" data-add-rae>Nuevo RAE</button>' +
+      '  <button type="button" class="inline-flex h-8 min-w-8 items-center justify-center rounded-md border border-app-border text-sm text-app-muted hover:border-app-accent hover:text-app-text transition-colors duration-200 ease-in-out px-3" data-remove-competencia>Eliminar competencia</button>' +
+      '</div>';
+    article.querySelector("[data-raes-container]").appendChild(buildRaeNode());
+    return article;
+  };
+
+  var updateHours = function () {
+    var lectiva = parseInt((horasLectivaInput && horasLectivaInput.value) || "0", 10);
+    var productiva = parseInt((horasProductivaInput && horasProductivaInput.value) || "0", 10);
+    if (isNaN(lectiva)) lectiva = 0;
+    if (isNaN(productiva)) productiva = 0;
+    var total = lectiva + productiva;
+    var totalText = total > 0 ? String(total) : "N/D";
+    if (horasTotalInput) horasTotalInput.value = totalText;
+    if (totalHorasEl) totalHorasEl.textContent = total > 0 ? totalText + "h" : "N/D";
+  };
+
+  var refreshCounters = function () {
+    var competencias = Array.prototype.slice.call(competenciasContainer.querySelectorAll("[data-competencia-item]"));
+    var totalCompetencias = competencias.length;
+    var totalRaes = 0;
+    competencias.forEach(function (competenciaNode, compIndex) {
+      var codigoInput = competenciaNode.querySelector("[data-field='competencia-codigo']");
+      var nombreInput = competenciaNode.querySelector("[data-field='competencia-nombre']");
+      if (codigoInput) codigoInput.name = "competencias[" + compIndex + "][codigo]";
+      if (nombreInput) nombreInput.name = "competencias[" + compIndex + "][nombre]";
+
+      var raes = Array.prototype.slice.call(competenciaNode.querySelectorAll("[data-rae-item]"));
+      raes.forEach(function (raeNode, raeIndex) {
+        var raeCodigo = raeNode.querySelector("[data-field='rae-codigo']");
+        var raeDescripcion = raeNode.querySelector("[data-field='rae-descripcion']");
+        if (raeCodigo) raeCodigo.name = "competencias[" + compIndex + "][resultados][" + raeIndex + "][codigo]";
+        if (raeDescripcion) raeDescripcion.name = "competencias[" + compIndex + "][resultados][" + raeIndex + "][descripcion]";
+      });
+      totalRaes += raes.length;
+    });
+
+    if (totalCompetenciasEl) totalCompetenciasEl.textContent = String(totalCompetencias);
+    if (totalRaesEl) totalRaesEl.textContent = String(totalRaes);
+  };
+
+  if (horasLectivaInput) horasLectivaInput.addEventListener("input", updateHours);
+  if (horasProductivaInput) horasProductivaInput.addEventListener("input", updateHours);
+
+  addCompetenciaButton.addEventListener("click", function () {
+    competenciasContainer.appendChild(buildCompetenciaNode());
+    refreshCounters();
+  });
+
+  competenciasContainer.addEventListener("click", function (event) {
+    var target = event.target;
+    if (!(target instanceof HTMLElement)) return;
+
+    var addRaeButton = target.closest("[data-add-rae]");
+    if (addRaeButton) {
+      var competencia = addRaeButton.closest("[data-competencia-item]");
+      if (!competencia) return;
+      var raesContainer = competencia.querySelector("[data-raes-container]");
+      if (!raesContainer) return;
+      raesContainer.appendChild(buildRaeNode());
+      refreshCounters();
+      return;
+    }
+
+    var removeRaeButton = target.closest("[data-remove-rae]");
+    if (removeRaeButton) {
+      var raeNode = removeRaeButton.closest("[data-rae-item]");
+      if (!raeNode) return;
+      var parentContainer = raeNode.parentElement;
+      raeNode.remove();
+      if (parentContainer && parentContainer.querySelectorAll("[data-rae-item]").length === 0) {
+        parentContainer.appendChild(buildRaeNode());
+      }
+      refreshCounters();
+      return;
+    }
+
+    var removeCompetenciaButton = target.closest("[data-remove-competencia]");
+    if (removeCompetenciaButton) {
+      var compNode = removeCompetenciaButton.closest("[data-competencia-item]");
+      if (!compNode) return;
+      compNode.remove();
+      if (competenciasContainer.querySelectorAll("[data-competencia-item]").length === 0) {
+        competenciasContainer.appendChild(buildCompetenciaNode());
+      }
+      refreshCounters();
+    }
+  });
+
+  if (competenciasContainer.querySelectorAll("[data-competencia-item]").length === 0) {
+    competenciasContainer.appendChild(buildCompetenciaNode());
+  }
+
+  updateHours();
+  refreshCounters();
+});
+
+// Edicion puntual en vista "ver programa" (pencil -> check/x).
+document.querySelectorAll("[data-inline-edit-root]").forEach(function (root) {
+  var openButton = root.querySelector("[data-inline-edit-open]");
+  var saveButton = root.querySelector("[data-inline-edit-save]");
+  var cancelButton = root.querySelector("[data-inline-edit-cancel]");
+  var inputs = Array.prototype.slice.call(root.querySelectorAll("[data-inline-input]"));
+  var form = root.querySelector("[data-inline-edit-form]");
+  var viewBlock = root.querySelector("[data-inline-view]");
+  var headerBlocks = Array.prototype.slice.call(root.querySelectorAll("[data-inline-header]"));
+  if (!openButton || !cancelButton || !saveButton || inputs.length === 0 || !form) return;
+
+  var originalValues = {};
+  var isEditing = false;
+  var isCompetenciaEdit = !!form.querySelector("input[name='competencia_id']");
+  var originalRaeRowsHtml = null;
+  var originalCompetenciaSnapshot = "";
+  var showToast = function (message) {
+    var toastRoot = document.querySelector("[data-toast-root]");
+    var toast = toastRoot ? toastRoot.querySelector("[data-toast]") : null;
+    if (!toast) return;
+    var textNode = toast.querySelector("p");
+    if (textNode) textNode.textContent = message;
+    toast.classList.add("sg-toast-visible");
+    window.clearTimeout(toast.__hideTimer);
+    toast.__hideTimer = window.setTimeout(function () {
+      toast.classList.remove("sg-toast-visible");
+    }, 3200);
+  };
+
+  var refreshInlineRaeNames = function () {
+    var rows = Array.prototype.slice.call(form.querySelectorAll("[data-inline-raes-body] tr"));
+    rows.forEach(function (row, rowIndex) {
+      var codigoInput = row.querySelector("input[name*='[codigo]']");
+      var descripcionInput = row.querySelector("input[name*='[descripcion]']");
+      if (codigoInput) codigoInput.name = "resultados[" + rowIndex + "][codigo]";
+      if (descripcionInput) descripcionInput.name = "resultados[" + rowIndex + "][descripcion]";
+    });
+  };
+
+  var competenciaSnapshot = function () {
+    var trackedInputs = Array.prototype.slice.call(form.querySelectorAll("[data-inline-input]"));
+    var parts = trackedInputs.map(function (input) {
+      var name = input.name || "";
+      var value = (input.value || "").trim();
+      return name + "=" + value;
+    });
+    return parts.join("|");
+  };
+
+  var setEditingState = function (editing) {
+    isEditing = editing;
+    if (viewBlock) viewBlock.classList.toggle("hidden", editing);
+    headerBlocks.forEach(function (headerBlock) {
+      headerBlock.classList.toggle("hidden", editing);
+    });
+    form.classList.toggle("hidden", !editing);
+    openButton.classList.toggle("hidden", editing);
+    saveButton.classList.toggle("hidden", !editing);
+    cancelButton.classList.toggle("hidden", !editing);
+    if (isCompetenciaEdit) {
+      root.classList.toggle("sg-inline-editing-competencia", editing);
+      if (editing) {
+        root.style.borderColor = "rgb(10 139 129 / 1)";
+        root.style.boxShadow = "0 0 0 2px rgb(232 253 251 / 1), 0 1px 2px rgba(16, 24, 40, 0.06)";
+      } else {
+        root.style.borderColor = "";
+        root.style.boxShadow = "";
+      }
+    }
+  };
+
+  openButton.addEventListener("click", function () {
+    document.querySelectorAll("[data-inline-edit-root].is-editing").forEach(function (otherRoot) {
+      if (otherRoot === root) return;
+      var otherCancel = otherRoot.querySelector("[data-inline-edit-cancel]");
+      if (otherCancel) otherCancel.click();
+    });
+
+    root.classList.add("is-editing");
+    var raesBody = form.querySelector("[data-inline-raes-body]");
+    originalRaeRowsHtml = raesBody ? raesBody.innerHTML : null;
+    refreshInlineRaeNames();
+    inputs.forEach(function (input) {
+      originalValues[input.name] = input.value;
+    });
+    originalCompetenciaSnapshot = competenciaSnapshot();
+
+    setEditingState(true);
+  });
+
+  cancelButton.addEventListener("click", function () {
+    if (isEditing) {
+      inputs.forEach(function (input) {
+        if (Object.prototype.hasOwnProperty.call(originalValues, input.name)) {
+          input.value = originalValues[input.name];
+        }
+      });
+    }
+    root.classList.remove("is-editing");
+    var raesBody = form.querySelector("[data-inline-raes-body]");
+    if (raesBody && originalRaeRowsHtml !== null) {
+      raesBody.innerHTML = originalRaeRowsHtml;
+    }
+    refreshInlineRaeNames();
+    setEditingState(false);
+  });
+
+  var addRaeButton = form.querySelector("[data-inline-add-rae]");
+  if (addRaeButton) {
+    addRaeButton.addEventListener("click", function () {
+      var tbody = form.querySelector("[data-inline-raes-body]");
+      if (!tbody) return;
+      var nextIndex = tbody.querySelectorAll("tr").length;
+      var row = document.createElement("tr");
+      row.className = "border-b border-app-borderSoft";
+      row.setAttribute("data-inline-new-rae", "1");
+      row.innerHTML = '' +
+        '<td class="px-2 py-3 align-top w-32">' +
+        '<input type="text" name="resultados[' + nextIndex + '][codigo]" value="" class="w-full rounded-lg border border-app-borderControlStrong bg-white px-3 py-2 text-sm text-app-muted outline-none transition-colors duration-200 hover:border-app-accent focus:border-app-accent focus:ring-2 focus:ring-app-accentSoft" data-inline-input>' +
+        '</td>' +
+        '<td class="px-2 py-3 align-top">' +
+        '<input type="text" name="resultados[' + nextIndex + '][descripcion]" value="" class="w-full rounded-lg border border-app-borderControlStrong bg-white px-3 py-2 text-sm text-app-muted outline-none transition-colors duration-200 hover:border-app-accent focus:border-app-accent focus:ring-2 focus:ring-app-accentSoft" data-inline-input>' +
+        '</td>' +
+        '<td class="px-2 py-3 align-top">' +
+        '<button type="button" class="font-app inline-flex h-10 w-10 items-center justify-center rounded-md border border-rose-300 bg-rose-50 text-rose-700 no-underline transition-colors duration-200 hover:border-rose-400 hover:bg-rose-100 hover:text-rose-700" data-inline-remove-rae aria-label="Eliminar RAE">' +
+        '<span class="inline-flex h-4 w-4 [&_svg]:h-4 [&_svg]:w-4"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path><path d="M3 6h18"></path><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></span>' +
+        '</button>' +
+        '</td>';
+      tbody.appendChild(row);
+      refreshInlineRaeNames();
+      var firstInput = row.querySelector("input");
+      if (firstInput) firstInput.focus();
+    });
+  }
+
+  form.addEventListener("click", function (event) {
+    var target = event.target;
+    if (!(target instanceof Element)) return;
+    var removeButton = target.closest("[data-inline-remove-rae]");
+    if (!removeButton) return;
+
+    var row = removeButton.closest("tr");
+    var tbody = form.querySelector("[data-inline-raes-body]");
+    if (!row || !tbody) return;
+
+    var rows = tbody.querySelectorAll("tr");
+    if (rows.length <= 1) {
+      var codigoInput = row.querySelector("input[name*='[codigo]']");
+      var descripcionInput = row.querySelector("input[name*='[descripcion]']");
+      if (codigoInput) codigoInput.value = "";
+      if (descripcionInput) descripcionInput.value = "";
+    } else {
+      row.remove();
+      refreshInlineRaeNames();
+    }
+  });
+
+  form.addEventListener("submit", function (event) {
+    var competenciaIdField = form.querySelector("input[name='competencia_id']");
+    if (!competenciaIdField) return;
+    var submitter = event.submitter;
+    if (submitter && submitter.hasAttribute("formaction") && (submitter.getAttribute("formaction") || "").indexOf("/catalogo/programas/eliminar-competencia") !== -1) {
+      return;
+    }
+
+    var nombreInput = form.querySelector("input[name='nombre']");
+    var codigoInput = form.querySelector("input[name='codigo']");
+    var horasInput = form.querySelector("input[name='horas']");
+    var nombre = nombreInput ? (nombreInput.value || "").trim() : "";
+    var codigo = codigoInput ? (codigoInput.value || "").trim() : "";
+    var horas = horasInput ? (horasInput.value || "").trim() : "";
+
+    if (nombre === "" || codigo === "" || horas === "") {
+      event.preventDefault();
+      showToast("Completa nombre, código y horas de la competencia.");
+      return;
+    }
+
+    var rows = Array.prototype.slice.call(form.querySelectorAll("[data-inline-raes-body] tr"));
+    if (rows.length === 0) {
+      event.preventDefault();
+      showToast("Agrega al menos un RAE.");
+      return;
+    }
+
+    var hasInvalidRae = rows.some(function (row) {
+      var codigoRaeInput = row.querySelector("input[name*='[codigo]']");
+      var descripcionRaeInput = row.querySelector("input[name*='[descripcion]']");
+      var codigoRae = codigoRaeInput ? (codigoRaeInput.value || "").trim() : "";
+      var descripcionRae = descripcionRaeInput ? (descripcionRaeInput.value || "").trim() : "";
+      return codigoRae === "" || descripcionRae === "";
+    });
+    if (hasInvalidRae) {
+      event.preventDefault();
+      showToast("Completa código y descripción en todos los RAEs.");
+      return;
+    }
+
+    var seenCodes = {};
+    var hasDuplicateCodes = rows.some(function (row) {
+      var codigoRaeInput = row.querySelector("input[name*='[codigo]']");
+      var codigoRae = codigoRaeInput ? (codigoRaeInput.value || "").trim().toLowerCase() : "";
+      if (codigoRae === "") return false;
+      if (seenCodes[codigoRae]) return true;
+      seenCodes[codigoRae] = true;
+      return false;
+    });
+    if (hasDuplicateCodes) {
+      event.preventDefault();
+      showToast("No se permiten códigos RAE duplicados.");
+      return;
+    }
+
+    if (competenciaSnapshot() === originalCompetenciaSnapshot) {
+      event.preventDefault();
+      showToast("No hay cambios para guardar en esta competencia.");
+    }
+  });
+
+  setEditingState(false);
+
+  if (root.getAttribute("data-inline-auto-open") === "1") {
+    openButton.click();
+  }
+});
+
+// Toast de servidor: animación de entrada/salida + limpieza de query params.
+document.querySelectorAll("[data-toast-root] [data-toast]").forEach(function (toast) {
+  var message = (toast.getAttribute("data-toast-message") || "").trim();
+  if (message === "") return;
+  var textNode = toast.querySelector("p");
+  if (textNode) textNode.textContent = message;
+  window.requestAnimationFrame(function () {
+    toast.classList.add("sg-toast-visible");
+  });
+  window.setTimeout(function () {
+    toast.classList.remove("sg-toast-visible");
+  }, 3200);
+
+  if (window.history && typeof window.history.replaceState === "function") {
+    try {
+      var cleanUrl = new URL(window.location.href);
+      cleanUrl.searchParams.delete("toast");
+      cleanUrl.searchParams.delete("saved");
+      cleanUrl.searchParams.delete("edit_competencia");
+      window.history.replaceState(null, "", cleanUrl.pathname + cleanUrl.search + cleanUrl.hash);
+    } catch (e) {
+      // no-op
+    }
+  }
+});
+
+// Nueva competencia (borrador): RAEs dinámicos sin persistir hasta guardar.
+document.querySelectorAll("[data-new-competencia-form]").forEach(function (form) {
+  var tbody = form.querySelector("[data-new-competencia-raes-body]");
+  var addButton = form.querySelector("[data-new-competencia-add-rae]");
+  if (!tbody || !addButton) return;
+
+  var refreshNames = function () {
+    Array.prototype.slice.call(tbody.querySelectorAll("tr")).forEach(function (row, idx) {
+      var codigoInput = row.querySelector("input[name*='[codigo]']");
+      var descripcionInput = row.querySelector("input[name*='[descripcion]']");
+      if (codigoInput) codigoInput.name = "resultados[" + idx + "][codigo]";
+      if (descripcionInput) descripcionInput.name = "resultados[" + idx + "][descripcion]";
+    });
+  };
+  var existingCodes = [];
+  try {
+    existingCodes = JSON.parse(form.getAttribute("data-existing-competencia-codes") || "[]");
+  } catch (e) {
+    existingCodes = [];
+  }
+
+  addButton.addEventListener("click", function () {
+    var idx = tbody.querySelectorAll("tr").length;
+    var row = document.createElement("tr");
+    row.className = "border-b border-app-borderSoft";
+    row.innerHTML = '' +
+      '<td class="px-2 py-3 align-top w-32"><input type="text" name="resultados[' + idx + '][codigo]" value="" autocomplete="new-password" autocorrect="off" autocapitalize="off" spellcheck="false" class="w-full rounded-lg border border-app-borderControlStrong bg-white px-3 py-2 text-sm text-app-muted outline-none transition-colors duration-200 hover:border-app-accent focus:border-app-accent focus:ring-2 focus:ring-app-accentSoft"></td>' +
+      '<td class="px-2 py-3 align-top"><input type="text" name="resultados[' + idx + '][descripcion]" value="" autocomplete="new-password" autocorrect="off" autocapitalize="off" spellcheck="false" class="w-full rounded-lg border border-app-borderControlStrong bg-white px-3 py-2 text-sm text-app-muted outline-none transition-colors duration-200 hover:border-app-accent focus:border-app-accent focus:ring-2 focus:ring-app-accentSoft"></td>' +
+      '<td class="px-2 py-3 align-top"><button type="button" class="font-app inline-flex h-10 w-10 items-center justify-center rounded-md border border-rose-300 bg-rose-50 text-rose-700 no-underline transition-colors duration-200 hover:border-rose-400 hover:bg-rose-100 hover:text-rose-700" data-new-competencia-remove-rae aria-label="Eliminar RAE"><span class="inline-flex h-4 w-4 [&_svg]:h-4 [&_svg]:w-4"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path><path d="M3 6h18"></path><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></span></button></td>';
+    tbody.appendChild(row);
+    refreshNames();
+  });
+
+  form.addEventListener("click", function (event) {
+    var target = event.target;
+    if (!(target instanceof Element)) return;
+    var removeButton = target.closest("[data-new-competencia-remove-rae]");
+    if (!removeButton) return;
+    var row = removeButton.closest("tr");
+    if (!row) return;
+    var rows = tbody.querySelectorAll("tr");
+    if (rows.length <= 1) {
+      var codigoInput = row.querySelector("input[name*='[codigo]']");
+      var descripcionInput = row.querySelector("input[name*='[descripcion]']");
+      if (codigoInput) codigoInput.value = "";
+      if (descripcionInput) descripcionInput.value = "";
+    } else {
+      row.remove();
+      refreshNames();
+    }
+  });
+
+  form.addEventListener("submit", function (event) {
+    var nombreInput = form.querySelector("input[name='nombre']");
+    var codigoInput = form.querySelector("input[name='codigo']");
+    var horasInput = form.querySelector("input[name='horas']");
+    var nombre = nombreInput ? (nombreInput.value || "").trim() : "";
+    var codigo = codigoInput ? (codigoInput.value || "").trim() : "";
+    var horas = horasInput ? (horasInput.value || "").trim() : "";
+
+    if (nombre === "" || codigo === "" || horas === "") {
+      event.preventDefault();
+      showGlobalToast("Completa nombre, código y horas de la competencia.");
+      return;
+    }
+
+    var rows = Array.prototype.slice.call(tbody.querySelectorAll("tr"));
+    if (rows.length === 0) {
+      event.preventDefault();
+      showGlobalToast("Agrega al menos un RAE.");
+      return;
+    }
+
+    var hasInvalidRae = rows.some(function (row) {
+      var codigoRaeInput = row.querySelector("input[name*='[codigo]']");
+      var descripcionRaeInput = row.querySelector("input[name*='[descripcion]']");
+      var codigoRae = codigoRaeInput ? (codigoRaeInput.value || "").trim() : "";
+      var descripcionRae = descripcionRaeInput ? (descripcionRaeInput.value || "").trim() : "";
+      return codigoRae === "" || descripcionRae === "";
+    });
+    if (hasInvalidRae) {
+      event.preventDefault();
+      showGlobalToast("Completa código y descripción en todos los RAEs.");
+      return;
+    }
+
+    var seenCodes = {};
+    var hasDuplicateCodes = rows.some(function (row) {
+      var codigoRaeInput = row.querySelector("input[name*='[codigo]']");
+      var codigoRae = codigoRaeInput ? (codigoRaeInput.value || "").trim().toLowerCase() : "";
+      if (codigoRae === "") return false;
+      if (seenCodes[codigoRae]) return true;
+      seenCodes[codigoRae] = true;
+      return false;
+    });
+    if (hasDuplicateCodes) {
+      event.preventDefault();
+      showGlobalToast("No se permiten códigos RAE duplicados.");
+      return;
+    }
+
+    var competenciaCode = codigo.toLowerCase();
+    var duplicateCompetenciaCode = existingCodes.some(function (existingCode) {
+      return ((existingCode || "") + "").trim().toLowerCase() === competenciaCode;
+    });
+    if (duplicateCompetenciaCode) {
+      event.preventDefault();
+      showGlobalToast("No se permiten códigos de competencia duplicados.");
+    }
+  });
 });
