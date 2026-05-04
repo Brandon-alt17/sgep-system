@@ -152,6 +152,12 @@
         cursor: pointer;
     }
 
+    .modal-container {
+        overflow-y: auto;
+        max-height: calc(85vh - 130px);
+        padding-right: 6px;
+    }   
+    
     /* Botones personalizados */
     .btn-cancelar {
         padding: 0.625rem 1.25rem;
