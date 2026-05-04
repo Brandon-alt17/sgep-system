@@ -84,10 +84,19 @@ document.querySelectorAll("[data-live-filter-root]").forEach(function (root) {
   var input = root.querySelector("[data-live-filter-input]");
   var clearButton = root.querySelector("[data-live-filter-clear]");
   var emptyState = root.querySelector("[data-live-filter-empty]");
-  var itemsContainer = root.parentElement ? root.parentElement.querySelector("[data-live-filter-items]") : null;
+  var itemsTargetSelector = (root.getAttribute("data-live-filter-items-target") || "").trim();
+  var itemsContainer = null;
+  if (itemsTargetSelector !== "") {
+    itemsContainer = document.querySelector(itemsTargetSelector);
+  } else if (root.parentElement) {
+    itemsContainer = root.parentElement.querySelector("[data-live-filter-items]");
+  }
   if (!input || !itemsContainer) return;
 
-  var items = Array.prototype.slice.call(itemsContainer.querySelectorAll("[data-live-filter-item]"));
+  var getItems = function () {
+    return Array.prototype.slice.call(itemsContainer.querySelectorAll("[data-live-filter-item]"));
+  };
+
   var normalize = function (value) {
     var text = (value || "").toString().toLowerCase();
     if (typeof text.normalize === "function") {
@@ -100,7 +109,7 @@ document.querySelectorAll("[data-live-filter-root]").forEach(function (root) {
     var query = normalize(input.value);
     var visibleCount = 0;
 
-    items.forEach(function (item) {
+    getItems().forEach(function (item) {
       var source = normalize(item.getAttribute("data-live-filter-text") || item.textContent || "");
       var matches = query === "" || source.indexOf(query) !== -1;
       item.classList.toggle("hidden", !matches);
@@ -121,6 +130,127 @@ document.querySelectorAll("[data-live-filter-root]").forEach(function (root) {
       input.value = "";
       applyFilter();
       input.focus();
+    });
+  }
+});
+
+// Listados: actualiza solo tbody (o nodo destino) por GET + JSON; debounce en texto; replaceState sin perder foco.
+document.querySelectorAll("[data-remote-table-filter-form]").forEach(function (form) {
+  var targetSelector = form.getAttribute("data-remote-table-filter-target") || "";
+  var debounceMs = parseInt(form.getAttribute("data-remote-table-filter-debounce") || "350", 10);
+  if (isNaN(debounceMs) || debounceMs < 0) debounceMs = 350;
+
+  var qInput = form.querySelector("[data-remote-table-filter-q]");
+  var clearButton = form.querySelector("[data-remote-table-filter-clear]");
+  var target = document.querySelector(targetSelector);
+
+  if (!qInput || !target) return;
+
+  var debounceTimer = null;
+  var activeController = null;
+
+  var refreshClearVisibility = function () {
+    if (!clearButton || !qInput) return;
+    clearButton.classList.toggle("hidden", (qInput.value || "").trim() === "");
+  };
+
+  var buildFetchUrl = function () {
+    var action = form.getAttribute("action") || window.location.pathname;
+    var url = new URL(action, window.location.origin);
+    var params = new URLSearchParams();
+    var formData = new FormData(form);
+    formData.forEach(function (value, key) {
+      if (typeof value === "string") params.append(key, value);
+    });
+    params.set("ajax", "1");
+    url.search = params.toString();
+    return url.toString();
+  };
+
+  var buildBrowserUrl = function () {
+    var action = form.getAttribute("action") || window.location.pathname;
+    var url = new URL(action, window.location.origin);
+    var params = new URLSearchParams();
+    var formData = new FormData(form);
+    formData.forEach(function (value, key) {
+      if (typeof value !== "string" || value.trim() === "") return;
+      params.set(key, value);
+    });
+    var keep = new URLSearchParams(window.location.search);
+    keep.forEach(function (val, key) {
+      if (key === "ajax" || key === "q" || key === "nivel") return;
+      if (!params.has(key)) params.set(key, val);
+    });
+    var qs = params.toString();
+    return url.pathname + (qs ? "?" + qs : "");
+  };
+
+  var runFetch = function () {
+    if (activeController) activeController.abort();
+    activeController = new AbortController();
+
+    form.setAttribute("aria-busy", "true");
+
+    fetch(buildFetchUrl(), {
+      method: "GET",
+      headers: {
+        "X-Requested-With": "XMLHttpRequest",
+        Accept: "application/json"
+      },
+      signal: activeController.signal
+    })
+      .then(function (response) {
+        if (!response.ok) throw new Error("La solicitud no fue exitosa");
+        return response.json();
+      })
+      .then(function (payload) {
+        if (!payload || payload.ok !== true || typeof payload.rowsHtml !== "string") {
+          throw new Error("Respuesta invalida");
+        }
+        target.innerHTML = payload.rowsHtml;
+        if (window.history && typeof window.history.replaceState === "function") {
+          window.history.replaceState(null, "", buildBrowserUrl());
+        }
+        refreshClearVisibility();
+      })
+      .catch(function (error) {
+        if (error && error.name === "AbortError") return;
+      })
+      .finally(function () {
+        form.removeAttribute("aria-busy");
+      });
+  };
+
+  var scheduleFetch = function () {
+    if (debounceTimer) window.clearTimeout(debounceTimer);
+    debounceTimer = window.setTimeout(runFetch, debounceMs);
+  };
+
+  qInput.addEventListener("input", function () {
+    refreshClearVisibility();
+    scheduleFetch();
+  });
+
+  form.addEventListener("submit", function (event) {
+    event.preventDefault();
+    if (debounceTimer) window.clearTimeout(debounceTimer);
+    runFetch();
+  });
+
+  form.querySelectorAll("[data-remote-table-filter-change]").forEach(function (field) {
+    field.addEventListener("change", function () {
+      if (debounceTimer) window.clearTimeout(debounceTimer);
+      runFetch();
+    });
+  });
+
+  if (clearButton) {
+    clearButton.addEventListener("click", function () {
+      qInput.value = "";
+      refreshClearVisibility();
+      if (debounceTimer) window.clearTimeout(debounceTimer);
+      runFetch();
+      qInput.focus();
     });
   }
 });
@@ -294,112 +424,6 @@ document.querySelectorAll("[data-import-form]").forEach(function (form) {
     localStorage.setItem(storageKey, isExpanded ? "true" : "false");
   });
 })();
-
-// Filtros de listado: auto-submit sin boton.
-document.querySelectorAll("[data-auto-filter-form]").forEach(function (filterForm) {
-  var debounceTimer = null;
-  var activeController = null;
-  var useAjax = filterForm.getAttribute("data-auto-filter-ajax") === "true";
-  var targetSelector = filterForm.getAttribute("data-auto-filter-target") || "";
-  var mainInput = filterForm.querySelector("[data-auto-filter-main-input]");
-  var clearButton = filterForm.querySelector("[data-auto-filter-clear]");
-
-  var runClassicSubmit = function () {
-    if (typeof filterForm.requestSubmit === "function") {
-      filterForm.requestSubmit();
-      return;
-    }
-    filterForm.submit();
-  };
-
-  var runAjaxSubmit = function () {
-    if (!targetSelector) {
-      runClassicSubmit();
-      return;
-    }
-    var target = document.querySelector(targetSelector);
-    if (!target) {
-      runClassicSubmit();
-      return;
-    }
-
-    var action = filterForm.getAttribute("action") || window.location.pathname;
-    var url = new URL(action, window.location.origin);
-    var formData = new FormData(filterForm);
-    var params = new URLSearchParams();
-    formData.forEach(function (value, key) {
-      if (typeof value === "string") params.append(key, value);
-    });
-    params.set("ajax", "1");
-    url.search = params.toString();
-
-    if (activeController) activeController.abort();
-    activeController = new AbortController();
-
-    filterForm.setAttribute("aria-busy", "true");
-    fetch(url.toString(), {
-      method: "GET",
-      headers: {
-        "X-Requested-With": "XMLHttpRequest",
-        "Accept": "application/json"
-      },
-      signal: activeController.signal
-    }).then(function (response) {
-      if (!response.ok) throw new Error("No se pudo consultar");
-      return response.json();
-    }).then(function (payload) {
-      if (!payload || payload.ok !== true || typeof payload.rowsHtml !== "string") {
-        throw new Error("Respuesta invalida");
-      }
-      target.innerHTML = payload.rowsHtml;
-      if (window.history && typeof window.history.replaceState === "function") {
-        var browserUrl = new URL(action, window.location.origin);
-        browserUrl.search = new URLSearchParams(formData).toString();
-        window.history.replaceState(null, "", browserUrl.pathname + browserUrl.search);
-      }
-    }).catch(function (error) {
-      if (error && error.name === "AbortError") return;
-      runClassicSubmit();
-    }).finally(function () {
-      filterForm.removeAttribute("aria-busy");
-    });
-  };
-
-  var submitForm = function () {
-    if (useAjax) {
-      runAjaxSubmit();
-      return;
-    }
-    runClassicSubmit();
-  };
-
-  var refreshClearButtonState = function () {
-    if (!mainInput || !clearButton) return;
-    clearButton.classList.toggle("hidden", (mainInput.value || "").trim() === "");
-  };
-
-  filterForm.querySelectorAll("[data-auto-filter-change]").forEach(function (field) {
-    field.addEventListener("change", submitForm);
-  });
-
-  filterForm.querySelectorAll("[data-auto-filter-input]").forEach(function (field) {
-    field.addEventListener("input", function () {
-      refreshClearButtonState();
-      if (debounceTimer) window.clearTimeout(debounceTimer);
-      debounceTimer = window.setTimeout(submitForm, 350);
-    });
-  });
-
-  if (clearButton && mainInput) {
-    clearButton.addEventListener("click", function () {
-      mainInput.value = "";
-      refreshClearButtonState();
-      submitForm();
-      mainInput.focus();
-    });
-    refreshClearButtonState();
-  }
-});
 
 // Selects: anima chevron al enfocar/abrir.
 document.querySelectorAll("[data-select-chevron]").forEach(function (chevron) {
@@ -610,14 +634,14 @@ document.querySelectorAll("[data-programa-editor]").forEach(function (form) {
       ' w-32">' +
       '<input type="text" class="' +
       inputClass +
-      ' ui-monospace font-mono" placeholder="Código RAE" data-field="rae-codigo">' +
+      ' ui-monospace font-mono" placeholder="Código RAE" data-field="rae-codigo" autocomplete="new-password" autocorrect="off" autocapitalize="off" spellcheck="false">' +
       "</td>" +
       '<td class="' +
       tdClass +
       '">' +
       '<textarea rows="1" class="' +
       inputClass +
-      ' min-h-[2.5rem] resize-none overflow-hidden" placeholder="Descripción del RAE" data-field="rae-descripcion" data-auto-resize-textarea></textarea>' +
+      ' min-h-[2.5rem] resize-none overflow-hidden" placeholder="Descripción del RAE" data-field="rae-descripcion" data-auto-resize-textarea autocomplete="new-password" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea>' +
       "</td>" +
       '<td class="' +
       tdClass +
@@ -645,21 +669,21 @@ document.querySelectorAll("[data-programa-editor]").forEach(function (form) {
       ' md:col-span-10">Nombre competencia <span class="text-rose-600">*</span>' +
       '    <input type="text" class="' +
       inputClass +
-      '" data-field="competencia-nombre">' +
+      '" data-field="competencia-nombre" autocomplete="new-password" autocorrect="off" autocapitalize="off" spellcheck="false">' +
       "  </label>" +
       '  <label class="' +
       labelClass +
       ' md:col-span-7">Código competencia <span class="text-rose-600">*</span>' +
       '    <input type="text" class="' +
       inputClass +
-      ' ui-monospace font-mono" data-field="competencia-codigo">' +
+      ' ui-monospace font-mono" data-field="competencia-codigo" autocomplete="new-password" autocorrect="off" autocapitalize="off" spellcheck="false">' +
       "  </label>" +
       '  <label class="' +
       labelClass +
       ' md:col-span-3">Horas competencia <span class="text-rose-600">*</span>' +
       '    <input type="number" min="0" step="1" inputmode="numeric" class="' +
       inputClass +
-      '" data-field="competencia-horas" placeholder="0">' +
+      '" data-field="competencia-horas" placeholder="0" autocomplete="off">' +
       "  </label>" +
       "</div>" +
       '<div class="mt-3 border-t border-app-borderSoft pt-6 flex justify-end">' +
@@ -1098,12 +1122,14 @@ document.querySelectorAll("[data-toast-root] [data-toast]").forEach(function (to
   if (message === "") return;
   var textNode = toast.querySelector("p");
   if (textNode) textNode.textContent = message;
+  var hideMs = parseInt(toast.getAttribute("data-toast-ms") || "3200", 10);
+  if (isNaN(hideMs) || hideMs < 1200) hideMs = 3200;
   window.requestAnimationFrame(function () {
     toast.classList.add("sg-toast-visible");
   });
   window.setTimeout(function () {
     toast.classList.remove("sg-toast-visible");
-  }, 3200);
+  }, hideMs);
 
   if (window.history && typeof window.history.replaceState === "function") {
     try {

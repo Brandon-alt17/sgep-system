@@ -67,6 +67,11 @@
   visibility: visible;
 }
 
+.sg-toast--error {
+  border-color: rgb(254 202 202 / 1);
+  background-color: rgb(255 241 242 / 1);
+}
+
 .sg-inline-editing-competencia {
   border-color: rgb(10 139 129 / 1) !important;
   box-shadow: 0 0 0 2px rgb(232 253 251 / 1), 0 1px 2px rgba(16, 24, 40, 0.06);

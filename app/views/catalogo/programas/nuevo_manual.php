@@ -19,18 +19,15 @@ $competenciasCount = count($competencias);
 $currentNivel = trim((string) ($meta['nivel'] ?? ''));
 $nivelCardText = $currentNivel !== '' ? $currentNivel : 'Nivel no seleccionado';
 $horasTotalesCard = $totalHorasCompetencias === 0 ? '0' : ($totalHorasCompetencias . 'h');
+$toastErroresGuardar = '';
+if ($errors !== []) {
+    $partes = [];
+    foreach ($errors as $err) {
+        $partes[] = (string) $err;
+    }
+    $toastErroresGuardar = implode(' • ', $partes);
+}
 ?>
-
-<?php if ($errors !== []): ?>
-    <section class="mb-4 rounded-md border border-rose-200 bg-rose-50 p-4 text-sm text-rose-900" role="alert">
-        <h3 class="m-0 mb-2 text-sm font-semibold">Revisa los siguientes puntos antes de guardar</h3>
-        <ul class="m-0 list-disc space-y-1 pl-5">
-            <?php foreach ($errors as $err): ?>
-                <li><?= e((string) $err) ?></li>
-            <?php endforeach; ?>
-        </ul>
-    </section>
-<?php endif; ?>
 
 <section class="bg-app-bg flex flex-row items-start gap-2">
     <a class="<?= e(ui_button_icon_classes()) ?> mt-2.5 shrink-0 self-start" href="<?= e(APP_BASE_PATH) ?>/catalogo/programas" aria-label="Volver al catálogo de programas">
@@ -42,7 +39,7 @@ $horasTotalesCard = $totalHorasCompetencias === 0 ? '0' : ($totalHorasCompetenci
     </div>
 </section>
 
-<form id="programa-nuevo-form" method="post" action="<?= e(APP_BASE_PATH) ?>/catalogo/programas/guardar" class="pb-28" data-programa-editor autocomplete="off">
+<form id="programa-nuevo-form" method="post" action="<?= e(APP_BASE_PATH) ?>/catalogo/programas/guardar" class="pb-28" data-programa-editor autocomplete="off" data-lpignore="true">
     <input type="hidden" name="programa_id" value="0">
 
     <section class="<?= e(ui_card_classes()) ?> mb-6 mt-4 w-full max-w-md min-h-[96px] p-6">
@@ -50,14 +47,14 @@ $horasTotalesCard = $totalHorasCompetencias === 0 ? '0' : ($totalHorasCompetenci
         <div class="mt-4 min-w-0">
             <div class="grid w-full gap-4">
                 <label class="<?= e(ui_label_classes()) ?>">Nombre del programa <span class="text-rose-600">*</span>
-                    <input type="text" name="nombre" value="<?= e((string) ($meta['nombre'] ?? '')) ?>" required maxlength="220" class="<?= e(ui_input_classes()) ?> bg-white" placeholder="Ej. Técnico en sistemas">
+                    <input type="text" name="nombre" value="<?= e((string) ($meta['nombre'] ?? '')) ?>" required maxlength="220" class="<?= e(ui_input_classes()) ?> bg-white" placeholder="Ej. Técnico en sistemas" autocomplete="new-password" autocorrect="off" autocapitalize="off" spellcheck="false">
                 </label>
                 <label class="<?= e(ui_label_classes()) ?>">Código <span class="text-rose-600">*</span>
-                    <input type="text" name="codigo" value="<?= e((string) ($meta['codigo'] ?? '')) ?>" required maxlength="40" class="<?= e(ui_input_classes()) ?> bg-white ui-monospace font-mono" placeholder="Código del programa">
+                    <input type="text" name="codigo" value="<?= e((string) ($meta['codigo'] ?? '')) ?>" required maxlength="40" class="<?= e(ui_input_classes()) ?> bg-white ui-monospace font-mono" placeholder="Código del programa" autocomplete="new-password" autocorrect="off" autocapitalize="off" spellcheck="false">
                 </label>
                 <label class="<?= e(ui_label_classes()) ?>">Nivel <span class="text-rose-600">*</span>
                     <span class="<?= e(ui_select_wrapper_classes()) ?>">
-                        <select id="programa-nivel-select" name="nivel" class="<?= e(ui_select_classes()) ?>" required data-programa-nivel-select>
+                        <select id="programa-nivel-select" name="nivel" class="<?= e(ui_select_classes()) ?>" required autocomplete="off" data-programa-nivel-select>
                             <option value="" disabled<?= $currentNivel === '' ? ' selected' : '' ?>>Selecciona…</option>
                             <option value="Técnico"<?= $currentNivel === 'Técnico' ? ' selected' : '' ?>>Técnico</option>
                             <option value="Tecnólogo"<?= $currentNivel === 'Tecnólogo' ? ' selected' : '' ?>>Tecnólogo</option>
@@ -133,13 +130,13 @@ $horasTotalesCard = $totalHorasCompetencias === 0 ? '0' : ($totalHorasCompetenci
                     <article class="rounded-[10px] border border-app-border bg-app-panelSubtle p-6 shadow-xsSoft min-h-[96px] transition-[border-color,box-shadow] duration-300 ease-out motion-reduce:transition-none" data-competencia-item>
                         <div class="mb-3 w-full grid grid-cols-1 gap-3 md:grid-cols-10 md:gap-3">
                             <label class="<?= e(ui_label_classes()) ?> md:col-span-10">Nombre competencia <span class="text-rose-600">*</span>
-                                <input type="text" name="competencias[<?= (int) $cIdx ?>][nombre]" value="<?= e((string) ($comp['nombre'] ?? '')) ?>" class="<?= e(ui_input_classes()) ?> bg-white" data-field="competencia-nombre">
+                                <input type="text" name="competencias[<?= (int) $cIdx ?>][nombre]" value="<?= e((string) ($comp['nombre'] ?? '')) ?>" class="<?= e(ui_input_classes()) ?> bg-white" data-field="competencia-nombre" autocomplete="new-password" autocorrect="off" autocapitalize="off" spellcheck="false">
                             </label>
                             <label class="<?= e(ui_label_classes()) ?> md:col-span-7">Código competencia <span class="text-rose-600">*</span>
-                                <input type="text" name="competencias[<?= (int) $cIdx ?>][codigo]" value="<?= e((string) ($comp['codigo'] ?? '')) ?>" class="<?= e(ui_input_classes()) ?> bg-white ui-monospace font-mono" data-field="competencia-codigo">
+                                <input type="text" name="competencias[<?= (int) $cIdx ?>][codigo]" value="<?= e((string) ($comp['codigo'] ?? '')) ?>" class="<?= e(ui_input_classes()) ?> bg-white ui-monospace font-mono" data-field="competencia-codigo" autocomplete="new-password" autocorrect="off" autocapitalize="off" spellcheck="false">
                             </label>
                             <label class="<?= e(ui_label_classes()) ?> md:col-span-3">Horas competencia <span class="text-rose-600">*</span>
-                                <input type="number" name="competencias[<?= (int) $cIdx ?>][horas]" value="<?= e((string) ($comp['horas'] ?? '')) ?>" min="0" step="1" inputmode="numeric" class="<?= e(ui_input_classes()) ?> bg-white" data-field="competencia-horas" placeholder="0">
+                                <input type="number" name="competencias[<?= (int) $cIdx ?>][horas]" value="<?= e((string) ($comp['horas'] ?? '')) ?>" min="0" step="1" inputmode="numeric" class="<?= e(ui_input_classes()) ?> bg-white" data-field="competencia-horas" placeholder="0" autocomplete="off">
                             </label>
                         </div>
                         <div class="mt-3 border-t border-app-borderSoft pt-6 flex justify-end">
@@ -161,10 +158,10 @@ $horasTotalesCard = $totalHorasCompetencias === 0 ? '0' : ($totalHorasCompetenci
                                 <?php foreach ($resultadosComp as $rIdx => $res): ?>
                                     <tr class="border-b border-app-borderSoft" data-rae-item>
                                         <td class="<?= e(str_replace('border-b border-app-borderSoft ', '', ui_td_classes())) ?> w-32 align-top">
-                                            <input type="text" name="competencias[<?= (int) $cIdx ?>][resultados][<?= (int) $rIdx ?>][codigo]" value="<?= e((string) ($res['codigo'] ?? '')) ?>" class="<?= e(ui_input_classes()) ?> bg-white" placeholder="Código RAE" data-field="rae-codigo">
+                                            <input type="text" name="competencias[<?= (int) $cIdx ?>][resultados][<?= (int) $rIdx ?>][codigo]" value="<?= e((string) ($res['codigo'] ?? '')) ?>" class="<?= e(ui_input_classes()) ?> bg-white" placeholder="Código RAE" data-field="rae-codigo" autocomplete="new-password" autocorrect="off" autocapitalize="off" spellcheck="false">
                                         </td>
                                         <td class="<?= e(str_replace('border-b border-app-borderSoft ', '', ui_td_classes())) ?> align-top">
-                                            <textarea rows="1" name="competencias[<?= (int) $cIdx ?>][resultados][<?= (int) $rIdx ?>][descripcion]" class="<?= e(ui_input_classes()) ?> min-h-[2.5rem] resize-none overflow-hidden bg-white" placeholder="Descripción del RAE" data-field="rae-descripcion" data-auto-resize-textarea><?= e((string) ($res['descripcion'] ?? '')) ?></textarea>
+                                            <textarea rows="1" name="competencias[<?= (int) $cIdx ?>][resultados][<?= (int) $rIdx ?>][descripcion]" class="<?= e(ui_input_classes()) ?> min-h-[2.5rem] resize-none overflow-hidden bg-white" placeholder="Descripción del RAE" data-field="rae-descripcion" data-auto-resize-textarea autocomplete="new-password" autocorrect="off" autocapitalize="off" spellcheck="false"><?= e((string) ($res['descripcion'] ?? '')) ?></textarea>
                                         </td>
                                         <td class="<?= e(str_replace('border-b border-app-borderSoft ', '', ui_td_classes())) ?> align-top">
                                             <button type="button" class="<?= e(ui_button_icon_classes()) ?> border-rose-300 bg-rose-50 text-rose-700 hover:border-rose-400 hover:bg-rose-100 hover:text-rose-700" data-remove-rae aria-label="Eliminar RAE">
@@ -188,6 +185,10 @@ $horasTotalesCard = $totalHorasCompetencias === 0 ? '0' : ($totalHorasCompetenci
         </div>
     </section>
 </form>
+
+<?php if ($toastErroresGuardar !== ''): ?>
+    <?php partial('components/toast', ['message' => $toastErroresGuardar, 'variant' => 'error']); ?>
+<?php endif; ?>
 
 <div class="pointer-events-none fixed inset-x-0 bottom-0 z-[60] border-t border-app-border bg-app-panel/95 shadow-[0_-4px_24px_rgba(16,24,40,0.08)] backdrop-blur-sm">
     <div class="pointer-events-auto flex min-h-[56px] w-full items-center justify-end gap-3 px-4 py-3 md:px-6">

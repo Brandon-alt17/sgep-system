@@ -23,8 +23,13 @@ class CatalogoController
         $pendientesCount = Programa::countPendientesEnlace();
 
         if ($this->isAjaxFilterRequest()) {
+            partial('components/ui');
+            $tdClasses = str_replace('h-[50px] ', '', ui_td_classes());
             ob_start();
-            partial('catalogo/programas/_rows', ['programas' => $programas]);
+            partial('catalogo/programas/_rows', [
+                'programas' => $programas,
+                'tdClasses' => $tdClasses,
+            ]);
             $rowsHtml = (string) ob_get_clean();
 
             header('Content-Type: application/json; charset=utf-8');
@@ -57,10 +62,33 @@ class CatalogoController
     public function pendientesPrograma(): void
     {
         $filters = ['q' => trim((string) ($_GET['q'] ?? ''))];
+        $pendientes = ProgramaEnlacePendiente::pendingList($filters);
+        $programas = Programa::all();
+
+        if ($this->isAjaxFilterRequest()) {
+            partial('components/ui');
+            $tdClasses = str_replace('h-[50px] ', '', ui_td_classes());
+            ob_start();
+            partial('catalogo/programas/_pendientes_rows', [
+                'pendientes' => $pendientes,
+                'programas' => $programas,
+                'tdClasses' => $tdClasses,
+            ]);
+            $rowsHtml = (string) ob_get_clean();
+
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode([
+                'ok' => true,
+                'rowsHtml' => $rowsHtml,
+                'total' => count($pendientes),
+            ], JSON_UNESCAPED_UNICODE);
+            return;
+        }
+
         view('catalogo/programas/pendientes', [
-            'pendientes' => ProgramaEnlacePendiente::pendingList($filters),
+            'pendientes' => $pendientes,
             'filters' => $filters,
-            'programas' => Programa::all(),
+            'programas' => $programas,
         ]);
     }
 
@@ -68,10 +96,13 @@ class CatalogoController
     {
         $pendingId = (int) ($_POST['pending_id'] ?? 0);
         $programaId = (int) ($_POST['programa_id'] ?? 0);
+        $resolved = false;
         if ($pendingId > 0 && $programaId > 0) {
             ProgramaEnlacePendiente::resolve($pendingId, $programaId);
+            $resolved = true;
         }
-        redirect(APP_BASE_PATH . '/catalogo/programas/pendientes');
+        $suffix = $resolved ? '?toast=pendiente_resuelto' : '';
+        redirect(APP_BASE_PATH . '/catalogo/programas/pendientes' . $suffix);
     }
 
     public function importarProgramaForm(): void
@@ -633,6 +664,7 @@ class CatalogoController
     {
         $isXmlHttpRequest = strtolower((string) ($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '')) === 'xmlhttprequest';
         $isAjaxQueryFlag = ((string) ($_GET['ajax'] ?? '')) === '1';
+
         return $isXmlHttpRequest && $isAjaxQueryFlag;
     }
 

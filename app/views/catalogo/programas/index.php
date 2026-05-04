@@ -46,12 +46,17 @@ partial('components/page_header', [
     'extraClasses' => 'mb-4',
 ]); ?>
 
-<!-- Buscador y filtros -->
-<section class="<?= e(ui_card_classes()) ?> mb-4">
-   
-
-    <form method="get" action="<?= e(APP_BASE_PATH) ?>/catalogo/programas" class="flex w-full items-center gap-3" data-auto-filter-form data-auto-filter-ajax="true" data-auto-filter-target="#tabla-catalogo-programas tbody">
-        <div class="relative flex-1 min-w-0">
+<!-- Búsqueda y nivel: solo se actualiza el tbody por fetch (sin recargar la página). -->
+<section class="<?= e(ui_card_classes()) ?> mb-4 p-6">
+    <form
+        method="get"
+        action="<?= e(APP_BASE_PATH) ?>/catalogo/programas"
+        class="flex w-full flex-col gap-4 sm:flex-row sm:items-end sm:gap-3"
+        data-remote-table-filter-form
+        data-remote-table-filter-target="#tabla-catalogo-programas tbody"
+        data-remote-table-filter-debounce="350"
+    >
+        <div class="relative min-w-0 flex-1">
             <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-app-muted [&_svg]:h-4 [&_svg]:w-4">
                 <?= ui_icon('search') ?>
             </span>
@@ -60,20 +65,20 @@ partial('components/page_header', [
                 name="q"
                 value="<?= e($q) ?>"
                 placeholder="Buscar por código o nombre"
-                class="<?= e(ui_input_classes()) ?> mt-0 flex-1 min-w-0 pl-10 pr-10"
-                data-auto-filter-input
-                data-auto-filter-main-input
+                aria-label="Buscar por código o nombre"
+                autocomplete="off"
+                class="<?= e(ui_input_classes()) ?> mt-0 w-full bg-white pl-10 pr-10"
+                data-remote-table-filter-q
             >
             <button
                 type="button"
                 class="<?= $q !== '' ? '' : 'hidden' ?> absolute right-2 top-1/2 -translate-y-1/2 rounded-md px-2 py-1 text-sm text-app-muted hover:bg-app-panelSubtle hover:text-app-text"
                 aria-label="Limpiar búsqueda"
-                data-auto-filter-clear
+                data-remote-table-filter-clear
             >&times;</button>
         </div>
-
-        <div class="<?= e(ui_select_wrapper_classes()) ?> w-64 shrink-0">
-            <select name="nivel" class="<?= e(ui_select_classes()) ?>" data-auto-filter-change>
+        <div class="<?= e(ui_select_wrapper_classes()) ?> w-full shrink-0 sm:w-64">
+            <select name="nivel" class="<?= e(ui_select_classes()) ?>" data-remote-table-filter-change aria-label="Filtrar por nivel">
                 <option value="">Todos los niveles</option>
                 <option value="Técnico" <?= $nivel === 'Técnico' ? 'selected' : '' ?>>Técnico</option>
                 <option value="Tecnólogo" <?= $nivel === 'Tecnólogo' ? 'selected' : '' ?>>Tecnólogo</option>
@@ -86,7 +91,6 @@ partial('components/page_header', [
                 </svg>
             </span>
         </div>
-
     </form>
 </section>
 
