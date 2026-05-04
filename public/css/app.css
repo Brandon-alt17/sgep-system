@@ -927,8 +927,12 @@ a:hover {
   top: 50%;
 }
 
-.right-0 {
-  right: 0px;
+.z-0 {
+  z-index: 0;
+}
+
+.z-\[100\] {
+  z-index: 100;
 }
 
 .z-\[60\] {
@@ -941,22 +945,6 @@ a:hover {
 
 .z-\[70\] {
   z-index: 70;
-}
-
-.z-\[1\] {
-  z-index: 1;
-}
-
-.z-0 {
-  z-index: 0;
-}
-
-.z-40 {
-  z-index: 40;
-}
-
-.z-\[100\] {
-  z-index: 100;
 }
 
 .col-span-10 {
@@ -1144,16 +1132,16 @@ a:hover {
   max-height: 14rem;
 }
 
+.max-h-\[210px\] {
+  max-height: 210px;
+}
+
 .max-h-\[55vh\] {
   max-height: 55vh;
 }
 
 .max-h-\[70vh\] {
   max-height: 70vh;
-}
-
-.max-h-\[210px\] {
-  max-height: 210px;
 }
 
 .min-h-24 {
@@ -1256,6 +1244,10 @@ a:hover {
   width: 26%;
 }
 
+.w-\[27\.5\%\] {
+  width: 27.5%;
+}
+
 .w-\[28\%\] {
   width: 28%;
 }
@@ -1270,6 +1262,10 @@ a:hover {
 
 .w-\[32\%\] {
   width: 32%;
+}
+
+.w-\[32\.5\%\] {
+  width: 32.5%;
 }
 
 .w-\[34\%\] {
@@ -1300,30 +1296,6 @@ a:hover {
   width: 100%;
 }
 
-.w-\[min\(100\%\2c 11\.5rem\)\] {
-  width: min(100%,11.5rem);
-}
-
-.w-\[33\%\] {
-  width: 33%;
-}
-
-.w-\[39\%\] {
-  width: 39%;
-}
-
-.w-\[10\.5rem\] {
-  width: 10.5rem;
-}
-
-.w-\[27\.5\%\] {
-  width: 27.5%;
-}
-
-.w-\[32\.5\%\] {
-  width: 32.5%;
-}
-
 .min-w-0 {
   min-width: 0px;
 }
@@ -1336,28 +1308,12 @@ a:hover {
   min-width: 12rem;
 }
 
-.min-w-\[280px\] {
-  min-width: 280px;
-}
-
-.min-w-\[200px\] {
-  min-width: 200px;
-}
-
-.min-w-\[220px\] {
-  min-width: 220px;
-}
-
-.min-w-\[720px\] {
-  min-width: 720px;
+.min-w-\[180px\] {
+  min-width: 180px;
 }
 
 .min-w-\[900px\] {
   min-width: 900px;
-}
-
-.min-w-\[180px\] {
-  min-width: 180px;
 }
 
 .max-w-3xl {
@@ -1378,14 +1334,6 @@ a:hover {
 
 .max-w-xl {
   max-width: 36rem;
-}
-
-.max-w-full {
-  max-width: 100%;
-}
-
-.max-w-\[12rem\] {
-  max-width: 12rem;
 }
 
 .flex-1 {
@@ -1726,11 +1674,6 @@ a:hover {
   border-color: rgb(225 29 72 / var(--tw-border-opacity, 1));
 }
 
-.border-amber-300 {
-  --tw-border-opacity: 1;
-  border-color: rgb(252 211 77 / var(--tw-border-opacity, 1));
-}
-
 .bg-amber-100 {
   --tw-bg-opacity: 1;
   background-color: rgb(254 243 199 / var(--tw-bg-opacity, 1));
@@ -1818,6 +1761,11 @@ a:hover {
   background-color: rgb(22 163 74 / var(--tw-bg-opacity, 1));
 }
 
+.bg-rose-200 {
+  --tw-bg-opacity: 1;
+  background-color: rgb(254 205 211 / var(--tw-bg-opacity, 1));
+}
+
 .bg-rose-50 {
   --tw-bg-opacity: 1;
   background-color: rgb(255 241 242 / var(--tw-bg-opacity, 1));
@@ -1831,20 +1779,6 @@ a:hover {
 .bg-white {
   --tw-bg-opacity: 1;
   background-color: rgb(255 255 255 / var(--tw-bg-opacity, 1));
-}
-
-.bg-amber-200 {
-  --tw-bg-opacity: 1;
-  background-color: rgb(253 230 138 / var(--tw-bg-opacity, 1));
-}
-
-.bg-amber-50\/80 {
-  background-color: rgb(255 251 235 / 0.8);
-}
-
-.bg-rose-200 {
-  --tw-bg-opacity: 1;
-  background-color: rgb(254 205 211 / var(--tw-bg-opacity, 1));
 }
 
 .bg-none {
@@ -1959,14 +1893,14 @@ a:hover {
   padding-bottom: 1rem;
 }
 
-.py-\[18\.5px\] {
-  padding-top: 18.5px;
-  padding-bottom: 18.5px;
-}
-
 .py-6 {
   padding-top: 1.5rem;
   padding-bottom: 1.5rem;
+}
+
+.py-\[18\.5px\] {
+  padding-top: 18.5px;
+  padding-bottom: 18.5px;
 }
 
 .pb-2 {
@@ -2039,10 +1973,6 @@ a:hover {
 
 .text-center {
   text-align: center;
-}
-
-.text-right {
-  text-align: right;
 }
 
 .align-top {
@@ -2248,11 +2178,6 @@ a:hover {
 .text-white {
   --tw-text-opacity: 1;
   color: rgb(255 255 255 / var(--tw-text-opacity, 1));
-}
-
-.text-amber-900 {
-  --tw-text-opacity: 1;
-  color: rgb(120 53 15 / var(--tw-text-opacity, 1));
 }
 
 .underline {
@@ -2519,10 +2444,6 @@ a:hover {
   --tw-ring-color: rgb(232 253 251 / var(--tw-ring-opacity, 1));
 }
 
-.has-\[\:focus-visible\]\:z-20:has(:focus-visible) {
-  z-index: 20;
-}
-
 @media (prefers-reduced-motion: reduce) {
   .motion-reduce\:transition-none {
     transition-property: none;
@@ -2532,14 +2453,6 @@ a:hover {
 @media (min-width: 640px) {
   .sm\:w-64 {
     width: 16rem;
-  }
-
-  .sm\:w-48 {
-    width: 12rem;
-  }
-
-  .sm\:max-w-\[11rem\] {
-    max-width: 11rem;
   }
 
   .sm\:flex-row {
@@ -2604,14 +2517,6 @@ a:hover {
 
   .md\:w-\[260px\] {
     width: 260px;
-  }
-
-  .md\:min-w-\[280px\] {
-    min-width: 280px;
-  }
-
-  .md\:min-w-\[300px\] {
-    min-width: 300px;
   }
 
   .md\:max-w-xs {
