@@ -162,11 +162,8 @@ class CatalogoController
             'warnings' => [],
         ];
 
-        view('catalogo/programas/show', [
-            'programa' => null,
-            'fileName' => 'Registro manual',
+        view('catalogo/programas/nuevo_manual', [
             'parsed' => $parsed,
-            'isNew' => true,
             'errors' => [],
         ]);
     }
@@ -179,37 +176,76 @@ class CatalogoController
             'nombre' => trim((string) ($_POST['nombre'] ?? '')),
             'nivel' => trim((string) ($_POST['nivel'] ?? '')),
             'modalidad' => trim((string) ($_POST['modalidad'] ?? '')),
-            'horas_lectiva' => trim((string) ($_POST['horas_lectiva'] ?? '')),
-            'horas_productiva' => trim((string) ($_POST['horas_productiva'] ?? '')),
+            'horas_lectiva' => '',
+            'horas_productiva' => '',
         ];
-        $meta['horas_total'] = $this->sumHoras($meta['horas_lectiva'], $meta['horas_productiva']);
         $competencias = $this->normalizePostedCompetencias((array) ($_POST['competencias'] ?? []));
+        $meta['horas_total'] = $this->sumHorasFromCompetencias($competencias);
 
-        $errors = [];
-        if ($meta['nombre'] === '') {
-            $errors[] = 'El nombre del programa es obligatorio.';
-        }
+        $errors = $this->validateProgramaFormacionPayload($meta, $competencias, $programaId);
 
         if ($errors !== []) {
-            view('catalogo/programas/show', [
-                'programa' => $programaId > 0 ? Programa::findById($programaId) : null,
-                'fileName' => 'Registro manual',
-                'parsed' => [
-                    'meta' => $meta,
-                    'competencias' => $competencias,
-                    'warnings' => [],
-                ],
-                'isNew' => $programaId <= 0,
-                'errors' => $errors,
-            ]);
+            if ($programaId > 0) {
+                view('catalogo/programas/show', [
+                    'programa' => Programa::findById($programaId),
+                    'fileName' => 'Registro manual',
+                    'parsed' => [
+                        'meta' => $meta,
+                        'competencias' => $competencias,
+                        'warnings' => [],
+                    ],
+                    'errors' => $errors,
+                ]);
+            } else {
+                view('catalogo/programas/nuevo_manual', [
+                    'parsed' => [
+                        'meta' => $meta,
+                        'competencias' => $competencias,
+                        'warnings' => [],
+                    ],
+                    'errors' => $errors,
+                ]);
+            }
             return;
         }
 
         $isUpdate = $programaId > 0;
-        if ($isUpdate) {
-            Programa::update($programaId, $meta);
-        } else {
-            $programaId = Programa::create($meta);
+        try {
+            if ($isUpdate) {
+                Programa::update($programaId, $meta);
+            } else {
+                $programaId = Programa::create($meta);
+            }
+        } catch (\PDOException $e) {
+            $msgLower = strtolower($e->getMessage());
+            $isLikelyUniqueViolation = str_contains($msgLower, 'duplicate')
+                || str_contains($msgLower, 'unique')
+                || str_contains($msgLower, 'uq_programas');
+            if (!$isLikelyUniqueViolation) {
+                throw $e;
+            }
+            if ($programaId <= 0) {
+                view('catalogo/programas/nuevo_manual', [
+                    'parsed' => [
+                        'meta' => $meta,
+                        'competencias' => $competencias,
+                        'warnings' => [],
+                    ],
+                    'errors' => ['No se pudo guardar: ya existe un programa con el mismo nombre y nivel (restricción en base de datos).'],
+                ]);
+            } else {
+                view('catalogo/programas/show', [
+                    'programa' => Programa::findById($programaId),
+                    'fileName' => 'Registro manual',
+                    'parsed' => [
+                        'meta' => $meta,
+                        'competencias' => $competencias,
+                        'warnings' => [],
+                    ],
+                    'errors' => ['No se pudo guardar: conflicto con otro programa (nombre y nivel únicos).'],
+                ]);
+            }
+            return;
         }
 
         ProgramaContenido::replaceProgramaContenido($programaId, $competencias);
@@ -600,6 +636,105 @@ class CatalogoController
         return $isXmlHttpRequest && $isAjaxQueryFlag;
     }
 
+    /**
+     * @param array<string,mixed> $meta
+     * @param array<int,array<string,mixed>> $competencias
+     * @return list<string>
+     */
+    private function validateProgramaFormacionPayload(array $meta, array $competencias, int $programaId): array
+    {
+        $errors = [];
+
+        if (trim((string) ($meta['nombre'] ?? '')) === '') {
+            $errors[] = 'El nombre del programa es obligatorio.';
+        }
+
+        if (trim((string) ($meta['codigo'] ?? '')) === '') {
+            $errors[] = 'El código del programa es obligatorio.';
+        }
+
+        $modalidad = trim((string) ($meta['modalidad'] ?? ''));
+        if ($modalidad !== '' && !in_array($modalidad, ['Presencial', 'Virtual', 'Mixta'], true)) {
+            $errors[] = 'La modalidad no es válida.';
+        }
+
+        $nivel = trim((string) ($meta['nivel'] ?? ''));
+        if ($nivel === '') {
+            $errors[] = 'El nivel del programa es obligatorio.';
+        } elseif (!in_array($nivel, ['Técnico', 'Tecnólogo', 'Auxiliar'], true)) {
+            $errors[] = 'El nivel debe ser Técnico, Tecnólogo o Auxiliar.';
+        }
+
+        if ($competencias === []) {
+            $errors[] = 'Debes agregar al menos una competencia con sus resultados de aprendizaje.';
+        }
+
+        $seenCompCodes = [];
+        $duplicateCompCode = false;
+        foreach ($competencias as $idx => $comp) {
+            $n = $idx + 1;
+            $codigo = trim((string) ($comp['codigo'] ?? ''));
+            $nombre = trim((string) ($comp['nombre'] ?? ''));
+            $horasComp = trim((string) ($comp['horas'] ?? ''));
+            if ($codigo === '' || $nombre === '') {
+                $errors[] = 'En la competencia ' . $n . ' el código y el nombre son obligatorios.';
+            }
+            if ($horasComp === '' || !ctype_digit($horasComp)) {
+                $errors[] = 'En la competencia ' . $n . ' las horas son obligatorias y deben ser un número entero mayor o igual que 0.';
+            }
+            if ($codigo !== '') {
+                $key = mb_strtolower($codigo);
+                if (isset($seenCompCodes[$key])) {
+                    $duplicateCompCode = true;
+                }
+                $seenCompCodes[$key] = true;
+            }
+
+            $resultados = (array) ($comp['resultados'] ?? []);
+            if ($resultados === []) {
+                $errors[] = 'La competencia ' . $n . ' debe tener al menos un resultado de aprendizaje con código y descripción.';
+                continue;
+            }
+
+            $seenRae = [];
+            $duplicateRae = false;
+            $incompleteRae = false;
+            foreach ($resultados as $res) {
+                $raC = trim((string) ($res['codigo'] ?? ''));
+                $raD = trim((string) ($res['descripcion'] ?? ''));
+                if ($raC === '' || $raD === '') {
+                    $incompleteRae = true;
+                    continue;
+                }
+                $rk = mb_strtolower($raC);
+                if (isset($seenRae[$rk])) {
+                    $duplicateRae = true;
+                }
+                $seenRae[$rk] = true;
+            }
+            if ($incompleteRae) {
+                $errors[] = 'En la competencia ' . $n . ' cada resultado de aprendizaje debe tener código y descripción.';
+            }
+            if ($duplicateRae) {
+                $errors[] = 'En la competencia ' . $n . ' no puede haber dos RAE con el mismo código.';
+            }
+        }
+
+        if ($duplicateCompCode) {
+            $errors[] = 'No puede haber dos competencias con el mismo código.';
+        }
+
+        $nombreProg = trim((string) ($meta['nombre'] ?? ''));
+        if ($nombreProg !== '' && $nivel !== '' && in_array($nivel, ['Técnico', 'Tecnólogo', 'Auxiliar'], true)) {
+            $dupId = Programa::findIdByNombreNivel($nombreProg, $nivel, $programaId);
+            if ($dupId !== null) {
+                $errors[] = 'Ya existe un programa con el mismo nombre y nivel. Cambia el nombre o el nivel, o edita el programa existente desde el catálogo.';
+            }
+        }
+
+        return $errors;
+    }
+
     /** @param array<int,mixed> $competenciasInput
      *  @return array<int,array<string,mixed>>
      */
@@ -612,6 +747,7 @@ class CatalogoController
             }
             $codigo = trim((string) ($competenciaRaw['codigo'] ?? ''));
             $nombre = trim((string) ($competenciaRaw['nombre'] ?? ''));
+            $horas = trim((string) ($competenciaRaw['horas'] ?? ''));
             $resultadosRaw = (array) ($competenciaRaw['resultados'] ?? []);
             $resultados = [];
             foreach ($resultadosRaw as $resultadoRaw) {
@@ -634,11 +770,26 @@ class CatalogoController
             $normalized[] = [
                 'codigo' => $codigo,
                 'nombre' => $nombre,
+                'horas' => $horas,
                 'resultados' => $resultados,
             ];
         }
 
         return $normalized;
+    }
+
+    /** Suma horas declaradas por competencia (formación manual / resumen). */
+    private function sumHorasFromCompetencias(array $competencias): string
+    {
+        $sum = 0;
+        foreach ($competencias as $comp) {
+            $h = trim((string) ($comp['horas'] ?? ''));
+            if ($h !== '' && ctype_digit($h)) {
+                $sum += (int) $h;
+            }
+        }
+
+        return (string) $sum;
     }
 
     private function sumHoras(string $lectiva, string $productiva): string
