@@ -127,7 +127,7 @@ if (!function_exists('e')) {
     <div class="divide-y divide-gray-100 min-h-[300px]">
         <?php if (empty($alerts)): ?>
         <!-- Mensaje bonito cuando no hay visitas -->
-        <div class="flex flex-col items-center justify-center py-12 px-6 text-center h-full">
+        <div class="mt-4 mb-4 flex flex-col items-center justify-center py-12 px-6 text-center h-full">
             <h4 class="text-lg font-medium text-gray-700 mb-1">No hay visitas programadas</h4>
             <p class="text-sm text-gray-400">No hay visitas programadas en los próximos 30 días</p>
         </div>
