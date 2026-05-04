@@ -12,8 +12,15 @@ class AprendizController
 {
     public function index(): void
     {
-        $aprendices = Aprendiz::paginated($_GET);
-        view('aprendices/index', ['aprendices' => $aprendices]);
+        $aprendices = Aprendiz::paginated($_GET, 500, 0);
+        view('aprendices/index', [
+            'aprendices' => $aprendices,
+            'fichasOptions' => Aprendiz::getUniqueFichas(),
+            'estadosOptions' => Aprendiz::getUniqueEstados(),
+            'initialFicha' => trim((string) ($_GET['ficha'] ?? '')),
+            'initialEstado' => trim((string) ($_GET['estado'] ?? '')),
+            'initialQ' => trim((string) ($_GET['q'] ?? '')),
+        ]);
     }
 
     public function create(): void
