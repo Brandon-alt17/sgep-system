@@ -380,27 +380,48 @@ class ProgramaPdfParser
 
     private static function detectNombre(string $text): string
     {
+        // Captura el valor completo entre "denominacion" y "1.2", incluso si el OCR lo parte en varias lineas con el label "del Programa:" intercalado.
+        if (preg_match('/1[\.\s]*1\b[^\n]*?denominaci[oó]n\s*(?:del\s+programa)?\s*[:\-]?\s*(.+?)\s*\n?\s*1[\.\s]*2\b/isu', $text, $mFull)) {
+            $rawFull = (string) ($mFull[1] ?? '');
+            $cleanedFull = preg_replace('/\s*\bdel\s+programa\s*[:\-]\s*/iu', ' ', $rawFull) ?? $rawFull;
+            $cleanedFull = self::normalizeSentence($cleanedFull);
+            if ($cleanedFull !== '' && !self::isInvalidProgramNameCandidate($cleanedFull)) {
+                return $cleanedFull;
+            }
+        }
+
         if (preg_match('/1[\.\s]*1\b[^\n]*denominaci[oó]n[^\n]*\n?(.*?)\n1[\.\s]*2\b/isu', $text, $mBlock)) {
             $block = trim((string) ($mBlock[1] ?? ''));
             if ($block !== '') {
                 $candidates = array_values(array_filter(array_map(
-                    static fn ($line): string => trim((string) $line),
+                    static fn ($line): string => self::sanitizeProgramNameCandidate((string) $line),
                     preg_split('/\R/u', $block) ?: []
                 ), static fn (string $line): bool => $line !== ''));
 
+                $blockValidLines = [];
                 foreach ($candidates as $candidate) {
-                    $invalid = self::isInvalidProgramNameCandidate($candidate);
-                    if (!$invalid) {
-                        return self::normalizeSentence($candidate);
+                    if (preg_match('/^1[\.\s]*[2-9]\b/u', $candidate) === 1) {
+                        break;
                     }
+                    if (!self::isInvalidProgramNameCandidate($candidate)) {
+                        $blockValidLines[] = $candidate;
+                    }
+                }
+
+                if ($blockValidLines !== []) {
+                    $combinedCandidate = self::normalizeSentence(implode(' ', $blockValidLines));
+                    if (!self::isInvalidProgramNameCandidate($combinedCandidate)) {
+                        return $combinedCandidate;
+                    }
+                    usort($blockValidLines, static fn (string $a, string $b): int => mb_strlen($b) <=> mb_strlen($a));
+                    return self::normalizeSentence((string) ($blockValidLines[0] ?? ''));
                 }
             }
         }
 
         if (preg_match('/1[\.\s]*1\b.*denominaci[oó]n(?:\s+del\s+programa)?\s*[:\-]?\s*(.+)$/imu', $text, $inline)) {
-            $candidateInline = trim((string) ($inline[1] ?? ''));
-            $invalidInline = self::isInvalidProgramNameCandidate($candidateInline);
-            if (!$invalidInline) {
+            $candidateInline = self::sanitizeProgramNameCandidate((string) ($inline[1] ?? ''));
+            if (!self::isInvalidProgramNameCandidate($candidateInline)) {
                 return self::normalizeSentence($candidateInline);
             }
         }
@@ -415,19 +436,41 @@ class ProgramaPdfParser
             if (!preg_match('/^1[\.\s]*1\b.*denominaci[oó]n/i', $lines[$i])) {
                 continue;
             }
+            $fallbackLines = [];
             for ($j = $i + 1; $j < min($total, $i + 8); $j++) {
-                $candidate = trim($lines[$j]);
-                $invalidFallback = self::isInvalidProgramNameCandidate($candidate);
-                if ($invalidFallback) {
+                $rawLine = trim((string) ($lines[$j] ?? ''));
+                if ($rawLine === '') {
                     continue;
                 }
-                if (preg_match('/^1\.[2-9]/', $candidate)) {
+                if (preg_match('/^1[\.\s]*[2-9]\b/u', $rawLine) === 1) {
                     break;
                 }
-                return self::normalizeSentence($candidate);
+
+                $candidate = self::sanitizeProgramNameCandidate($rawLine);
+                if (self::isInvalidProgramNameCandidate($candidate)) {
+                    continue;
+                }
+                $fallbackLines[] = $candidate;
+            }
+
+            if ($fallbackLines !== []) {
+                $combined = self::normalizeSentence(implode(' ', $fallbackLines));
+                if (!self::isInvalidProgramNameCandidate($combined)) {
+                    return $combined;
+                }
+                usort($fallbackLines, static fn (string $a, string $b): int => mb_strlen($b) <=> mb_strlen($a));
+                return self::normalizeSentence((string) ($fallbackLines[0] ?? ''));
             }
         }
         return '';
+    }
+
+    private static function sanitizeProgramNameCandidate(string $candidate): string
+    {
+        $value = trim($candidate);
+        $value = preg_replace('/^\s*del\s+programa\s*[:\-]\s*/iu', '', $value) ?? $value;
+        $value = preg_replace('/^\s*programa\s*[:\-]\s*/iu', '', $value) ?? $value;
+        return self::normalizeSentence($value);
     }
 
     private static function detectNivel(string $text): string
@@ -588,6 +631,9 @@ class ProgramaPdfParser
             return true;
         }
         if (preg_match('/^(del\s+programa:?|programa:?)$/iu', $value)) {
+            return true;
+        }
+        if (preg_match('/^(del\s+programa|programa)\s*[:\-]\s*/iu', $value)) {
             return true;
         }
         if (preg_match('/^\d+$/', $value)) {

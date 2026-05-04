@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 ?>
-<div id="modal-confirm-action" class="hidden fixed inset-0 z-50 items-center justify-center p-4" data-modal-overlay="confirm-action">
+<div id="modal-confirm-action" class="hidden fixed inset-0 z-[70] items-center justify-center p-4" data-modal-overlay="confirm-action">
     <div class="absolute inset-0 bg-app-text/40"></div>
     <div class="relative w-full max-w-md rounded-[10px] border border-app-border bg-app-panel p-6 shadow-xsSoft">
         <div class="min-w-0">

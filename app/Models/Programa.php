@@ -101,6 +101,27 @@ class Programa
         return $stmt->fetch() ?: null;
     }
 
+    /** Coincidencia exacta de nombre + nivel (índice único en BD). */
+    public static function findIdByNombreNivel(string $nombre, string $nivel, int $excludeId = 0): ?int
+    {
+        $nombre = trim($nombre);
+        $nivel = trim($nivel);
+        if ($nombre === '' || $nivel === '') {
+            return null;
+        }
+        $sql = 'SELECT id FROM programas WHERE nombre = :nombre AND nivel = :nivel';
+        $params = ['nombre' => $nombre, 'nivel' => $nivel];
+        if ($excludeId > 0) {
+            $sql .= ' AND id <> :exclude_id';
+            $params['exclude_id'] = $excludeId;
+        }
+        $sql .= ' LIMIT 1';
+        $stmt = Database::connection()->prepare($sql);
+        $stmt->execute($params);
+        $row = $stmt->fetch();
+        return $row ? (int) ($row['id'] ?? 0) : null;
+    }
+
     public static function create(array $data): int
     {
         $pdo = Database::connection();
