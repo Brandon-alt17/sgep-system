@@ -5,12 +5,19 @@ $pendientes = (array) ($pendientes ?? []);
 $programas = (array) ($programas ?? []);
 $filters = (array) ($filters ?? []);
 $q = trim((string) ($filters['q'] ?? ''));
+$pendientesCount = (int) ($pendientesCount ?? 0);
 $toastKey = trim((string) ($_GET['toast'] ?? ''));
 $toastMessage = match ($toastKey) {
     'pendiente_resuelto' => 'Vínculo con el programa guardado correctamente.',
     default => '',
 };
 $tdClasses = str_replace('h-[50px] ', '', ui_td_classes());
+$pendientesAlertUrgente = $pendientesCount > 5;
+$pendientesAlertSection = trim('mt-4 ' . ui_pending_enlace_alert_section_classes($pendientesCount));
+$pendientesAlertFg = $pendientesAlertUrgente ? 'text-rose-700' : 'text-app-warningText';
+$pendientesAlertBadge = $pendientesAlertUrgente
+    ? 'rounded-full bg-rose-200 px-2 py-0.5 text-xs font-bold text-rose-900'
+    : 'rounded-full border border-app-borderWarning bg-amber-100 px-2 py-0.5 text-xs font-bold text-app-warningText';
 ?>
 
 <section class="bg-app-bg flex flex-row items-start gap-2">
@@ -21,6 +28,13 @@ $tdClasses = str_replace('h-[50px] ', '', ui_td_classes());
         <h2 class="m-0 text-2xl font-semibold text-app-text">Pendientes por enlazar</h2>
         <p class="m-0 text-sm text-app-muted">Aprendices importados sin vínculo a un programa del catálogo. Asigna un programa existente en cada fila para resolver el pendiente.</p>
     </div>
+</section>
+
+<section class="<?= e($pendientesAlertSection) ?>">
+    <p class="m-0 flex items-center gap-2 text-sm font-semibold <?= e($pendientesAlertFg) ?>">
+        <span class="inline-flex h-4 w-4 [&_svg]:h-4 [&_svg]:w-4 <?= e($pendientesAlertFg) ?>"><?= ui_icon('alert-circle') ?></span>
+        Hay <span class="<?= e($pendientesAlertBadge) ?>"><?= e((string) $pendientesCount) ?></span> aprendices pendientes por enlazar con un programa.
+    </p>
 </section>
 
 <section class="<?= e(ui_card_classes()) ?> mb-4 mt-4 p-6">
@@ -62,10 +76,10 @@ $tdClasses = str_replace('h-[50px] ', '', ui_td_classes());
     <div class="overflow-x-auto rounded-[10px]">
         <table class="<?= e(ui_table_in_card_classes()) ?> table-fixed min-w-[900px] !m-0 !p-0">
             <colgroup>
-                <col class="w-[33%] min-w-[200px]">
+                <col class="w-[28%] min-w-[180px]">
                 <col class="w-[12%]">
                 <col class="w-[27.5%]">
-                <col class="w-[27.5%]">
+                <col class="w-[32.5%]">
             </colgroup>
             <thead>
             <tr class="bg-app-panelSubtle">

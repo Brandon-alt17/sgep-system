@@ -134,6 +134,207 @@ document.querySelectorAll("[data-live-filter-root]").forEach(function (root) {
   }
 });
 
+// Combobox reusable: input + lista filtrable para seleccionar valor.
+var initComboboxes = function (scope) {
+  var rootScope = scope && scope.querySelectorAll ? scope : document;
+  rootScope.querySelectorAll("[data-combobox-root]").forEach(function (root) {
+    if (!(root instanceof HTMLElement)) return;
+    if (root.dataset.comboboxReady === "1") return;
+    root.dataset.comboboxReady = "1";
+
+    var hiddenInput = root.querySelector("[data-combobox-value]");
+    var searchInput = root.querySelector("[data-combobox-input]");
+    var clearButton = root.querySelector("[data-combobox-clear]");
+    var chevron = root.querySelector("[data-combobox-chevron]");
+    var menu = root.querySelector("[data-combobox-menu]");
+    var emptyState = root.querySelector("[data-combobox-empty]");
+    if (!hiddenInput || !searchInput || !menu) return;
+
+    var getOptions = function () {
+      return Array.prototype.slice.call(menu.querySelectorAll("[data-combobox-option]"));
+    };
+    var normalize = function (value) {
+      var text = (value || "").toString().toLowerCase();
+      if (typeof text.normalize === "function") {
+        text = text.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      }
+      return text.trim();
+    };
+    var setChevronOpen = function (open) {
+      if (!chevron) return;
+      chevron.classList.toggle("rotate-180", !!open);
+    };
+    // Misma X que el buscador (live_filter_search): visible solo con texto; chevron solo con campo vacío (como select).
+    var syncClearAndChevron = function () {
+      var textEmpty = (searchInput.value || "").trim() === "";
+      if (clearButton) clearButton.classList.toggle("hidden", textEmpty);
+      if (chevron) chevron.classList.toggle("hidden", !textEmpty);
+    };
+    var listEl = menu.querySelector("ul");
+    var menuPlaceholder = null;
+    var repositionHandler = function () {
+      if (menu.classList.contains("hidden")) return;
+      positionMenu();
+    };
+    var positionMenu = function () {
+      if (menu.classList.contains("hidden")) return;
+      var rect = searchInput.getBoundingClientRect();
+      var gap = 4;
+      var spaceBelow = window.innerHeight - rect.bottom - gap - 8;
+      var maxList = Math.min(210, Math.max(96, spaceBelow));
+      if (listEl) listEl.style.maxHeight = maxList + "px";
+      menu.style.position = "fixed";
+      menu.style.left = Math.max(8, rect.left) + "px";
+      menu.style.top = rect.bottom + gap + "px";
+      menu.style.width = rect.width + "px";
+      menu.style.minWidth = rect.width + "px";
+      menu.style.right = "auto";
+      menu.style.boxSizing = "border-box";
+    };
+    var attachMenuToBody = function () {
+      if (menu.parentNode === document.body) return;
+      menuPlaceholder = document.createComment("sg-combobox-menu");
+      root.replaceChild(menuPlaceholder, menu);
+      document.body.appendChild(menu);
+    };
+    var restoreMenuToRoot = function () {
+      if (menuPlaceholder && menuPlaceholder.parentNode === root) {
+        root.replaceChild(menu, menuPlaceholder);
+        menuPlaceholder = null;
+      } else if (menu.parentNode === document.body && menuPlaceholder === null) {
+        root.appendChild(menu);
+      }
+    };
+    var openMenu = function () {
+      var wasHidden = menu.classList.contains("hidden");
+      menu.classList.remove("hidden");
+      attachMenuToBody();
+      if (wasHidden) {
+        window.addEventListener("scroll", repositionHandler, true);
+        window.addEventListener("resize", repositionHandler);
+      }
+      window.requestAnimationFrame(function () {
+        positionMenu();
+      });
+    };
+    var closeMenu = function () {
+      menu.classList.add("hidden");
+      menu.style.position = "";
+      menu.style.left = "";
+      menu.style.top = "";
+      menu.style.width = "";
+      menu.style.minWidth = "";
+      menu.style.right = "";
+      menu.style.boxSizing = "";
+      if (listEl) listEl.style.maxHeight = "";
+      window.removeEventListener("scroll", repositionHandler, true);
+      window.removeEventListener("resize", repositionHandler);
+      restoreMenuToRoot();
+    };
+    var applyFilter = function () {
+      var query = normalize(searchInput.value);
+      var visibleCount = 0;
+      getOptions().forEach(function (opt) {
+        var source = normalize(opt.getAttribute("data-search") || opt.getAttribute("data-label") || opt.textContent || "");
+        var matches = query === "" || source.indexOf(query) !== -1;
+        opt.classList.toggle("hidden", !matches);
+        if (matches) visibleCount += 1;
+      });
+      if (emptyState) emptyState.classList.toggle("hidden", visibleCount > 0);
+      syncClearAndChevron();
+    };
+    var syncLabelFromValue = function () {
+      var selected = getOptions().find(function (opt) {
+        return (opt.getAttribute("data-value") || "") === (hiddenInput.value || "");
+      });
+      searchInput.value = selected ? (selected.getAttribute("data-label") || selected.textContent || "") : "";
+      syncClearAndChevron();
+    };
+    var clearValue = function () {
+      hiddenInput.value = "";
+      searchInput.value = "";
+      searchInput.setCustomValidity("");
+      applyFilter();
+      openMenu();
+      searchInput.focus();
+    };
+
+    menu.addEventListener("click", function (event) {
+      var target = event.target;
+      if (!(target instanceof Element)) return;
+      var option = target.closest("[data-combobox-option]");
+      if (!option) return;
+      var nextValue = option.getAttribute("data-value") || "";
+      var nextLabel = option.getAttribute("data-label") || option.textContent || "";
+      hiddenInput.value = nextValue;
+      searchInput.value = nextLabel;
+      searchInput.setCustomValidity("");
+      closeMenu();
+      syncClearAndChevron();
+    });
+
+    searchInput.addEventListener("focus", function () {
+      setChevronOpen(true);
+      applyFilter();
+      openMenu();
+    });
+    searchInput.addEventListener("blur", function () {
+      window.setTimeout(function () {
+        setChevronOpen(false);
+      }, 0);
+    });
+    searchInput.addEventListener("input", function () {
+      hiddenInput.value = "";
+      searchInput.setCustomValidity("");
+      applyFilter();
+      openMenu();
+    });
+    searchInput.addEventListener("keydown", function (event) {
+      if (event.key === "Escape") {
+        closeMenu();
+      }
+    });
+
+    if (clearButton) {
+      clearButton.addEventListener("click", function (event) {
+        event.preventDefault();
+        event.stopPropagation();
+        clearValue();
+      });
+    }
+
+    var parentForm = root.closest("form");
+    if (parentForm && parentForm.dataset.comboboxValidationBound !== "1") {
+      parentForm.dataset.comboboxValidationBound = "1";
+      parentForm.addEventListener("submit", function (event) {
+        var requiredCombobox = parentForm.querySelector("[data-combobox-value][data-combobox-required='1']");
+        if (!requiredCombobox) return;
+        var requiredRoot = requiredCombobox.closest("[data-combobox-root]");
+        var requiredInput = requiredRoot ? requiredRoot.querySelector("[data-combobox-input]") : null;
+        if ((requiredCombobox.value || "").trim() !== "") return;
+        event.preventDefault();
+        if (requiredInput) {
+          requiredInput.setCustomValidity("Selecciona un programa.");
+          requiredInput.reportValidity();
+          requiredInput.focus();
+        }
+      });
+    }
+
+    document.addEventListener("click", function (event) {
+      var t = event.target;
+      if (!(t instanceof Node)) return;
+      if (root.contains(t)) return;
+      if (menu.contains(t)) return;
+      closeMenu();
+    });
+
+    syncLabelFromValue();
+    applyFilter();
+  });
+};
+initComboboxes(document);
+
 // Listados: actualiza solo tbody (o nodo destino) por GET + JSON; debounce en texto; replaceState sin perder foco.
 document.querySelectorAll("[data-remote-table-filter-form]").forEach(function (form) {
   var targetSelector = form.getAttribute("data-remote-table-filter-target") || "";
@@ -207,6 +408,7 @@ document.querySelectorAll("[data-remote-table-filter-form]").forEach(function (f
           throw new Error("Respuesta invalida");
         }
         target.innerHTML = payload.rowsHtml;
+        initComboboxes(target);
         if (window.history && typeof window.history.replaceState === "function") {
           window.history.replaceState(null, "", buildBrowserUrl());
         }

@@ -86,7 +86,17 @@ $errors = (array) ($errors ?? []);
         <input type="hidden" name="horas_productiva" value="<?= e((string) ($meta['horas_productiva'] ?? '')) ?>">
         <div class="grid gap-3 max-w-xl w-full">
             <label class="<?= e(ui_label_classes()) ?>">Nombre del programa
-                <input type="text" name="nombre" value="<?= e((string) ($meta['nombre'] ?? '')) ?>" class="<?= e(ui_input_classes()) ?>" data-inline-input>
+                <textarea
+                    name="nombre"
+                    rows="1"
+                    class="<?= e(ui_input_classes()) ?> min-h-[2.5rem] resize-none overflow-hidden bg-white"
+                    data-inline-input
+                    data-auto-resize-textarea
+                    autocomplete="new-password"
+                    autocorrect="off"
+                    autocapitalize="off"
+                    spellcheck="false"
+                ><?= e((string) ($meta['nombre'] ?? '')) ?></textarea>
             </label>
             <label class="<?= e(ui_label_classes()) ?>">Código
                 <input type="text" name="codigo" value="<?= e($programCode) ?>" class="<?= e(ui_input_classes()) ?>" data-inline-input>

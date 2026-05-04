@@ -202,6 +202,19 @@ if (!function_exists('ui_warning_card_classes')) {
     }
 }
 
+if (!function_exists('ui_pending_enlace_alert_section_classes')) {
+    /**
+     * Misma jerarquía visual que el aviso de pendientes por enlazar en catálogo
+     * (components/alerts/pending_link): más de 5 → crítico (rose); en caso contrario aviso estándar.
+     */
+    function ui_pending_enlace_alert_section_classes(int $count): string
+    {
+        return $count > 5
+            ? 'rounded-[10px] border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700'
+            : (string) ui_warning_card_classes();
+    }
+}
+
 if (!function_exists('ui_upload_dropzone_preset')) {
     /**
      * Presets reutilizables para tarjetas de carga con drag & drop.

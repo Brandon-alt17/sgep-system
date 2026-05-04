@@ -64,6 +64,7 @@ class CatalogoController
         $filters = ['q' => trim((string) ($_GET['q'] ?? ''))];
         $pendientes = ProgramaEnlacePendiente::pendingList($filters);
         $programas = Programa::all();
+        $pendientesCount = Programa::countPendientesEnlace();
 
         if ($this->isAjaxFilterRequest()) {
             partial('components/ui');
@@ -89,6 +90,7 @@ class CatalogoController
             'pendientes' => $pendientes,
             'filters' => $filters,
             'programas' => $programas,
+            'pendientesCount' => $pendientesCount,
         ]);
     }
 
