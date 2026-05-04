@@ -15,14 +15,14 @@ $tdClasses = isset($tdClasses) && (string) $tdClasses !== ''
 <?php else: ?>
     <?php foreach ($pendientes as $row): ?>
         <tr class="border-b border-app-borderSoft">
-            <td class="<?= e($tdClasses) ?> px-5 py-4 pl-6 align-top text-app-text"><?= e((string) ($row['nombre_aprendiz'] ?? '')) ?></td>
+            <td class="<?= e($tdClasses) ?> px-5 py-4 pl-6 align-top whitespace-normal break-words text-app-text"><?= e((string) ($row['nombre_aprendiz'] ?? '')) ?></td>
             <td class="<?= e($tdClasses) ?> px-5 py-4 align-top font-mono text-sm text-app-textSubtle"><?= e((string) ($row['numero_documento'] ?? '')) ?></td>
-            <td class="<?= e($tdClasses) ?> px-5 py-4 align-top text-app-text"><?= e((string) ($row['programa_fuente'] ?? '')) ?></td>
-            <td class="<?= e($tdClasses) ?> relative z-0 px-5 py-4 pr-6 align-top focus-within:z-30">
-                <form method="post" action="<?= e(APP_BASE_PATH) ?>/catalogo/programas/pendientes/resolver" class="flex flex-wrap items-center gap-3">
+            <td class="<?= e($tdClasses) ?> px-5 py-4 align-top text-sm leading-snug text-app-text"><?= e((string) ($row['programa_fuente'] ?? '')) ?></td>
+            <td class="<?= e($tdClasses) ?> relative z-0 px-5 py-4 pr-6 align-middle focus-within:z-30">
+                <form method="post" action="<?= e(APP_BASE_PATH) ?>/catalogo/programas/pendientes/resolver" class="flex flex-row flex-nowrap items-center justify-start gap-2">
                     <input type="hidden" name="pending_id" value="<?= (int) ($row['id'] ?? 0) ?>">
-                    <span class="<?= e(ui_select_wrapper_classes()) ?> min-w-[220px] max-w-full flex-1 md:min-w-[300px]">
-                        <select name="programa_id" required class="<?= e(ui_select_classes()) ?>" autocomplete="off">
+                    <span class="<?= e(ui_select_wrapper_classes()) ?> min-w-0 flex-1">
+                        <select name="programa_id" required class="<?= e(ui_select_classes()) ?> text-xs" autocomplete="off">
                             <option value="">Seleccionar programa…</option>
                             <?php foreach ($programas as $programa): ?>
                                 <?php
@@ -38,7 +38,7 @@ $tdClasses = isset($tdClasses) && (string) $tdClasses !== ''
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-4 w-4"><path d="m6 9 6 6 6-6"></path></svg>
                         </span>
                     </span>
-                    <button class="<?= e(ui_button_small_classes()) ?> inline-flex shrink-0 items-center gap-2" type="submit">
+                    <button class="<?= e(ui_button_small_classes()) ?> inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap" type="submit">
                         <span class="inline-flex h-4 w-4 [&_svg]:h-4 [&_svg]:w-4"><?= ui_icon('check') ?></span>
                         Resolver
                     </button>

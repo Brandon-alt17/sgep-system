@@ -665,7 +665,9 @@ class CatalogoController
         $isXmlHttpRequest = strtolower((string) ($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '')) === 'xmlhttprequest';
         $isAjaxQueryFlag = ((string) ($_GET['ajax'] ?? '')) === '1';
 
-        return $isXmlHttpRequest && $isAjaxQueryFlag;
+        // Algunos entornos no propagan HTTP_X_REQUESTED_WITH de forma confiable.
+        // Con ajax=1 permitimos respuesta parcial sin depender del header.
+        return $isAjaxQueryFlag || $isXmlHttpRequest;
     }
 
     /**

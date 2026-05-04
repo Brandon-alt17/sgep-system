@@ -60,13 +60,19 @@ $tdClasses = str_replace('h-[50px] ', '', ui_td_classes());
 
 <section class="<?= e(ui_card_classes()) ?> mb-6 !p-0">
     <div class="overflow-x-auto rounded-[10px]">
-        <table class="<?= e(ui_table_in_card_classes()) ?> min-w-[720px] !m-0 !p-0">
+        <table class="<?= e(ui_table_in_card_classes()) ?> table-fixed min-w-[900px] !m-0 !p-0">
+            <colgroup>
+                <col class="w-[33%] min-w-[200px]">
+                <col class="w-[12%]">
+                <col class="w-[27.5%]">
+                <col class="w-[27.5%]">
+            </colgroup>
             <thead>
             <tr class="bg-app-panelSubtle">
                 <th class="<?= e(ui_th_classes()) ?> px-5 pl-6">Aprendiz</th>
                 <th class="<?= e(ui_th_classes()) ?> px-5">Documento</th>
                 <th class="<?= e(ui_th_classes()) ?> px-5">Programa fuente</th>
-                <th class="<?= e(ui_th_classes()) ?> px-5 pr-6">Resolver</th>
+                <th class="<?= e(ui_th_classes()) ?> px-5 pr-6 text-left">Resolver</th>
             </tr>
             </thead>
             <tbody id="tabla-pendientes-tbody">

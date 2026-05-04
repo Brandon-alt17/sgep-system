@@ -154,9 +154,9 @@ document.querySelectorAll("[data-remote-table-filter-form]").forEach(function (f
     clearButton.classList.toggle("hidden", (qInput.value || "").trim() === "");
   };
 
+  // Usa la URL actual del documento (pathname + prefijo de app) para no depender de que `action` del form coincida con dónde está montada la app.
   var buildFetchUrl = function () {
-    var action = form.getAttribute("action") || window.location.pathname;
-    var url = new URL(action, window.location.origin);
+    var url = new URL(window.location.href);
     var params = new URLSearchParams();
     var formData = new FormData(form);
     formData.forEach(function (value, key) {
@@ -168,8 +168,7 @@ document.querySelectorAll("[data-remote-table-filter-form]").forEach(function (f
   };
 
   var buildBrowserUrl = function () {
-    var action = form.getAttribute("action") || window.location.pathname;
-    var url = new URL(action, window.location.origin);
+    var url = new URL(window.location.origin + window.location.pathname);
     var params = new URLSearchParams();
     var formData = new FormData(form);
     formData.forEach(function (value, key) {
