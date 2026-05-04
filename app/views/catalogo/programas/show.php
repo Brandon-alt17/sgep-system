@@ -41,7 +41,19 @@ $toastMessage = match ($toastKey) {
 $horasTotalesDisplay = $totalHorasCompetencias > 0
     ? (string) $totalHorasCompetencias
     : (string) ($meta['horas_total'] ?? '');
+$errors = (array) ($errors ?? []);
 ?>
+
+<?php if ($errors !== []): ?>
+    <section class="mb-4 rounded-md border border-rose-200 bg-rose-50 p-4 text-sm text-rose-900" role="alert">
+        <h3 class="m-0 mb-2 text-sm font-semibold">No se pudieron guardar los cambios</h3>
+        <ul class="m-0 list-disc space-y-1 pl-5">
+            <?php foreach ($errors as $err): ?>
+                <li><?= e((string) $err) ?></li>
+            <?php endforeach; ?>
+        </ul>
+    </section>
+<?php endif; ?>
 
 <section class="bg-app-bg flex flex-row items-start gap-2">
     <a class="<?= e(ui_button_icon_classes()) ?> mt-2.5 self-start" href="<?= e(APP_BASE_PATH) ?>/catalogo/programas" aria-label="Volver al catálogo de programas">
@@ -74,7 +86,17 @@ $horasTotalesDisplay = $totalHorasCompetencias > 0
         <input type="hidden" name="horas_productiva" value="<?= e((string) ($meta['horas_productiva'] ?? '')) ?>">
         <div class="grid gap-3 max-w-xl w-full">
             <label class="<?= e(ui_label_classes()) ?>">Nombre del programa
-                <input type="text" name="nombre" value="<?= e((string) ($meta['nombre'] ?? '')) ?>" class="<?= e(ui_input_classes()) ?>" data-inline-input>
+                <textarea
+                    name="nombre"
+                    rows="1"
+                    class="<?= e(ui_input_classes()) ?> min-h-[2.5rem] resize-none overflow-hidden bg-white"
+                    data-inline-input
+                    data-auto-resize-textarea
+                    autocomplete="new-password"
+                    autocorrect="off"
+                    autocapitalize="off"
+                    spellcheck="false"
+                ><?= e((string) ($meta['nombre'] ?? '')) ?></textarea>
             </label>
             <label class="<?= e(ui_label_classes()) ?>">Código
                 <input type="text" name="codigo" value="<?= e($programCode) ?>" class="<?= e(ui_input_classes()) ?>" data-inline-input>
@@ -160,29 +182,13 @@ $horasTotalesDisplay = $totalHorasCompetencias > 0
 <?php endif; ?>
 
 <?php if ($competencias !== []): ?>
-<section class="<?= e(ui_card_classes()) ?> mt-6 " data-live-filter-root>
-    <div class="relative">
-        <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-app-muted [&_svg]:h-4 [&_svg]:w-4">
-            <?= ui_icon('search') ?>
-        </span>
-        <input
-            type="text"
-            class="<?= e(ui_input_classes()) ?> pl-10 pr-10"
-            placeholder="Buscar por competencia, RAE o código"
-            aria-label="Buscar por competencia, RAE o código"
-            data-live-filter-input
-        >
-        <button
-            type="button"
-            class="hidden absolute right-2 top-1/2 -translate-y-1/2 rounded-md px-2 py-1 text-sm text-app-muted hover:bg-app-panelSubtle hover:text-app-text"
-            aria-label="Limpiar búsqueda"
-            data-live-filter-clear
-        >&times;</button>
-    </div>
-    <p class="mt-2 hidden rounded-md border border-app-border bg-app-panelSubtle p-3 text-sm text-app-muted" data-live-filter-empty>
-        No hay coincidencias para la búsqueda.
-    </p>
-</section>
+    <?php partial('components/live_filter_search', [
+        'items_target' => '#programa-competencias-live-items',
+        'placeholder' => 'Buscar por competencia, RAE o código',
+        'aria_label' => 'Buscar por competencia, RAE o código',
+        'variant' => 'card',
+        'class' => '',
+    ]); ?>
 <?php endif; ?>
 
 <section class="<?= e(ui_card_classes()) ?> mb-6 mt-4 p-6">
@@ -229,7 +235,7 @@ $horasTotalesDisplay = $totalHorasCompetencias > 0
                                     <input type="text" name="resultados[0][codigo]" value="" class="<?= e(ui_input_classes()) ?>" autocomplete="new-password" autocorrect="off" autocapitalize="off" spellcheck="false">
                                 </td>
                                 <td class="<?= e(str_replace('border-b border-app-borderSoft ', '', ui_td_classes())) ?>">
-                                    <input type="text" name="resultados[0][descripcion]" value="" class="<?= e(ui_input_classes()) ?>" autocomplete="new-password" autocorrect="off" autocapitalize="off" spellcheck="false">
+                                    <textarea name="resultados[0][descripcion]" rows="1" class="<?= e(ui_input_classes()) ?> min-h-[2.5rem] resize-none overflow-hidden bg-white" data-auto-resize-textarea autocomplete="new-password" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea>
                                 </td>
                                 <td class="<?= e(str_replace('border-b border-app-borderSoft ', '', ui_td_classes())) ?>">
                                     <button type="button" class="<?= e(ui_button_icon_classes()) ?> border-rose-300 bg-rose-50 text-rose-700 hover:border-rose-400 hover:bg-rose-100 hover:text-rose-700" data-new-competencia-remove-rae aria-label="Eliminar RAE">
@@ -255,7 +261,7 @@ $horasTotalesDisplay = $totalHorasCompetencias > 0
     <?php if ($competencias === []): ?>
         <div class="mt-6 rounded-md border border-app-border bg-app-panelSubtle p-4 text-sm text-app-muted">No se detectaron competencias automáticamente.</div>
     <?php else: ?>
-        <div class="mt-6 space-y-6" data-live-filter-items>
+        <div id="programa-competencias-live-items" class="mt-6 space-y-6" data-live-filter-items>
             <?php foreach ($competencias as $compIndex => $comp): ?>
                 <?php
                 $resultadosComp = (array) ($comp['resultados'] ?? []);
@@ -274,7 +280,7 @@ $horasTotalesDisplay = $totalHorasCompetencias > 0
                     $searchParts
                 ))));
                 ?>
-                <article class="<?= e(ui_card_classes()) ?> min-h-[96px] p-6" data-inline-edit-root data-live-filter-item data-live-filter-text="<?= e($searchText) ?>" <?= $autoEditCompetenciaId === (int) ($comp['id'] ?? 0) ? 'data-inline-auto-open="1"' : '' ?>>
+                <article class="<?= e(ui_card_classes()) ?> min-h-[96px] p-6 transition-[border-color,box-shadow] duration-300 ease-out motion-reduce:transition-none" data-inline-edit-root data-live-filter-item data-live-filter-text="<?= e($searchText) ?>" <?= $autoEditCompetenciaId === (int) ($comp['id'] ?? 0) ? 'data-inline-auto-open="1"' : '' ?>>
                     <div class="mb-3 flex items-start justify-between gap-3">
                         <div data-inline-header>
                             <?php if (trim((string) ($comp['codigo'] ?? '')) !== ''): ?>
@@ -319,7 +325,9 @@ $horasTotalesDisplay = $totalHorasCompetencias > 0
                         </div>
                     </div>
 
-                    <form id="competencia-form-<?= (int) ($comp['id'] ?? 0) ?>" method="post" action="<?= e(APP_BASE_PATH) ?>/catalogo/programas/actualizar-competencia" data-inline-edit-form class="hidden">
+                    <div data-inline-competencia-drawer aria-expanded="false">
+                        <div data-inline-competencia-drawer-inner>
+                    <form id="competencia-form-<?= (int) ($comp['id'] ?? 0) ?>" method="post" action="<?= e(APP_BASE_PATH) ?>/catalogo/programas/actualizar-competencia" data-inline-edit-form inert>
                         <input type="hidden" name="programa_id" value="<?= (int) $programId ?>">
                         <input type="hidden" name="competencia_id" value="<?= (int) ($comp['id'] ?? 0) ?>">
                         <div class="mb-3 w-full grid grid-cols-10 gap-3">
@@ -355,7 +363,7 @@ $horasTotalesDisplay = $totalHorasCompetencias > 0
                                             <input type="text" name="resultados[0][codigo]" value="" class="<?= e(ui_input_classes()) ?>" data-inline-input>
                                         </td>
                                         <td class="<?= e(str_replace('border-b border-app-borderSoft ', '', ui_td_classes())) ?>">
-                                            <input type="text" name="resultados[0][descripcion]" value="" class="<?= e(ui_input_classes()) ?>" data-inline-input>
+                                            <textarea name="resultados[0][descripcion]" rows="1" class="<?= e(ui_input_classes()) ?> min-h-[2.5rem] resize-none overflow-hidden bg-white" data-inline-input data-auto-resize-textarea autocomplete="new-password" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea>
                                         </td>
                                         <td class="<?= e(str_replace('border-b border-app-borderSoft ', '', ui_td_classes())) ?>">
                                             <button type="button" class="<?= e(ui_button_icon_classes()) ?> border-rose-300 bg-rose-50 text-rose-700 hover:border-rose-400 hover:bg-rose-100 hover:text-rose-700" data-inline-remove-rae aria-label="Eliminar RAE">
@@ -370,7 +378,7 @@ $horasTotalesDisplay = $totalHorasCompetencias > 0
                                                 <input type="text" name="resultados[<?= (int) $raIndex ?>][codigo]" value="<?= e((string) (($resultado['codigo'] ?? '') !== '' ? $resultado['codigo'] : ('RA' . ($raIndex + 1)))) ?>" class="<?= e(ui_input_classes()) ?>" data-inline-input>
                                             </td>
                                             <td class="<?= e(str_replace('border-b border-app-borderSoft ', '', ui_td_classes())) ?>">
-                                                <input type="text" name="resultados[<?= (int) $raIndex ?>][descripcion]" value="<?= e((string) ($resultado['descripcion'] ?? '')) ?>" class="<?= e(ui_input_classes()) ?>" data-inline-input>
+                                                <textarea name="resultados[<?= (int) $raIndex ?>][descripcion]" rows="1" class="<?= e(ui_input_classes()) ?> min-h-[2.5rem] resize-none overflow-hidden bg-white" data-inline-input data-auto-resize-textarea autocomplete="new-password" autocorrect="off" autocapitalize="off" spellcheck="false"><?= e((string) ($resultado['descripcion'] ?? '')) ?></textarea>
                                             </td>
                                             <td class="<?= e(str_replace('border-b border-app-borderSoft ', '', ui_td_classes())) ?>">
                                                 <button type="button" class="<?= e(ui_button_icon_classes()) ?> border-rose-300 bg-rose-50 text-rose-700 hover:border-rose-400 hover:bg-rose-100 hover:text-rose-700" data-inline-remove-rae aria-label="Eliminar RAE">
@@ -398,6 +406,8 @@ $horasTotalesDisplay = $totalHorasCompetencias > 0
                             </div>
                         </div>
                     </form>
+                        </div>
+                    </div>
                 </article>
             <?php endforeach; ?>
         </div>
