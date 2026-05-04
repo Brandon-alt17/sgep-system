@@ -35,6 +35,18 @@ class Aprendiz
             $params['ficha'] = $filters['ficha'];
         }
 
+        $empresaId = (int) ($filters['empresa_id'] ?? 0);
+        if ($empresaId > 0) {
+            $where[] = 'a.empresa_id = :empresa_id';
+            $params['empresa_id'] = $empresaId;
+        }
+
+        $programaId = (int) ($filters['programa_id'] ?? 0);
+        if ($programaId > 0) {
+            $where[] = 'a.programa_id = :programa_id';
+            $params['programa_id'] = $programaId;
+        }
+
         if (!empty($filters['q'])) {
             $where[] = '(a.nombre_completo LIKE :q OR a.numero_documento LIKE :q)';
             $params['q'] = '%' . $filters['q'] . '%';

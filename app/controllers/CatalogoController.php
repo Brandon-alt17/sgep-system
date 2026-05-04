@@ -6,9 +6,12 @@ namespace App\Controllers;
 
 use App\Helpers\ProgramaPdfParser;
 use App\Helpers\ProgramaPdfTextExtractor;
+use App\Helpers\Validator;
 use App\Models\ProgramaContenido;
 use App\Models\ProgramaEnlacePendiente;
 use App\Models\ProgramaImportacionPdf;
+use App\Models\Empresa;
+use App\Models\Grupo;
 use App\Models\Programa;
 
 class CatalogoController
@@ -51,12 +54,153 @@ class CatalogoController
 
     public function grupos(): void
     {
-        view('catalogo/grupos/index');
+        $filters = [
+            'q' => trim((string) ($_GET['q'] ?? '')),
+            'programa_id' => (int) ($_GET['programa_id'] ?? 0),
+        ];
+        $grupos = Grupo::catalogo($filters);
+        $programas = Programa::all();
+
+        if ($this->isAjaxFilterRequest()) {
+            partial('components/ui');
+            $tdClasses = str_replace('h-[50px] ', '', ui_td_classes());
+            ob_start();
+            partial('catalogo/grupos/_rows', ['grupos' => $grupos, 'tdClasses' => $tdClasses]);
+            $rowsHtml = (string) ob_get_clean();
+
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode([
+                'ok' => true,
+                'rowsHtml' => $rowsHtml,
+                'total' => count($grupos),
+            ], JSON_UNESCAPED_UNICODE);
+            return;
+        }
+
+        view('catalogo/grupos/index', [
+            'grupos' => $grupos,
+            'filters' => $filters,
+            'programas' => $programas,
+        ]);
     }
 
     public function empresas(): void
     {
-        view('catalogo/empresas/index');
+        $filters = ['q' => trim((string) ($_GET['q'] ?? ''))];
+        $empresas = Empresa::catalogo($filters);
+
+        if ($this->isAjaxFilterRequest()) {
+            partial('components/ui');
+            $tdClasses = str_replace('h-[50px] ', '', ui_td_classes());
+            ob_start();
+            partial('catalogo/empresas/_rows', ['empresas' => $empresas, 'tdClasses' => $tdClasses]);
+            $rowsHtml = (string) ob_get_clean();
+
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode([
+                'ok' => true,
+                'rowsHtml' => $rowsHtml,
+                'total' => count($empresas),
+            ], JSON_UNESCAPED_UNICODE);
+            return;
+        }
+
+        view('catalogo/empresas/index', [
+            'empresas' => $empresas,
+            'filters' => $filters,
+        ]);
+    }
+
+    public function empresasNuevo(): void
+    {
+        view('catalogo/empresas/form', [
+            'empresa' => null,
+            'errors' => [],
+        ]);
+    }
+
+    public function empresasCrear(): void
+    {
+        $data = $this->postedEmpresaPayload();
+        $errors = Validator::required($_POST, ['nombre']);
+        if ($errors !== []) {
+            view('catalogo/empresas/form', ['empresa' => $data, 'errors' => array_values($errors)]);
+            return;
+        }
+        Empresa::create($data);
+        redirect(APP_BASE_PATH . '/catalogo/empresas?toast=empresa_creada');
+    }
+
+    public function empresasEditar(): void
+    {
+        $id = (int) ($_GET['id'] ?? 0);
+        $empresa = Empresa::findById($id);
+        if ($empresa === null) {
+            http_response_code(404);
+            view('errors/404', ['uri' => '/catalogo/empresas/editar?id=' . $id]);
+            return;
+        }
+        view('catalogo/empresas/form', [
+            'empresa' => $empresa,
+            'errors' => [],
+        ]);
+    }
+
+    public function empresasActualizar(): void
+    {
+        $id = (int) ($_POST['id'] ?? 0);
+        $empresa = Empresa::findById($id);
+        if ($empresa === null) {
+            http_response_code(404);
+            view('errors/404', ['uri' => '/catalogo/empresas/editar']);
+            return;
+        }
+        $data = $this->postedEmpresaPayload();
+        $errors = Validator::required($_POST, ['nombre']);
+        if ($errors !== []) {
+            $data['id'] = $id;
+            view('catalogo/empresas/form', ['empresa' => array_merge($empresa, $data), 'errors' => array_values($errors)]);
+            return;
+        }
+        Empresa::update($id, $data);
+        redirect(APP_BASE_PATH . '/catalogo/empresas?toast=empresa_actualizada');
+    }
+
+    public function empresasEliminar(): void
+    {
+        $id = (int) ($_POST['empresa_id'] ?? 0);
+        if ($id <= 0) {
+            redirect(APP_BASE_PATH . '/catalogo/empresas');
+            return;
+        }
+        if (Empresa::countAprendices($id) > 0) {
+            redirect(APP_BASE_PATH . '/catalogo/empresas?toast=empresa_no_eliminada_aprendices');
+            return;
+        }
+        if (Empresa::deleteById($id)) {
+            redirect(APP_BASE_PATH . '/catalogo/empresas?toast=empresa_eliminada');
+            return;
+        }
+        redirect(APP_BASE_PATH . '/catalogo/empresas?toast=empresa_no_encontrada');
+    }
+
+    /** @return array<string, string> */
+    private function postedEmpresaPayload(): array
+    {
+        return [
+            'nombre' => trim((string) ($_POST['nombre'] ?? '')),
+            'nit' => trim((string) ($_POST['nit'] ?? '')),
+            'direccion' => trim((string) ($_POST['direccion'] ?? '')),
+            'ciudad' => trim((string) ($_POST['ciudad'] ?? '')),
+            'correo_org' => trim((string) ($_POST['correo_org'] ?? '')),
+            'nombre_jefe' => trim((string) ($_POST['nombre_jefe'] ?? '')),
+            'cargo_jefe' => trim((string) ($_POST['cargo_jefe'] ?? '')),
+            'correo_jefe' => trim((string) ($_POST['correo_jefe'] ?? '')),
+            'telefono_jefe' => trim((string) ($_POST['telefono_jefe'] ?? '')),
+            'nombre_contacto2' => trim((string) ($_POST['nombre_contacto2'] ?? '')),
+            'correo_contacto2' => trim((string) ($_POST['correo_contacto2'] ?? '')),
+            'direccion_practica' => trim((string) ($_POST['direccion_practica'] ?? '')),
+        ];
     }
 
     public function pendientesPrograma(): void
