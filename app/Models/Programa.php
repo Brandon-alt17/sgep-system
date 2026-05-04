@@ -32,13 +32,7 @@ class Programa
             $params['nivel'] = $nivel;
         }
 
-        $modalidad = trim((string) ($filters['modalidad'] ?? ''));
-        if ($modalidad !== '') {
-            $where[] = 'modalidad = :modalidad';
-            $params['modalidad'] = $modalidad;
-        }
-
-        $sql = 'SELECT id, codigo, nombre, nivel, modalidad FROM programas';
+        $sql = 'SELECT id, codigo, nombre, nivel FROM programas';
         if ($where !== []) {
             $sql .= ' WHERE ' . implode(' AND ', $where);
         }
@@ -76,7 +70,7 @@ class Programa
                            GROUP BY programa_id
                          ) latest ON latest.max_id = i.id";
             $hoursStmt = Database::connection()->prepare($hoursSql);
-            $hoursStmt->execute(array_merge($programaIds, $programaIds));
+            $hoursStmt->execute($programaIds);
             $hoursRows = $hoursStmt->fetchAll();
 
             $hoursByProgramaId = [];
@@ -105,6 +99,68 @@ class Programa
         $stmt = Database::connection()->prepare('SELECT * FROM programas WHERE id = :id LIMIT 1');
         $stmt->execute(['id' => $id]);
         return $stmt->fetch() ?: null;
+    }
+
+    /** Coincidencia exacta de nombre + nivel (índice único en BD). */
+    public static function findIdByNombreNivel(string $nombre, string $nivel, int $excludeId = 0): ?int
+    {
+        $nombre = trim($nombre);
+        $nivel = trim($nivel);
+        if ($nombre === '' || $nivel === '') {
+            return null;
+        }
+        $sql = 'SELECT id FROM programas WHERE nombre = :nombre AND nivel = :nivel';
+        $params = ['nombre' => $nombre, 'nivel' => $nivel];
+        if ($excludeId > 0) {
+            $sql .= ' AND id <> :exclude_id';
+            $params['exclude_id'] = $excludeId;
+        }
+        $sql .= ' LIMIT 1';
+        $stmt = Database::connection()->prepare($sql);
+        $stmt->execute($params);
+        $row = $stmt->fetch();
+        return $row ? (int) ($row['id'] ?? 0) : null;
+    }
+
+    public static function create(array $data): int
+    {
+        $pdo = Database::connection();
+        $stmt = $pdo->prepare(
+            'INSERT INTO programas (codigo, nombre, nivel, modalidad, created_at)
+             VALUES (:codigo, :nombre, :nivel, :modalidad, NOW())'
+        );
+        $stmt->execute([
+            'codigo' => self::nullableTrim($data['codigo'] ?? ''),
+            'nombre' => trim((string) ($data['nombre'] ?? '')),
+            'nivel' => self::nullableTrim($data['nivel'] ?? ''),
+            'modalidad' => self::nullableTrim($data['modalidad'] ?? ''),
+        ]);
+        return (int) $pdo->lastInsertId();
+    }
+
+    public static function update(int $id, array $data): void
+    {
+        $stmt = Database::connection()->prepare(
+            'UPDATE programas
+             SET codigo = :codigo,
+                 nombre = :nombre,
+                 nivel = :nivel,
+                 modalidad = :modalidad
+             WHERE id = :id'
+        );
+        $stmt->execute([
+            'id' => $id,
+            'codigo' => self::nullableTrim($data['codigo'] ?? ''),
+            'nombre' => trim((string) ($data['nombre'] ?? '')),
+            'nivel' => self::nullableTrim($data['nivel'] ?? ''),
+            'modalidad' => self::nullableTrim($data['modalidad'] ?? ''),
+        ]);
+    }
+
+    public static function deleteById(int $id): void
+    {
+        $stmt = Database::connection()->prepare('DELETE FROM programas WHERE id = :id');
+        $stmt->execute(['id' => $id]);
     }
 
     public static function countPendientesEnlace(): int
@@ -163,5 +219,11 @@ class Programa
             $pdo->prepare($sqlLegacy)->execute($params);
         }
         return (int) $pdo->lastInsertId();
+    }
+
+    private static function nullableTrim(mixed $value): ?string
+    {
+        $trimmed = trim((string) $value);
+        return $trimmed === '' ? null : $trimmed;
     }
 }

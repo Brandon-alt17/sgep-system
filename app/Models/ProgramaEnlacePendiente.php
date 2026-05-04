@@ -49,8 +49,11 @@ class ProgramaEnlacePendiente
         $params = [];
         $q = trim((string) ($filters['q'] ?? ''));
         if ($q !== '') {
-            $where[] = '(pep.numero_documento LIKE :q OR pep.nombre_aprendiz LIKE :q OR pep.programa_fuente LIKE :q)';
-            $params['q'] = '%' . $q . '%';
+            $like = '%' . $q . '%';
+            $where[] = '(pep.numero_documento LIKE :q_doc OR pep.nombre_aprendiz LIKE :q_nom OR pep.programa_fuente LIKE :q_prog)';
+            $params['q_doc'] = $like;
+            $params['q_nom'] = $like;
+            $params['q_prog'] = $like;
         }
 
         $sql = 'SELECT pep.*, a.id AS aprendiz_id, p.nombre AS programa_nombre_destino

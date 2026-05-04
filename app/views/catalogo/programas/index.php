@@ -3,7 +3,12 @@ $programas = (array) ($programas ?? []);
 $filters = (array) ($filters ?? []);
 $q = trim((string) ($filters['q'] ?? ''));
 $nivel = trim((string) ($filters['nivel'] ?? ''));
-$modalidad = trim((string) ($filters['modalidad'] ?? ''));
+$toastKey = trim((string) ($_GET['toast'] ?? ''));
+$toastMessage = match ($toastKey) {
+    'programa_importado' => 'PDF del programa importado correctamente.',
+    'programa_eliminado' => 'Programa eliminado correctamente.',
+    default => '',
+};
 $totalRows = count($programas);
 $pendientesCount = (int) ($pendientesCount ?? 0);
 
@@ -12,10 +17,16 @@ $tdClasses = str_replace('h-[50px] ', '', ui_td_classes());
 
 ob_start();
 ?>
-<a class="<?= e(ui_button_primary_classes()) ?> inline-flex items-center gap-2 text-app-textOnBrand" href="<?= e(APP_BASE_PATH) ?>/catalogo/programas/importar">
-    <span class="inline-flex h-4 w-4 [&_svg]:h-4 [&_svg]:w-4"><?= ui_icon('file-up') ?></span>
-    Importar PDF del programa
-</a>
+<div class="flex flex-wrap items-center gap-2">
+    <a class="<?= e(ui_button_primary_classes()) ?> inline-flex items-center gap-2 text-app-textOnBrand" href="<?= e(APP_BASE_PATH) ?>/catalogo/programas/importar">
+        <span class="inline-flex h-4 w-4 [&_svg]:h-4 [&_svg]:w-4"><?= ui_icon('file-up') ?></span>
+        Importar PDF
+    </a>
+    <a class="<?= e(ui_button_small_classes()) ?> inline-flex items-center gap-2" href="<?= e(APP_BASE_PATH) ?>/catalogo/programas/nuevo">
+        <span class="inline-flex h-4 w-4 [&_svg]:h-4 [&_svg]:w-4"><?= ui_icon('pencil') ?></span>
+        Nuevo programa manual
+    </a>
+</div>
 <?php
 $headerActions = (string) ob_get_clean();
 
@@ -35,22 +46,39 @@ partial('components/page_header', [
     'extraClasses' => 'mb-4',
 ]); ?>
 
-<!-- Buscador y filtros -->
-<section class="<?= e(ui_card_classes()) ?> mb-4">
-   
-
-    <form method="get" action="<?= e(APP_BASE_PATH) ?>/catalogo/programas" class="flex w-full items-center gap-3" data-auto-filter-form data-auto-filter-ajax="true" data-auto-filter-target="#tabla-catalogo-programas tbody">
-        <input
-            type="text"
-            name="q"
-            value="<?= e($q) ?>"
-            placeholder="Buscar por código o nombre"
-            class="<?= e(ui_input_classes()) ?> mt-0 flex-1 min-w-0"
-            data-auto-filter-input
-        >
-
-        <div class="<?= e(ui_select_wrapper_classes()) ?> w-64 shrink-0">
-            <select name="nivel" class="<?= e(ui_select_classes()) ?>" data-auto-filter-change>
+<!-- Búsqueda y nivel: solo se actualiza el tbody por fetch (sin recargar la página). -->
+<section class="<?= e(ui_card_classes()) ?> mb-4 p-6">
+    <form
+        method="get"
+        action="<?= e(APP_BASE_PATH) ?>/catalogo/programas"
+        class="flex w-full flex-col gap-4 sm:flex-row sm:items-end sm:gap-3"
+        data-remote-table-filter-form
+        data-remote-table-filter-target="#tabla-catalogo-programas tbody"
+        data-remote-table-filter-debounce="350"
+    >
+        <div class="relative min-w-0 flex-1">
+            <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-app-muted [&_svg]:h-4 [&_svg]:w-4">
+                <?= ui_icon('search') ?>
+            </span>
+            <input
+                type="text"
+                name="q"
+                value="<?= e($q) ?>"
+                placeholder="Buscar por código o nombre"
+                aria-label="Buscar por código o nombre"
+                autocomplete="off"
+                class="<?= e(ui_input_classes()) ?> mt-0 w-full bg-white pl-10 pr-10"
+                data-remote-table-filter-q
+            >
+            <button
+                type="button"
+                class="<?= $q !== '' ? '' : 'hidden' ?> absolute right-2 top-1/2 -translate-y-1/2 rounded-md px-2 py-1 text-sm text-app-muted hover:bg-app-panelSubtle hover:text-app-text"
+                aria-label="Limpiar búsqueda"
+                data-remote-table-filter-clear
+            >&times;</button>
+        </div>
+        <div class="<?= e(ui_select_wrapper_classes()) ?> w-full shrink-0 sm:w-64">
+            <select name="nivel" class="<?= e(ui_select_classes()) ?>" data-remote-table-filter-change aria-label="Filtrar por nivel">
                 <option value="">Todos los niveles</option>
                 <option value="Técnico" <?= $nivel === 'Técnico' ? 'selected' : '' ?>>Técnico</option>
                 <option value="Tecnólogo" <?= $nivel === 'Tecnólogo' ? 'selected' : '' ?>>Tecnólogo</option>
@@ -63,36 +91,27 @@ partial('components/page_header', [
                 </svg>
             </span>
         </div>
-
-        <div class="<?= e(ui_select_wrapper_classes()) ?> w-64 shrink-0">
-            <select name="modalidad" class="<?= e(ui_select_classes()) ?>" data-auto-filter-change>
-                <option value="">Todas las modalidades</option>
-                <option value="Presencial" <?= $modalidad === 'Presencial' ? 'selected' : '' ?>>Presencial</option>
-                <option value="Virtual" <?= $modalidad === 'Virtual' ? 'selected' : '' ?>>Virtual</option>
-            </select>
-            <span class="<?= e(ui_select_chevron_classes()) ?>" data-select-chevron aria-hidden="true">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-4 w-4">
-                    <path d="m6 9 6 6 6-6"></path>
-                </svg>
-            </span>
-        </div>
     </form>
 </section>
+
+<?php partial('components/toast', ['message' => $toastMessage]); ?>
 
 <section class="<?= e(ui_card_classes()) ?> !p-0 overflow-hidden">
     <table id="tabla-catalogo-programas" class="<?= e(ui_table_in_card_classes()) ?> !m-0 !p-0 table-fixed">
         <colgroup>
-            <col class="w-[16%]">
-            <col class="w-[46%]">
+            <col class="w-[14%]">
+            <col class="w-[40%]">
             <col class="w-[18%]">
-            <col class="w-[20%]">
+            <col class="w-[14%]">
+            <col class="w-[14%]">
         </colgroup>
         <thead>
         <tr class="bg-app-panelSubtle">
             <th class="<?= e(ui_th_classes()) ?> px-4 pl-6">Código</th>
             <th class="<?= e(ui_th_classes()) ?> px-4">Nombre</th>
             <th class="<?= e(ui_th_classes()) ?> px-4">Nivel</th>
-            <th class="<?= e(ui_th_classes()) ?> px-4 pr-6">Duración</th>
+            <th class="<?= e(ui_th_classes()) ?> px-4">Duración</th>
+            <th class="<?= e(ui_th_classes()) ?> px-4 pr-6">Acciones</th>
         </tr>
         </thead>
         <tbody>

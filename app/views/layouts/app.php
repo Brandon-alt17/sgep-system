@@ -21,10 +21,14 @@ $titles = [
     '/importar' => 'Importar datos',
     '/reportes/maestro' => 'Reportes',
     '/catalogo/programas' => 'Catálogo',
+    '/catalogo/programas/ver' => 'Catálogo',
     '/catalogo/programas/pendientes' => 'Catálogo',
     '/catalogo/programas/importar' => 'Catálogo',
+    '/catalogo/programas/nuevo' => 'Catálogo',
     '/catalogo/grupos' => 'Catálogo',
     '/catalogo/empresas' => 'Catálogo',
+    '/catalogo/empresas/nuevo' => 'Catálogo',
+    '/catalogo/empresas/editar' => 'Catálogo',
     '/documentos/generar' => 'Configuración',
 ];
 $pageTitle = $titles[$currentPath] ?? 'SGEP';
@@ -32,15 +36,16 @@ $currentUserName = (string) ($_SESSION['user_name'] ?? 'Usuario no registrado');
 ?>
 <?php partial('components/icons'); ?>
 <?php partial('components/ui'); ?>
-<div class="grid min-h-screen md:grid-cols-[260px_1fr]">
+<div class="min-h-screen md:pl-[260px]">
     <?php partial('components/sidebar', ['currentPath' => $currentPath]); ?>
-    <div class="grid grid-rows-[56px_1fr]">
+    <div class="grid min-h-screen grid-rows-[56px_1fr]">
         <?php partial('components/topbar', ['title' => $pageTitle, 'userName' => $currentUserName]); ?>
         <main class="p-6">
             <?php require $viewPath; ?>
         </main>
     </div>
 </div>
+<?php partial('components/confirm_modal'); ?>
 <script src="<?= e(APP_BASE_PATH) ?>/js/app.js"></script>
 <script>window.APP_BASE_PATH = "<?= e((string) APP_BASE_PATH) ?>";</script>
 <script src="<?= e(APP_BASE_PATH) ?>/js/modal-manager.js"></script>
