@@ -22,6 +22,24 @@ var showGlobalToast = function (message) {
   }, 3200);
 };
 
+// Textareas que ajustan su altura al contenido (atributo data-auto-resize-textarea).
+var sgAutoResizeTextarea = function (el) {
+  if (!el || el.tagName !== "TEXTAREA") return;
+  el.style.overflow = "hidden";
+  el.style.resize = "none";
+  el.style.height = "auto";
+  el.style.height = el.scrollHeight + "px";
+};
+document.addEventListener("input", function (event) {
+  var t = event.target;
+  if (t && t.matches && t.matches("textarea[data-auto-resize-textarea]")) {
+    sgAutoResizeTextarea(t);
+  }
+});
+window.addEventListener("load", function () {
+  document.querySelectorAll("textarea[data-auto-resize-textarea]").forEach(sgAutoResizeTextarea);
+});
+
 // Desactiva sugerencias/autorrelleno del navegador en inputs de texto.
 document.querySelectorAll("form").forEach(function (form) {
   if (!(form instanceof HTMLElement)) return;
@@ -563,56 +581,133 @@ document.querySelectorAll(".js-custom-select").forEach(function (wrapper) {
 document.querySelectorAll("[data-programa-editor]").forEach(function (form) {
   var competenciasContainer = form.querySelector("[data-competencias-container]");
   var addCompetenciaButton = form.querySelector("[data-add-competencia]");
-  var horasLectivaInput = form.querySelector("[data-programa-horas-lectiva]");
-  var horasProductivaInput = form.querySelector("[data-programa-horas-productiva]");
-  var horasTotalInput = form.querySelector("[data-programa-horas-total-input]");
+  var nivelSelect = form.querySelector("[data-programa-nivel-select]");
+  var nivelDisplayEl = document.querySelector("[data-programa-nivel-display]");
   var totalCompetenciasEl = document.querySelector("[data-programa-total-competencias]");
   var totalRaesEl = document.querySelector("[data-programa-total-raes]");
   var totalHorasEl = document.querySelector("[data-programa-total-horas]");
   if (!competenciasContainer || !addCompetenciaButton) return;
 
+  var inputClass =
+    "w-full rounded-lg border border-app-borderControlStrong px-3 py-2 text-sm text-app-text outline-none transition-colors duration-200 focus:border-app-accent focus:ring-2 focus:ring-app-accentSoft bg-white";
+  var labelClass = "block text-sm font-medium text-app-textSubtle";
+  var tdClass =
+    "h-[50px] px-2 py-2 text-left text-sm align-top transition-colors duration-200 ease-in-out";
+  var raeRemoveBtnClass =
+    "font-app inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-rose-300 bg-rose-50 text-rose-700 no-underline hover:border-rose-400 hover:bg-rose-100 hover:text-rose-700";
+  var trashSvg =
+    '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4"><path d="M10 11v6"/><path d="M14 11v6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>';
+  var plusSvg =
+    '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4"><path d="M5 12h14"/><path d="M12 5v14"/></svg>';
+
   var buildRaeNode = function () {
-    var row = document.createElement("div");
-    row.className = "grid gap-2 md:grid-cols-[160px_1fr_auto]";
+    var row = document.createElement("tr");
+    row.className = "border-b border-app-borderSoft";
     row.setAttribute("data-rae-item", "");
-    row.innerHTML = '' +
-      '<input type="text" class="w-full rounded-lg border border-app-borderControlStrong bg-white px-3 py-2 text-sm text-app-muted outline-none transition-colors duration-200 focus:border-app-accent focus:ring-2 focus:ring-app-accentSoft hover:border-app-accent" placeholder="Código RAE" data-field="rae-codigo">' +
-      '<input type="text" class="w-full rounded-lg border border-app-borderControlStrong bg-white px-3 py-2 text-sm text-app-muted outline-none transition-colors duration-200 focus:border-app-accent focus:ring-2 focus:ring-app-accentSoft hover:border-app-accent" placeholder="Descripción del RAE" data-field="rae-descripcion">' +
-      '<button type="button" class="inline-flex h-8 min-w-8 items-center justify-center rounded-md border border-app-border text-sm text-app-muted hover:border-app-accent hover:text-app-text transition-colors duration-200 ease-in-out" data-remove-rae aria-label="Eliminar RAE">&times;</button>';
+    row.innerHTML =
+      '<td class="' +
+      tdClass +
+      ' w-32">' +
+      '<input type="text" class="' +
+      inputClass +
+      ' ui-monospace font-mono" placeholder="Código RAE" data-field="rae-codigo">' +
+      "</td>" +
+      '<td class="' +
+      tdClass +
+      '">' +
+      '<textarea rows="1" class="' +
+      inputClass +
+      ' min-h-[2.5rem] resize-none overflow-hidden" placeholder="Descripción del RAE" data-field="rae-descripcion" data-auto-resize-textarea></textarea>' +
+      "</td>" +
+      '<td class="' +
+      tdClass +
+      '">' +
+      '<button type="button" class="' +
+      raeRemoveBtnClass +
+      '" data-remove-rae aria-label="Eliminar RAE">' +
+      '<span class="inline-flex h-4 w-4 items-center justify-center [&_svg]:h-4 [&_svg]:w-4">' +
+      trashSvg +
+      "</span></button></td>";
+    var descTa = row.querySelector("[data-field='rae-descripcion']");
+    if (descTa) sgAutoResizeTextarea(descTa);
     return row;
   };
 
   var buildCompetenciaNode = function () {
     var article = document.createElement("article");
-    article.className = "rounded-xl border border-app-border bg-app-panel p-4 shadow-xsSoft bg-app-panelSubtle";
+    article.className =
+      "rounded-[10px] border border-app-border bg-app-panelSubtle p-6 shadow-xsSoft min-h-[96px] transition-[border-color,box-shadow] duration-300 ease-out motion-reduce:transition-none";
     article.setAttribute("data-competencia-item", "");
-    article.innerHTML = '' +
-      '<div class="grid gap-3 md:grid-cols-2">' +
-      '  <label class="text-sm font-medium text-app-text">Código competencia' +
-      '    <input type="text" class="w-full rounded-lg border border-app-borderControlStrong bg-white px-3 py-2 text-sm text-app-muted outline-none transition-colors duration-200 focus:border-app-accent focus:ring-2 focus:ring-app-accentSoft hover:border-app-accent" data-field="competencia-codigo">' +
-      '  </label>' +
-      '  <label class="text-sm font-medium text-app-text">Nombre competencia' +
-      '    <input type="text" class="w-full rounded-lg border border-app-borderControlStrong bg-white px-3 py-2 text-sm text-app-muted outline-none transition-colors duration-200 focus:border-app-accent focus:ring-2 focus:ring-app-accentSoft hover:border-app-accent" data-field="competencia-nombre">' +
-      '  </label>' +
-      '</div>' +
-      '<div class="mt-4 space-y-2" data-raes-container></div>' +
-      '<div class="mt-4 flex gap-2">' +
-      '  <button type="button" class="inline-flex h-8 min-w-8 items-center justify-center rounded-md border border-app-border text-sm text-app-muted hover:border-app-accent hover:text-app-text transition-colors duration-200 ease-in-out px-3" data-add-rae>Nuevo RAE</button>' +
-      '  <button type="button" class="inline-flex h-8 min-w-8 items-center justify-center rounded-md border border-app-border text-sm text-app-muted hover:border-app-accent hover:text-app-text transition-colors duration-200 ease-in-out px-3" data-remove-competencia>Eliminar competencia</button>' +
-      '</div>';
-    article.querySelector("[data-raes-container]").appendChild(buildRaeNode());
+    article.innerHTML =
+      '<div class="mb-3 w-full grid grid-cols-1 gap-3 md:grid-cols-10 md:gap-3">' +
+      '  <label class="' +
+      labelClass +
+      ' md:col-span-10">Nombre competencia <span class="text-rose-600">*</span>' +
+      '    <input type="text" class="' +
+      inputClass +
+      '" data-field="competencia-nombre">' +
+      "  </label>" +
+      '  <label class="' +
+      labelClass +
+      ' md:col-span-7">Código competencia <span class="text-rose-600">*</span>' +
+      '    <input type="text" class="' +
+      inputClass +
+      ' ui-monospace font-mono" data-field="competencia-codigo">' +
+      "  </label>" +
+      '  <label class="' +
+      labelClass +
+      ' md:col-span-3">Horas competencia <span class="text-rose-600">*</span>' +
+      '    <input type="number" min="0" step="1" inputmode="numeric" class="' +
+      inputClass +
+      '" data-field="competencia-horas" placeholder="0">' +
+      "  </label>" +
+      "</div>" +
+      '<div class="mt-3 border-t border-app-borderSoft pt-6 flex justify-end">' +
+      '  <button type="button" class="font-app inline-flex items-center justify-center gap-2 rounded-md border border-app-borderControl bg-app-panelSubtle px-[18px] py-2 text-sm font-medium text-app-muted no-underline hover:bg-app-accentSoft hover:text-app-accent" data-add-rae>' +
+      '    <span class="inline-flex h-4 w-4 items-center justify-center [&_svg]:h-4 [&_svg]:w-4">' +
+      plusSvg +
+      "</span>Nuevo RAE</button>" +
+      "</div>" +
+      '<div class="mt-3 overflow-hidden">' +
+      '  <table class="w-full border-collapse [&>tbody>tr:hover>td]:bg-app-panelHover">' +
+      "    <thead><tr>" +
+      '      <th class="h-[50px] px-2 text-left text-sm font-semibold text-app-muted align-middle">Código RAE</th>' +
+      '      <th class="h-[50px] px-2 text-left text-sm font-semibold text-app-muted align-middle">Resultado de aprendizaje</th>' +
+      '      <th class="h-[50px] w-10 px-2 text-left text-sm font-semibold text-app-muted align-middle">Acción</th>' +
+      "    </tr></thead>" +
+      '    <tbody data-raes-container></tbody>' +
+      "  </table>" +
+      "</div>" +
+      '<div class="mt-3 border-t border-app-borderSoft pt-3 flex justify-end">' +
+      '  <button type="button" class="inline-flex items-center gap-2 rounded-md border border-rose-300 bg-rose-50 px-[18px] py-2 text-sm font-medium text-rose-700 no-underline transition-colors duration-200 hover:border-rose-400 hover:bg-rose-100 hover:text-rose-700" data-remove-competencia>' +
+      '    <span class="inline-flex h-4 w-4 items-center justify-center [&_svg]:h-4 [&_svg]:w-4">' +
+      trashSvg +
+      "</span>Eliminar competencia</button>" +
+      "</div>";
+    var raesBody = article.querySelector("[data-raes-container]");
+    if (raesBody) raesBody.appendChild(buildRaeNode());
     return article;
   };
 
-  var updateHours = function () {
-    var lectiva = parseInt((horasLectivaInput && horasLectivaInput.value) || "0", 10);
-    var productiva = parseInt((horasProductivaInput && horasProductivaInput.value) || "0", 10);
-    if (isNaN(lectiva)) lectiva = 0;
-    if (isNaN(productiva)) productiva = 0;
-    var total = lectiva + productiva;
-    var totalText = total > 0 ? String(total) : "N/D";
-    if (horasTotalInput) horasTotalInput.value = totalText;
-    if (totalHorasEl) totalHorasEl.textContent = total > 0 ? totalText + "h" : "N/D";
+  var syncNivelCard = function () {
+    if (!nivelSelect || !nivelDisplayEl) return;
+    var opt = nivelSelect.options[nivelSelect.selectedIndex];
+    var val = (opt && opt.value) || "";
+    nivelDisplayEl.textContent = val !== "" ? opt.text : "Nivel no seleccionado";
+  };
+
+  var refreshProgramHorasFromCompetencias = function () {
+    var competencias = Array.prototype.slice.call(competenciasContainer.querySelectorAll("[data-competencia-item]"));
+    var total = 0;
+    competencias.forEach(function (competenciaNode) {
+      var horasInput = competenciaNode.querySelector("[data-field='competencia-horas']");
+      if (!horasInput) return;
+      var raw = String(horasInput.value || "").trim();
+      var n = parseInt(raw === "" ? "0" : raw, 10);
+      if (!isNaN(n) && n >= 0) total += n;
+    });
+    var displayTotal = total === 0 ? "0" : String(total) + "h";
+    if (totalHorasEl) totalHorasEl.textContent = displayTotal;
   };
 
   var refreshCounters = function () {
@@ -622,8 +717,10 @@ document.querySelectorAll("[data-programa-editor]").forEach(function (form) {
     competencias.forEach(function (competenciaNode, compIndex) {
       var codigoInput = competenciaNode.querySelector("[data-field='competencia-codigo']");
       var nombreInput = competenciaNode.querySelector("[data-field='competencia-nombre']");
+      var horasInput = competenciaNode.querySelector("[data-field='competencia-horas']");
       if (codigoInput) codigoInput.name = "competencias[" + compIndex + "][codigo]";
       if (nombreInput) nombreInput.name = "competencias[" + compIndex + "][nombre]";
+      if (horasInput) horasInput.name = "competencias[" + compIndex + "][horas]";
 
       var raes = Array.prototype.slice.call(competenciaNode.querySelectorAll("[data-rae-item]"));
       raes.forEach(function (raeNode, raeIndex) {
@@ -637,10 +734,21 @@ document.querySelectorAll("[data-programa-editor]").forEach(function (form) {
 
     if (totalCompetenciasEl) totalCompetenciasEl.textContent = String(totalCompetencias);
     if (totalRaesEl) totalRaesEl.textContent = String(totalRaes);
+    refreshProgramHorasFromCompetencias();
   };
 
-  if (horasLectivaInput) horasLectivaInput.addEventListener("input", updateHours);
-  if (horasProductivaInput) horasProductivaInput.addEventListener("input", updateHours);
+  if (nivelSelect) {
+    nivelSelect.addEventListener("change", syncNivelCard);
+    syncNivelCard();
+  }
+
+  competenciasContainer.addEventListener("input", function (event) {
+    var target = event.target;
+    if (!(target instanceof HTMLElement)) return;
+    if (target.getAttribute("data-field") === "competencia-horas") {
+      refreshProgramHorasFromCompetencias();
+    }
+  });
 
   addCompetenciaButton.addEventListener("click", function () {
     competenciasContainer.appendChild(buildCompetenciaNode());
@@ -691,8 +799,8 @@ document.querySelectorAll("[data-programa-editor]").forEach(function (form) {
     competenciasContainer.appendChild(buildCompetenciaNode());
   }
 
-  updateHours();
   refreshCounters();
+  competenciasContainer.querySelectorAll("textarea[data-auto-resize-textarea]").forEach(sgAutoResizeTextarea);
 });
 
 // Edicion puntual en vista "ver programa" (pencil -> check/x).
@@ -709,6 +817,7 @@ document.querySelectorAll("[data-inline-edit-root]").forEach(function (root) {
   var originalValues = {};
   var isEditing = false;
   var isCompetenciaEdit = !!form.querySelector("input[name='competencia_id']");
+  var competenciaDrawer = isCompetenciaEdit ? root.querySelector("[data-inline-competencia-drawer]") : null;
   var originalRaeRowsHtml = null;
   var originalCompetenciaSnapshot = "";
   var showToast = function (message) {
@@ -728,7 +837,7 @@ document.querySelectorAll("[data-inline-edit-root]").forEach(function (root) {
     var rows = Array.prototype.slice.call(form.querySelectorAll("[data-inline-raes-body] tr"));
     rows.forEach(function (row, rowIndex) {
       var codigoInput = row.querySelector("input[name*='[codigo]']");
-      var descripcionInput = row.querySelector("input[name*='[descripcion]']");
+      var descripcionInput = row.querySelector("[name*='[descripcion]']");
       if (codigoInput) codigoInput.name = "resultados[" + rowIndex + "][codigo]";
       if (descripcionInput) descripcionInput.name = "resultados[" + rowIndex + "][descripcion]";
     });
@@ -744,13 +853,54 @@ document.querySelectorAll("[data-inline-edit-root]").forEach(function (root) {
     return parts.join("|");
   };
 
+  var drawerCollapseTimer = null;
+  var drawerCollapseOnEnd = null;
+
   var setEditingState = function (editing) {
     isEditing = editing;
     if (viewBlock) viewBlock.classList.toggle("hidden", editing);
     headerBlocks.forEach(function (headerBlock) {
       headerBlock.classList.toggle("hidden", editing);
     });
-    form.classList.toggle("hidden", !editing);
+    if (competenciaDrawer) {
+      if (drawerCollapseTimer) {
+        window.clearTimeout(drawerCollapseTimer);
+        drawerCollapseTimer = null;
+      }
+      if (drawerCollapseOnEnd) {
+        competenciaDrawer.removeEventListener("transitionend", drawerCollapseOnEnd);
+        drawerCollapseOnEnd = null;
+      }
+      if (editing) {
+        form.removeAttribute("inert");
+        window.requestAnimationFrame(function () {
+          competenciaDrawer.setAttribute("aria-expanded", "true");
+        });
+      } else {
+        competenciaDrawer.setAttribute("aria-expanded", "false");
+        if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+          form.setAttribute("inert", "");
+        } else {
+          drawerCollapseOnEnd = function (ev) {
+            if (ev.target !== competenciaDrawer || ev.propertyName !== "grid-template-rows") return;
+            competenciaDrawer.removeEventListener("transitionend", drawerCollapseOnEnd);
+            drawerCollapseOnEnd = null;
+            form.setAttribute("inert", "");
+          };
+          competenciaDrawer.addEventListener("transitionend", drawerCollapseOnEnd);
+          drawerCollapseTimer = window.setTimeout(function () {
+            drawerCollapseTimer = null;
+            if (drawerCollapseOnEnd) {
+              competenciaDrawer.removeEventListener("transitionend", drawerCollapseOnEnd);
+              drawerCollapseOnEnd = null;
+            }
+            form.setAttribute("inert", "");
+          }, 500);
+        }
+      }
+    } else {
+      form.classList.toggle("hidden", !editing);
+    }
     openButton.classList.toggle("hidden", editing);
     saveButton.classList.toggle("hidden", !editing);
     cancelButton.classList.toggle("hidden", !editing);
@@ -783,6 +933,25 @@ document.querySelectorAll("[data-inline-edit-root]").forEach(function (root) {
     originalCompetenciaSnapshot = competenciaSnapshot();
 
     setEditingState(true);
+    var resizeRaesTextareas = function () {
+      form.querySelectorAll("textarea[data-auto-resize-textarea]").forEach(sgAutoResizeTextarea);
+    };
+    if (competenciaDrawer) {
+      var onDrawerOpened = function (ev) {
+        if (ev.target !== competenciaDrawer || ev.propertyName !== "grid-template-rows") return;
+        competenciaDrawer.removeEventListener("transitionend", onDrawerOpened);
+        resizeRaesTextareas();
+      };
+      competenciaDrawer.addEventListener("transitionend", onDrawerOpened);
+      window.setTimeout(function () {
+        competenciaDrawer.removeEventListener("transitionend", onDrawerOpened);
+        resizeRaesTextareas();
+      }, 450);
+    } else {
+      window.requestAnimationFrame(function () {
+        window.requestAnimationFrame(resizeRaesTextareas);
+      });
+    }
   });
 
   cancelButton.addEventListener("click", function () {
@@ -816,7 +985,7 @@ document.querySelectorAll("[data-inline-edit-root]").forEach(function (root) {
         '<input type="text" name="resultados[' + nextIndex + '][codigo]" value="" class="w-full rounded-lg border border-app-borderControlStrong bg-white px-3 py-2 text-sm text-app-muted outline-none transition-colors duration-200 hover:border-app-accent focus:border-app-accent focus:ring-2 focus:ring-app-accentSoft" data-inline-input>' +
         '</td>' +
         '<td class="px-2 py-3 align-top">' +
-        '<input type="text" name="resultados[' + nextIndex + '][descripcion]" value="" class="w-full rounded-lg border border-app-borderControlStrong bg-white px-3 py-2 text-sm text-app-muted outline-none transition-colors duration-200 hover:border-app-accent focus:border-app-accent focus:ring-2 focus:ring-app-accentSoft" data-inline-input>' +
+        '<textarea rows="1" name="resultados[' + nextIndex + '][descripcion]" class="min-h-[2.5rem] w-full resize-none overflow-hidden rounded-lg border border-app-borderControlStrong bg-white px-3 py-2 text-sm text-app-muted outline-none transition-colors duration-200 hover:border-app-accent focus:border-app-accent focus:ring-2 focus:ring-app-accentSoft" data-inline-input data-auto-resize-textarea></textarea>' +
         '</td>' +
         '<td class="px-2 py-3 align-top">' +
         '<button type="button" class="font-app inline-flex h-10 w-10 items-center justify-center rounded-md border border-rose-300 bg-rose-50 text-rose-700 no-underline transition-colors duration-200 hover:border-rose-400 hover:bg-rose-100 hover:text-rose-700" data-inline-remove-rae aria-label="Eliminar RAE">' +
@@ -825,6 +994,8 @@ document.querySelectorAll("[data-inline-edit-root]").forEach(function (root) {
         '</td>';
       tbody.appendChild(row);
       refreshInlineRaeNames();
+      var newTa = row.querySelector("textarea[data-auto-resize-textarea]");
+      if (newTa) sgAutoResizeTextarea(newTa);
       var firstInput = row.querySelector("input");
       if (firstInput) firstInput.focus();
     });
@@ -843,7 +1014,7 @@ document.querySelectorAll("[data-inline-edit-root]").forEach(function (root) {
     var rows = tbody.querySelectorAll("tr");
     if (rows.length <= 1) {
       var codigoInput = row.querySelector("input[name*='[codigo]']");
-      var descripcionInput = row.querySelector("input[name*='[descripcion]']");
+      var descripcionInput = row.querySelector("[name*='[descripcion]']");
       if (codigoInput) codigoInput.value = "";
       if (descripcionInput) descripcionInput.value = "";
     } else {
@@ -882,7 +1053,7 @@ document.querySelectorAll("[data-inline-edit-root]").forEach(function (root) {
 
     var hasInvalidRae = rows.some(function (row) {
       var codigoRaeInput = row.querySelector("input[name*='[codigo]']");
-      var descripcionRaeInput = row.querySelector("input[name*='[descripcion]']");
+      var descripcionRaeInput = row.querySelector("[name*='[descripcion]']");
       var codigoRae = codigoRaeInput ? (codigoRaeInput.value || "").trim() : "";
       var descripcionRae = descripcionRaeInput ? (descripcionRaeInput.value || "").trim() : "";
       return codigoRae === "" || descripcionRae === "";
@@ -956,7 +1127,7 @@ document.querySelectorAll("[data-new-competencia-form]").forEach(function (form)
   var refreshNames = function () {
     Array.prototype.slice.call(tbody.querySelectorAll("tr")).forEach(function (row, idx) {
       var codigoInput = row.querySelector("input[name*='[codigo]']");
-      var descripcionInput = row.querySelector("input[name*='[descripcion]']");
+      var descripcionInput = row.querySelector("[name*='[descripcion]']");
       if (codigoInput) codigoInput.name = "resultados[" + idx + "][codigo]";
       if (descripcionInput) descripcionInput.name = "resultados[" + idx + "][descripcion]";
     });
@@ -974,10 +1145,12 @@ document.querySelectorAll("[data-new-competencia-form]").forEach(function (form)
     row.className = "border-b border-app-borderSoft";
     row.innerHTML = '' +
       '<td class="px-2 py-3 align-top w-32"><input type="text" name="resultados[' + idx + '][codigo]" value="" autocomplete="new-password" autocorrect="off" autocapitalize="off" spellcheck="false" class="w-full rounded-lg border border-app-borderControlStrong bg-white px-3 py-2 text-sm text-app-muted outline-none transition-colors duration-200 hover:border-app-accent focus:border-app-accent focus:ring-2 focus:ring-app-accentSoft"></td>' +
-      '<td class="px-2 py-3 align-top"><input type="text" name="resultados[' + idx + '][descripcion]" value="" autocomplete="new-password" autocorrect="off" autocapitalize="off" spellcheck="false" class="w-full rounded-lg border border-app-borderControlStrong bg-white px-3 py-2 text-sm text-app-muted outline-none transition-colors duration-200 hover:border-app-accent focus:border-app-accent focus:ring-2 focus:ring-app-accentSoft"></td>' +
+      '<td class="px-2 py-3 align-top"><textarea rows="1" name="resultados[' + idx + '][descripcion]" autocomplete="new-password" autocorrect="off" autocapitalize="off" spellcheck="false" class="min-h-[2.5rem] w-full resize-none overflow-hidden rounded-lg border border-app-borderControlStrong bg-white px-3 py-2 text-sm text-app-muted outline-none transition-colors duration-200 hover:border-app-accent focus:border-app-accent focus:ring-2 focus:ring-app-accentSoft" data-auto-resize-textarea></textarea></td>' +
       '<td class="px-2 py-3 align-top"><button type="button" class="font-app inline-flex h-10 w-10 items-center justify-center rounded-md border border-rose-300 bg-rose-50 text-rose-700 no-underline transition-colors duration-200 hover:border-rose-400 hover:bg-rose-100 hover:text-rose-700" data-new-competencia-remove-rae aria-label="Eliminar RAE"><span class="inline-flex h-4 w-4 [&_svg]:h-4 [&_svg]:w-4"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path><path d="M3 6h18"></path><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></span></button></td>';
     tbody.appendChild(row);
     refreshNames();
+    var addedTa = row.querySelector("textarea[data-auto-resize-textarea]");
+    if (addedTa) sgAutoResizeTextarea(addedTa);
   });
 
   form.addEventListener("click", function (event) {
@@ -990,7 +1163,7 @@ document.querySelectorAll("[data-new-competencia-form]").forEach(function (form)
     var rows = tbody.querySelectorAll("tr");
     if (rows.length <= 1) {
       var codigoInput = row.querySelector("input[name*='[codigo]']");
-      var descripcionInput = row.querySelector("input[name*='[descripcion]']");
+      var descripcionInput = row.querySelector("[name*='[descripcion]']");
       if (codigoInput) codigoInput.value = "";
       if (descripcionInput) descripcionInput.value = "";
     } else {
@@ -1022,7 +1195,7 @@ document.querySelectorAll("[data-new-competencia-form]").forEach(function (form)
 
     var hasInvalidRae = rows.some(function (row) {
       var codigoRaeInput = row.querySelector("input[name*='[codigo]']");
-      var descripcionRaeInput = row.querySelector("input[name*='[descripcion]']");
+      var descripcionRaeInput = row.querySelector("[name*='[descripcion]']");
       var codigoRae = codigoRaeInput ? (codigoRaeInput.value || "").trim() : "";
       var descripcionRae = descripcionRaeInput ? (descripcionRaeInput.value || "").trim() : "";
       return codigoRae === "" || descripcionRae === "";
