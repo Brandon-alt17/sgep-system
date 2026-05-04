@@ -12,7 +12,12 @@ $q = trim((string) ($filters['q'] ?? ''));
 
 <section class="<?= e(ui_card_classes()) ?> mb-4">
     <form method="get" action="<?= e(APP_BASE_PATH) ?>/catalogo/programas/pendientes" class="flex gap-3">
-        <input type="text" name="q" value="<?= e($q) ?>" placeholder="Buscar por documento, aprendiz o programa" class="<?= e(ui_input_classes()) ?>">
+        <div class="relative flex-1 min-w-0">
+            <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-app-muted [&_svg]:h-4 [&_svg]:w-4">
+                <?= ui_icon('search') ?>
+            </span>
+            <input type="text" name="q" value="<?= e($q) ?>" placeholder="Buscar por documento, aprendiz o programa" class="<?= e(ui_input_classes()) ?> pl-10">
+        </div>
         <button class="<?= e(ui_button_primary_classes()) ?>" type="submit">Buscar</button>
     </form>
 </section>

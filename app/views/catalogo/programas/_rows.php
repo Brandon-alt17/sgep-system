@@ -43,7 +43,12 @@ if (!function_exists('normalize_programa_nombre_for_view')) {
             <td class="<?= e($tdClasses) ?> py-3 px-4 pl-6 align-top"><span class="ui-monospace font-mono tracking-wide"><?= e($codigoPrograma) ?></span></td>
             <td class="<?= e($tdClasses) ?> py-3 px-4 whitespace-normal break-words leading-6 align-top"><?= e($nombrePrograma) ?></td>
             <td class="<?= e($tdClasses) ?> py-3 px-4 align-top"><?= e((string) ($programa['nivel'] ?? '')) ?></td>
-            <td class="<?= e($tdClasses) ?> py-3 px-4 pr-6 align-top"><?= e($horasDisplay) ?></td>
+            <td class="<?= e($tdClasses) ?> py-3 px-4 align-top"><?= e($horasDisplay) ?></td>
+            <td class="<?= e($tdClasses) ?> py-3 px-4 pr-6 align-top">
+                <a class="<?= e(ui_button_small_classes()) ?>" href="<?= e(APP_BASE_PATH) ?>/catalogo/programas/ver?id=<?= (int) ($programa['id'] ?? 0) ?>">
+                    Ver programa
+                </a>
+            </td>
         </tr>
     <?php endforeach; ?>
 <?php endif; ?>

@@ -27,4 +27,18 @@ class ProgramaImportacionPdf
         ]);
         return (int) $pdo->lastInsertId();
     }
+
+    public static function latestByProgramaId(int $programaId): ?array
+    {
+        $stmt = Database::connection()->prepare(
+            'SELECT *
+             FROM programa_importaciones_pdf
+             WHERE programa_id = :programa_id
+             ORDER BY id DESC
+             LIMIT 1'
+        );
+        $stmt->execute(['programa_id' => $programaId]);
+        $row = $stmt->fetch();
+        return $row ?: null;
+    }
 }
