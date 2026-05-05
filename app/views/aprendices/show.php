@@ -1,6 +1,7 @@
 <?php include __DIR__ . '/modal-editar-perfil.php'; ?>
 <?php include __DIR__ . '/modal-agendar-visitas.php'; ?>
 <script src="<?= e(APP_BASE_PATH) ?>../public/js/edit-profile.js"></script>
+<?php $backToListUrl = (string) ($backToListUrl ?? (APP_BASE_PATH . '/aprendices')); ?>
 
 <?php partial('components/page_header', [
     'title' => 'Perfil del aprendiz',
@@ -12,7 +13,7 @@
 <div class="space-y-6 md:col-span-2 grid gap-4">
     <div class="mb-1 flex items-end justify-between">
         <!-- 🔙 VOLVER -->
-        <a href="<?= e(APP_BASE_PATH) ?>/aprendices"
+        <a href="<?= e($backToListUrl) ?>"
         class="mt-6 text-sm text-app-link hover:underline">
             ← Listado
         </a>

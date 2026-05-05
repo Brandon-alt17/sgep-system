@@ -38,8 +38,11 @@ class Empresa
         $where = [];
         $params = [];
         if ($q !== '') {
-            $where[] = '(e.nombre LIKE :q OR COALESCE(e.nit, \'\') LIKE :q OR COALESCE(e.ciudad, \'\') LIKE :q)';
-            $params['q'] = '%' . $q . '%';
+            $where[] = '(e.nombre LIKE :q_nombre OR COALESCE(e.nit, \'\') LIKE :q_nit OR COALESCE(e.ciudad, \'\') LIKE :q_ciudad)';
+            $likeQ = '%' . $q . '%';
+            $params['q_nombre'] = $likeQ;
+            $params['q_nit'] = $likeQ;
+            $params['q_ciudad'] = $likeQ;
         }
         $sql = 'SELECT e.*,
                 (SELECT COUNT(*) FROM aprendices a WHERE a.empresa_id = e.id) AS aprendices_count

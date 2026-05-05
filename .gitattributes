@@ -5,6 +5,7 @@
 *.html diff=html
 *.md diff=markdown
 *.php diff=php
+public/css/app.css merge=ours -diff
 
 /.github export-ignore
 CHANGELOG.md export-ignore
