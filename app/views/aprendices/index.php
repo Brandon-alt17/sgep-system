@@ -71,23 +71,8 @@ partial('components/page_header', [
             >
             <button type="button" class="<?= $initialQ !== '' ? '' : 'hidden' ?> absolute right-2 top-1/2 -translate-y-1/2 rounded-md px-2 py-1 text-sm text-app-muted hover:bg-app-panelSubtle hover:text-app-text" aria-label="Limpiar búsqueda" data-auto-filter-clear>&times;</button>
         </div>
-
-        <div class="<?= e(ui_select_wrapper_classes()) ?> w-full min-w-[220px] shrink-0 md:w-64">
-            <select name="estado" class="<?= e(ui_select_classes()) ?>" data-auto-filter-change>
-                <option value="">Todos los estados</option>
-                <?php foreach ($estadosOptions as $st): ?>
-                    <?php if ($st === null || $st === '') { continue; } ?>
-                    <option value="<?= e((string) $st) ?>" <?= (string) $st === $initialEstado ? 'selected' : '' ?>><?= e((string) $st) ?></option>
-                <?php endforeach; ?>
-            </select>
-            <span class="<?= e(ui_select_chevron_classes()) ?>" data-select-chevron aria-hidden="true">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-4 w-4"><path d="m6 9 6 6 6-6"></path></svg>
-            </span>
-        </div>
-
-        <div class="ml-auto flex items-center gap-2">
-            <div class="relative w-full min-w-[220px] md:w-64">
-                <button type="button" id="open-filters-popover" class="<?= e(ui_button_small_classes()) ?> inline-flex w-full items-center justify-center gap-2" aria-expanded="false" aria-controls="aprendices-filters-popover" data-filter-popover-trigger>
+        <div class="relative w-full min-w-[260px] md:w-80 ">
+                <button type="button" id="open-filters-popover" class="<?= e(ui_button_small_classes()) ?> inline-flex w-full items-center justify-center gap-2 bg-white border-app-borderControlStrong text-app-text hover:bg-white hover:text-app-accent" aria-expanded="false" aria-controls="aprendices-filters-popover" data-filter-popover-trigger>
                     <span class="inline-flex h-4 w-4 items-center justify-center" aria-hidden="true">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-4 w-4">
                             <path d="M3 5h18l-7 8v6l-4-2v-4L3 5z"></path>
@@ -152,11 +137,22 @@ partial('components/page_header', [
                     </div>
                 </div>
             </div>
-            <a class="<?= e(ui_button_primary_classes()) ?> inline-flex items-center gap-2 text-white" href="<?= e($clearFiltersUrl) ?>">
+        <div class="<?= e(ui_select_wrapper_classes()) ?> w-full min-w-[220px] shrink-0 md:w-64">
+            <select name="estado" class="<?= e(ui_select_classes()) ?>" data-auto-filter-change>
+                <option value="">Todos los estados</option>
+                <?php foreach ($estadosOptions as $st): ?>
+                    <?php if ($st === null || $st === '') { continue; } ?>
+                    <option value="<?= e((string) $st) ?>" <?= (string) $st === $initialEstado ? 'selected' : '' ?>><?= e((string) $st) ?></option>
+                <?php endforeach; ?>
+            </select>
+            <span class="<?= e(ui_select_chevron_classes()) ?>" data-select-chevron aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-4 w-4"><path d="m6 9 6 6 6-6"></path></svg>
+            </span>
+        </div>
+        <a class="<?= e(ui_button_primary_classes()) ?> inline-flex items-center gap-2 text-white" href="<?= e($clearFiltersUrl) ?>">
                 <span class="inline-flex h-4 w-4 items-center justify-center [&_svg]:h-4 [&_svg]:w-4" aria-hidden="true"><?= ui_icon('brush-cleaning') ?></span>
                 Limpiar filtros
-            </a>
-        </div>
+        </a>
     </form>
 </section>
 
