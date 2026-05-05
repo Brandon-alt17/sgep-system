@@ -32,8 +32,15 @@ partial('components/page_header', [
 ?>
 
 <section class="<?= e(ui_card_classes()) ?> mb-4">
-    <form method="get" action="<?= e(APP_BASE_PATH) ?>/catalogo/empresas" class="flex w-full items-center gap-3" data-auto-filter-form data-auto-filter-ajax="true" data-auto-filter-target="#tabla-catalogo-empresas tbody">
-        <div class="relative min-w-0 flex-1">
+    <form
+        method="get"
+        action="<?= e(APP_BASE_PATH) ?>/catalogo/empresas"
+        class="flex w-full items-center gap-3"
+        data-remote-table-filter-form
+        data-remote-table-filter-target="#tabla-catalogo-empresas tbody"
+        data-remote-table-filter-debounce="350"
+    >
+        <div class="relative w-full min-w-0 md:flex-1">
             <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-app-muted [&_svg]:h-4 [&_svg]:w-4">
                 <?= ui_icon('search') ?>
             </span>
@@ -42,15 +49,14 @@ partial('components/page_header', [
                 name="q"
                 value="<?= e($q) ?>"
                 placeholder="Buscar por razón social, NIT o ciudad"
-                class="<?= e(ui_input_classes()) ?> mt-0 min-w-0 flex-1 pl-10 pr-10"
-                data-auto-filter-input
-                data-auto-filter-main-input
+                class="<?= e(ui_input_classes()) ?> mt-0 block w-full min-w-0 pl-10 pr-10"
+                data-remote-table-filter-q
             >
             <button
                 type="button"
                 class="<?= $q !== '' ? '' : 'hidden' ?> absolute right-2 top-1/2 -translate-y-1/2 rounded-md px-2 py-1 text-sm text-app-muted hover:bg-app-panelSubtle hover:text-app-text"
                 aria-label="Limpiar búsqueda"
-                data-auto-filter-clear
+                data-remote-table-filter-clear
             >&times;</button>
         </div>
     </form>

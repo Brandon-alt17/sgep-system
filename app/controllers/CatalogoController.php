@@ -10,6 +10,7 @@ use App\Helpers\Validator;
 use App\Models\ProgramaContenido;
 use App\Models\ProgramaEnlacePendiente;
 use App\Models\ProgramaImportacionPdf;
+use App\Models\Aprendiz;
 use App\Models\Empresa;
 use App\Models\Grupo;
 use App\Models\Programa;
@@ -131,19 +132,31 @@ class CatalogoController
         redirect(APP_BASE_PATH . '/catalogo/empresas?toast=empresa_creada');
     }
 
-    public function empresasEditar(): void
+    public function empresasVer(): void
     {
         $id = (int) ($_GET['id'] ?? 0);
         $empresa = Empresa::findById($id);
         if ($empresa === null) {
             http_response_code(404);
-            view('errors/404', ['uri' => '/catalogo/empresas/editar?id=' . $id]);
+            view('errors/404', ['uri' => '/catalogo/empresas/ver?id=' . $id]);
             return;
         }
+        $editing = ((string) ($_GET['edit'] ?? '')) === '1';
+        $aprendicesVinculados = Aprendiz::paginated(['empresa_id' => $id], 500, 0);
         view('catalogo/empresas/form', [
             'empresa' => $empresa,
             'errors' => [],
+            'aprendicesCount' => Empresa::countAprendices($id),
+            'aprendicesVinculados' => $aprendicesVinculados,
+            'editing' => $editing,
         ]);
+    }
+
+    /** @deprecated Prefer /catalogo/empresas/ver */
+    public function empresasEditar(): void
+    {
+        $id = (int) ($_GET['id'] ?? 0);
+        redirect(APP_BASE_PATH . '/catalogo/empresas/ver?id=' . $id);
     }
 
     public function empresasActualizar(): void
@@ -152,18 +165,24 @@ class CatalogoController
         $empresa = Empresa::findById($id);
         if ($empresa === null) {
             http_response_code(404);
-            view('errors/404', ['uri' => '/catalogo/empresas/editar']);
+            view('errors/404', ['uri' => '/catalogo/empresas/ver']);
             return;
         }
         $data = $this->postedEmpresaPayload();
         $errors = Validator::required($_POST, ['nombre']);
         if ($errors !== []) {
             $data['id'] = $id;
-            view('catalogo/empresas/form', ['empresa' => array_merge($empresa, $data), 'errors' => array_values($errors)]);
+            view('catalogo/empresas/form', [
+                'empresa' => array_merge($empresa, $data),
+                'errors' => array_values($errors),
+                'aprendicesCount' => Empresa::countAprendices($id),
+                'aprendicesVinculados' => Aprendiz::paginated(['empresa_id' => $id], 500, 0),
+                'editing' => true,
+            ]);
             return;
         }
         Empresa::update($id, $data);
-        redirect(APP_BASE_PATH . '/catalogo/empresas?toast=empresa_actualizada');
+        redirect(APP_BASE_PATH . '/catalogo/empresas/ver?id=' . $id . '&toast=empresa_actualizada');
     }
 
     public function empresasEliminar(): void

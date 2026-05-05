@@ -178,7 +178,7 @@ var initComboboxes = function (scope) {
     };
     var positionMenu = function () {
       if (menu.classList.contains("hidden")) return;
-      var rect = searchInput.getBoundingClientRect();
+      var rect = root.getBoundingClientRect();
       var gap = 4;
       var spaceBelow = window.innerHeight - rect.bottom - gap - 8;
       var maxList = Math.min(210, Math.max(96, spaceBelow));
@@ -215,6 +215,13 @@ var initComboboxes = function (scope) {
       }
       window.requestAnimationFrame(function () {
         positionMenu();
+        if (wasHidden) {
+          window.requestAnimationFrame(function () {
+            if (!menu.classList.contains("hidden")) {
+              positionMenu();
+            }
+          });
+        }
       });
     };
     var closeMenu = function () {
@@ -230,6 +237,16 @@ var initComboboxes = function (scope) {
       window.removeEventListener("scroll", repositionHandler, true);
       window.removeEventListener("resize", repositionHandler);
       restoreMenuToRoot();
+    };
+    var isPointerInsideCombobox = function () {
+      var rootHovered = root.matches(":hover");
+      var menuHovered = menu.matches(":hover");
+      return rootHovered || menuHovered;
+    };
+    var openMenuIfPointerInside = function () {
+      var pointerInside = isPointerInsideCombobox();
+      if (!pointerInside) return;
+      openMenu();
     };
     var applyFilter = function () {
       var query = normalize(searchInput.value);
@@ -252,10 +269,11 @@ var initComboboxes = function (scope) {
     };
     var clearValue = function () {
       hiddenInput.value = "";
+      hiddenInput.dispatchEvent(new Event("change", { bubbles: true }));
       searchInput.value = "";
       searchInput.setCustomValidity("");
       applyFilter();
-      openMenu();
+      openMenuIfPointerInside();
       searchInput.focus();
     };
 
@@ -267,6 +285,7 @@ var initComboboxes = function (scope) {
       var nextValue = option.getAttribute("data-value") || "";
       var nextLabel = option.getAttribute("data-label") || option.textContent || "";
       hiddenInput.value = nextValue;
+      hiddenInput.dispatchEvent(new Event("change", { bubbles: true }));
       searchInput.value = nextLabel;
       searchInput.setCustomValidity("");
       closeMenu();
@@ -274,9 +293,13 @@ var initComboboxes = function (scope) {
     });
 
     searchInput.addEventListener("focus", function () {
+      if (!isPointerInsideCombobox()) {
+        setChevronOpen(false);
+        return;
+      }
       setChevronOpen(true);
       applyFilter();
-      openMenu();
+      openMenuIfPointerInside();
     });
     searchInput.addEventListener("blur", function () {
       window.setTimeout(function () {
@@ -287,7 +310,7 @@ var initComboboxes = function (scope) {
       hiddenInput.value = "";
       searchInput.setCustomValidity("");
       applyFilter();
-      openMenu();
+      openMenuIfPointerInside();
     });
     searchInput.addEventListener("keydown", function (event) {
       if (event.key === "Escape") {
@@ -328,7 +351,6 @@ var initComboboxes = function (scope) {
       if (menu.contains(t)) return;
       closeMenu();
     });
-
     syncLabelFromValue();
     applyFilter();
   });
