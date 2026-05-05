@@ -26,9 +26,15 @@ $activeQuery = array_filter([
 
 $profileFiltersQuery = $activeQuery === [] ? '' : '&' . http_build_query($activeQuery);
 $clearFiltersUrl = APP_BASE_PATH . '/aprendices';
-$returnToCatalogUrl = $source === 'grupos'
-    ? APP_BASE_PATH . '/catalogo/grupos'
-    : ($source === 'empresas' ? APP_BASE_PATH . '/catalogo/empresas' : '');
+$returnToEmpresaUrl = '';
+if ($source === 'empresas' && $initialEmpresaId > 0) {
+    $returnToEmpresaUrl = APP_BASE_PATH . '/catalogo/empresas/ver?id=' . $initialEmpresaId;
+}
+$returnToCatalogUrl = match ($source) {
+    'grupos' => APP_BASE_PATH . '/catalogo/grupos',
+    'empresas' => ($returnToEmpresaUrl !== '' ? $returnToEmpresaUrl : APP_BASE_PATH . '/catalogo/empresas'),
+    default => '',
+};
 
 $fichaComboboxOptions = [];
 foreach ($fichasOptions as $f) {
@@ -98,7 +104,9 @@ partial('components/page_header', [
 <?php if ($source === 'grupos' || $source === 'empresas'): ?>
     <?php if ($returnToCatalogUrl !== ''): ?>
         <a href="<?= e($returnToCatalogUrl) ?>" class="mb-4 inline-block text-sm text-app-link hover:underline">
-            ← <?= $source === 'grupos' ? 'Volver a grupos' : 'Volver a empresas' ?>
+            ← <?= $source === 'grupos'
+                ? 'Volver a grupos'
+                : ($initialEmpresaId > 0 ? 'Volver a la empresa' : 'Volver a empresas') ?>
         </a>
     <?php endif; ?>
 <?php endif; ?>

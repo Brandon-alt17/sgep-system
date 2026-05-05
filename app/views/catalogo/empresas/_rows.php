@@ -21,7 +21,7 @@ $tdClasses = (string) ($tdClasses ?? $defaultTdClasses);
             <td class="<?= e($tdClasses) ?> py-3 px-4 align-top"><?= (int) ($empresa['aprendices_count'] ?? 0) ?></td>
             <td class="<?= e($tdClasses) ?> py-3 px-4 pr-6 align-top">
                 <a class="<?= e(ui_button_small_classes()) ?>" href="<?= e(APP_BASE_PATH) ?>/catalogo/empresas/ver?id=<?= $eid ?>">
-                    Información empresa
+                    Ver empresa
                 </a>
             </td>
         </tr>

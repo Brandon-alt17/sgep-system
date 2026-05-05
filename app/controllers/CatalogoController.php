@@ -10,7 +10,6 @@ use App\Helpers\Validator;
 use App\Models\ProgramaContenido;
 use App\Models\ProgramaEnlacePendiente;
 use App\Models\ProgramaImportacionPdf;
-use App\Models\Aprendiz;
 use App\Models\Empresa;
 use App\Models\Grupo;
 use App\Models\Programa;
@@ -142,12 +141,10 @@ class CatalogoController
             return;
         }
         $editing = ((string) ($_GET['edit'] ?? '')) === '1';
-        $aprendicesVinculados = Aprendiz::paginated(['empresa_id' => $id], 500, 0);
         view('catalogo/empresas/form', [
             'empresa' => $empresa,
             'errors' => [],
             'aprendicesCount' => Empresa::countAprendices($id),
-            'aprendicesVinculados' => $aprendicesVinculados,
             'editing' => $editing,
         ]);
     }
@@ -176,7 +173,6 @@ class CatalogoController
                 'empresa' => array_merge($empresa, $data),
                 'errors' => array_values($errors),
                 'aprendicesCount' => Empresa::countAprendices($id),
-                'aprendicesVinculados' => Aprendiz::paginated(['empresa_id' => $id], 500, 0),
                 'editing' => true,
             ]);
             return;
