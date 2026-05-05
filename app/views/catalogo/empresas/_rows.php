@@ -15,7 +15,10 @@ $tdClasses = (string) ($tdClasses ?? $defaultTdClasses);
     <?php foreach ($empresas as $empresa): ?>
         <?php
         $eid = (int) ($empresa['id'] ?? 0);
-        $aprendicesUrl = APP_BASE_PATH . '/aprendices?' . http_build_query(['empresa_id' => (string) $eid]);
+        $aprendicesUrl = APP_BASE_PATH . '/aprendices?' . http_build_query([
+            'empresa_id' => (string) $eid,
+            'from' => 'empresas',
+        ]);
         ?>
         <tr>
             <td class="<?= e($tdClasses) ?> py-3 px-4 pl-6 align-top font-medium"><?= e((string) ($empresa['nombre'] ?? '')) ?></td>

@@ -48,8 +48,10 @@ class Aprendiz
         }
 
         if (!empty($filters['q'])) {
-            $where[] = '(a.nombre_completo LIKE :q OR a.numero_documento LIKE :q)';
-            $params['q'] = '%' . $filters['q'] . '%';
+            $where[] = '(a.nombre_completo LIKE :q_nombre OR a.numero_documento LIKE :q_documento)';
+            $likeQ = '%' . $filters['q'] . '%';
+            $params['q_nombre'] = $likeQ;
+            $params['q_documento'] = $likeQ;
         }
 
         $sql = '
