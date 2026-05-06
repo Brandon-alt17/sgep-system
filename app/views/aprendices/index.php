@@ -123,72 +123,86 @@ function actualizarFiltros() {
         // Obtener todas las celdas
         const celdas = fila.querySelectorAll('td');
         
-        <!-- 👇 HEADER con fondo gris como la imagen -->
-        <thead class="bg-app-panelSubtle border-b">
-            <tr>
-                <th class="<?= e(ui_th_classes()) ?>">Nombre completo</th>
-                <th class="<?= e(ui_th_classes()) ?>">Documento</th>
-                <th class="<?= e(ui_th_classes()) ?>">Empresa</th>
-                <th class="<?= e(ui_th_classes()) ?>">Grupo</th>
-                <th class="<?= e(ui_th_classes()) ?>">Estado</th>
-                <th class="<?= e(ui_th_classes()) ?>">Última visita</th>
-                <th class="<?= e(ui_th_classes()) ?>"></th>
-            </tr>
-        </thead>
-
-        <tbody>
-        <?php if (empty($aprendices)): ?>
-            <tr class="border-b bg-app-panelSubtle/40">
-                <td class="<?= e(ui_td_classes()) ?> align-middle text-center text-app-muted" colspan="7">Sin aprendices registrados aún</td>
-            </tr>
-        <?php else: ?>
-        <?php foreach (($aprendices ?? []) as $aprendiz): ?>
-
-            <!-- 👇 hover suave como la imagen -->
-            <tr class="border-b hover:bg-gray-50 transition">
-
-                <td class="<?= e(ui_td_classes()) ?> font-medium">
-                    <?= e($aprendiz['nombre_completo']) ?>
-                </td>
-
-                <td class="<?= e(ui_td_classes()) ?> text-gray-600">
-                    <?= e($aprendiz['numero_documento']) ?>
-                </td>
-
-                <td class="<?= e(ui_td_classes()) ?>">
-                    <?= e( $aprendiz['empresa_nombre'] ?? '-') ?>
-                </td>
-
-                <td class="<?= e(ui_td_classes()) ?> text-gray-600">
-                    <?= e($aprendiz['ficha'] ?? '-') ?>
-                </td>
-
-                <td class="<?= e(ui_td_classes()) ?>">
-                    <?php
-                        $estado = $aprendiz['estado'] ?? '';
-
-                        if ($estado === 'En etapa productiva') {
-                            echo '<span class="'.e(ui_badge_success_classes()).'">'.$estado.'</span>';
-                        } elseif ($estado === 'Pendiente') {
-                            echo '<span class="'.e(ui_badge_warning_classes()).'">'.$estado.'</span>';
-                        } elseif ($estado === 'Certificado') {
-                            echo '<span class="'.e(ui_badge_success_classes()).'">'.$estado.'</span>';
-                        } else {
-                            echo '<span class="'.e(ui_badge_error_classes()).'">'.$estado.'</span>';
-                        }
-                    ?>
-                </td>
-
-                <td class="<?= e(ui_td_classes()) ?> text-gray-500">
-                    <?= e($aprendiz['ultima_visita'] ?? '—') ?>
-                </td>
-
-                <td class="<?= e(ui_td_classes()) ?>">
-                    <a class="<?= e(ui_button_small_classes()) ?>" 
-                       href="<?= e(APP_BASE_PATH) ?>/aprendices/show?id=<?= (int)$aprendiz['id'] ?>">
-                        Ver perfil
-                    </a>
-                </td>
+        if (celdas.length >= 5) {
+            // La ficha está en la celda 4 (índice 3)
+            const ficha = celdas[3].textContent.trim();
+            console.log(`Fila ${index} - Ficha: "${ficha}"`);
+            if (ficha && ficha !== '-' && ficha !== '—') {
+                fichasUnicas.add(ficha);
+            }
+            
+            // El estado está en la celda 5 (índice 4)
+            const spanEstado = celdas[4].querySelector('span');
+            let estado = spanEstado ? spanEstado.textContent.trim() : celdas[4].textContent.trim();
+            console.log(`Fila ${index} - Estado: "${estado}"`);
+            if (estado && estado !== '') {
+                estadosUnicos.add(estado);
+            }
+        }
+    });
+    
+    console.log('Fichas únicas:', Array.from(fichasUnicas));
+    
+    // Actualizar select de fichas
+    const selectFicha = document.getElementById('ficha-filter');
+    if (selectFicha) {
+        // Guardar el valor seleccionado actual
+        const valorActual = selectFicha.value;
+        
+        // Limpiar opciones (dejar solo la primera)
+        while (selectFicha.options.length > 1) {
+            selectFicha.remove(1);
+        }
+        
+        // Agregar nuevas opciones
+        const fichasArray = Array.from(fichasUnicas).sort();
+        fichasArray.forEach(ficha => {
+            const option = document.createElement('option');
+            option.value = ficha;
+            option.textContent = ficha;
+            selectFicha.appendChild(option);
+        });
+        
+        // Restaurar valor si aún existe
+        if (valorActual && fichasArray.includes(valorActual)) {
+            selectFicha.value = valorActual;
+        }
+        
+        console.log('Select de fichas actualizado, opciones:', selectFicha.options.length);
+    } else {
+        console.error('No se encontró el select con id "ficha-filter"');
+    }
+    
+    // Actualizar select de estados
+    const selectEstado = document.getElementById('estado-filter');
+    if (selectEstado) {
+        // Guardar el valor seleccionado actual
+        const valorActual = selectEstado.value;
+        
+        // Limpiar opciones (dejar solo la primera)
+        while (selectEstado.options.length > 1) {
+            selectEstado.remove(1);
+        }
+        
+        // Agregar nuevas opciones
+        const estadosArray = Array.from(estadosUnicos).sort();
+        estadosArray.forEach(estado => {
+            const option = document.createElement('option');
+            option.value = estado;
+            option.textContent = estado;
+            selectEstado.appendChild(option);
+        });
+        
+        // Restaurar valor si aún existe
+        if (valorActual && estadosArray.includes(valorActual)) {
+            selectEstado.value = valorActual;
+        }
+        
+        console.log('Select de estados actualizado, opciones:', selectEstado.options.length);
+    } else {
+        console.error('No se encontró el select con id "estado-filter"');
+    }
+}
 
 // Función para filtrar la tabla
 function filtrarTabla() {
@@ -228,10 +242,28 @@ function filtrarTabla() {
     mostrarMensaje(filasVisibles === 0);
 }
 
-        <?php endforeach; ?>
-        <?php endif; ?>
-        </tbody>
-    </table>
+// Función para mostrar/ocultar mensaje de sin resultados
+function mostrarMensaje(mostrar) {
+    const tbody = document.getElementById('table-body');
+    if (!tbody) return;
+    
+    let mensajeRow = document.getElementById('no-results-message');
+    
+    if (mostrar && !mensajeRow) {
+        mensajeRow = document.createElement('tr');
+        mensajeRow.id = 'no-results-message';
+        const thead = document.querySelector('#aprendices-table thead');
+        const numColumnas = thead ? thead.querySelectorAll('th').length : 7;
+        mensajeRow.innerHTML = `
+            <td colspan="${numColumnas}" class="text-center py-8 text-gray-500 mt-4 mb-4">
+                No se encontraron resultados que coincidan con los filtros seleccionados.
+            </td>
+        `;
+        tbody.appendChild(mensajeRow);
+    } else if (!mostrar && mensajeRow) {
+        mensajeRow.remove();
+    }
+}
 
 // Inicializar cuando el DOM esté listo
 document.addEventListener('DOMContentLoaded', function() {
