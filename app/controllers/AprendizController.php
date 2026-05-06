@@ -6,6 +6,7 @@ namespace App\Controllers;
 
 use App\Helpers\Validator;
 use App\Models\Aprendiz;
+use App\Models\EmpresaJefe;
 use App\Models\Programa;
 
 class AprendizController
@@ -92,8 +93,12 @@ class AprendizController
             ]
         ];
 
+        $empresaId = (int) ($aprendiz['empresa_id'] ?? 0);
+        $jefes = $empresaId > 0 ? EmpresaJefe::listByEmpresa($empresaId) : [];
+
         view('aprendices/show', [
             'aprendiz' => $aprendiz,
+            'jefes' => $jefes,
             'momentos' => $momentos,
             'backToListUrl' => $this->aprendicesBackUrl($_GET),
         ]);
