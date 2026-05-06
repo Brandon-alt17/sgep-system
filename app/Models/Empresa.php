@@ -72,12 +72,10 @@ class Empresa
         $pdo = Database::connection();
         $sql = 'INSERT INTO empresas (
             nombre, nit, direccion, ciudad, correo_org,
-            nombre_jefe, cargo_jefe, correo_jefe, telefono_jefe,
             nombre_contacto2, correo_contacto2, direccion_practica,
             created_at, updated_at
         ) VALUES (
             :nombre, :nit, :direccion, :ciudad, :correo_org,
-            :nombre_jefe, :cargo_jefe, :correo_jefe, :telefono_jefe,
             :nombre_contacto2, :correo_contacto2, :direccion_practica,
             NOW(), NOW()
         )';
@@ -98,10 +96,6 @@ class Empresa
             direccion = :direccion,
             ciudad = :ciudad,
             correo_org = :correo_org,
-            nombre_jefe = :nombre_jefe,
-            cargo_jefe = :cargo_jefe,
-            correo_jefe = :correo_jefe,
-            telefono_jefe = :telefono_jefe,
             nombre_contacto2 = :nombre_contacto2,
             correo_contacto2 = :correo_contacto2,
             direccion_practica = :direccion_practica,
@@ -143,10 +137,6 @@ class Empresa
             'direccion' => $nullIfEmpty($data['direccion'] ?? null),
             'ciudad' => $nullIfEmpty($data['ciudad'] ?? null),
             'correo_org' => $nullIfEmpty($data['correo_org'] ?? null),
-            'nombre_jefe' => $nullIfEmpty($data['nombre_jefe'] ?? null),
-            'cargo_jefe' => $nullIfEmpty($data['cargo_jefe'] ?? null),
-            'correo_jefe' => $nullIfEmpty($data['correo_jefe'] ?? null),
-            'telefono_jefe' => $nullIfEmpty($data['telefono_jefe'] ?? null),
             'nombre_contacto2' => $nullIfEmpty($data['nombre_contacto2'] ?? null),
             'correo_contacto2' => $nullIfEmpty($data['correo_contacto2'] ?? null),
             'direccion_practica' => $nullIfEmpty($data['direccion_practica'] ?? null),

@@ -11,6 +11,7 @@ use App\Models\ProgramaContenido;
 use App\Models\ProgramaEnlacePendiente;
 use App\Models\ProgramaImportacionPdf;
 use App\Models\Empresa;
+use App\Models\EmpresaJefe;
 use App\Models\Grupo;
 use App\Models\Programa;
 
@@ -141,11 +142,25 @@ class CatalogoController
             return;
         }
         $editing = ((string) ($_GET['edit'] ?? '')) === '1';
+        $jefes = EmpresaJefe::listByEmpresa($id);
+        // Compatibilidad: si aún no se han migrado/seeded los jefes,
+        // mostramos el contacto legado de empresa como "Jefe 1".
+        if ($jefes === [] && trim((string) ($empresa['nombre_jefe'] ?? '')) !== '') {
+            $jefes[] = [
+                'nombre' => (string) ($empresa['nombre_jefe'] ?? ''),
+                'cargo' => (string) ($empresa['cargo_jefe'] ?? ''),
+                'correo' => (string) ($empresa['correo_jefe'] ?? ''),
+                'telefono' => (string) ($empresa['telefono_jefe'] ?? ''),
+                'nombre_contacto2' => (string) ($empresa['nombre_contacto2'] ?? ''),
+                'correo_contacto2' => (string) ($empresa['correo_contacto2'] ?? ''),
+            ];
+        }
         view('catalogo/empresas/form', [
             'empresa' => $empresa,
             'errors' => [],
             'aprendicesCount' => Empresa::countAprendices($id),
             'editing' => $editing,
+            'jefes' => $jefes,
         ]);
     }
 
@@ -166,7 +181,14 @@ class CatalogoController
             return;
         }
         $data = $this->postedEmpresaPayload();
+        $jefesPosted = $this->postedJefesForView($id);
         $errors = Validator::required($_POST, ['nombre']);
+        if ($errors === []
+            && !$this->hasEmpresaMainDataChanges($empresa, $data)
+            && !$this->hasJefesChanges($id, $jefesPosted)
+        ) {
+            redirect(APP_BASE_PATH . '/catalogo/empresas/ver?id=' . $id . '&edit=1&toast=empresa_sin_cambios');
+        }
         if ($errors !== []) {
             $data['id'] = $id;
             view('catalogo/empresas/form', [
@@ -174,10 +196,12 @@ class CatalogoController
                 'errors' => array_values($errors),
                 'aprendicesCount' => Empresa::countAprendices($id),
                 'editing' => true,
+                'jefes' => $jefesPosted,
             ]);
             return;
         }
         Empresa::update($id, $data);
+        $this->savePostedJefes($id);
         redirect(APP_BASE_PATH . '/catalogo/empresas/ver?id=' . $id . '&toast=empresa_actualizada');
     }
 
@@ -208,14 +232,124 @@ class CatalogoController
             'direccion' => trim((string) ($_POST['direccion'] ?? '')),
             'ciudad' => trim((string) ($_POST['ciudad'] ?? '')),
             'correo_org' => trim((string) ($_POST['correo_org'] ?? '')),
-            'nombre_jefe' => trim((string) ($_POST['nombre_jefe'] ?? '')),
-            'cargo_jefe' => trim((string) ($_POST['cargo_jefe'] ?? '')),
-            'correo_jefe' => trim((string) ($_POST['correo_jefe'] ?? '')),
-            'telefono_jefe' => trim((string) ($_POST['telefono_jefe'] ?? '')),
             'nombre_contacto2' => trim((string) ($_POST['nombre_contacto2'] ?? '')),
             'correo_contacto2' => trim((string) ($_POST['correo_contacto2'] ?? '')),
             'direccion_practica' => trim((string) ($_POST['direccion_practica'] ?? '')),
         ];
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    private function postedJefesForView(int $empresaId): array
+    {
+        $rows = (array) ($_POST['jefes'] ?? []);
+        $out = [];
+        foreach ($rows as $row) {
+            if (!is_array($row)) {
+                continue;
+            }
+            $out[] = [
+                'id' => (int) ($row['id'] ?? 0),
+                'empresa_id' => $empresaId,
+                'nombre' => trim((string) ($row['nombre'] ?? '')),
+                'cargo' => trim((string) ($row['cargo'] ?? '')),
+                'correo' => trim((string) ($row['correo'] ?? '')),
+                'telefono' => trim((string) ($row['telefono'] ?? '')),
+                'nombre_contacto2' => trim((string) ($row['nombre_contacto2'] ?? '')),
+                'correo_contacto2' => trim((string) ($row['correo_contacto2'] ?? '')),
+            ];
+        }
+
+        if ($out === []) {
+            return EmpresaJefe::listByEmpresa($empresaId);
+        }
+
+        return $out;
+    }
+
+    private function savePostedJefes(int $empresaId): void
+    {
+        $rows = (array) ($_POST['jefes'] ?? []);
+        foreach ($rows as $row) {
+            if (!is_array($row)) {
+                continue;
+            }
+            EmpresaJefe::updateByIdForEmpresa($empresaId, (int) ($row['id'] ?? 0), [
+                'nombre' => trim((string) ($row['nombre'] ?? '')),
+                'cargo' => trim((string) ($row['cargo'] ?? '')),
+                'correo' => trim((string) ($row['correo'] ?? '')),
+                'telefono' => trim((string) ($row['telefono'] ?? '')),
+                'nombre_contacto2' => trim((string) ($row['nombre_contacto2'] ?? '')),
+                'correo_contacto2' => trim((string) ($row['correo_contacto2'] ?? '')),
+            ]);
+        }
+    }
+
+    /** @param array<string, mixed> $current @param array<string, string> $incoming */
+    private function hasEmpresaMainDataChanges(array $current, array $incoming): bool
+    {
+        $fields = [
+            'nombre',
+            'nit',
+            'direccion',
+            'ciudad',
+            'correo_org',
+            'nombre_contacto2',
+            'correo_contacto2',
+            'direccion_practica',
+        ];
+        foreach ($fields as $field) {
+            $currentValue = trim((string) ($current[$field] ?? ''));
+            $incomingValue = trim((string) ($incoming[$field] ?? ''));
+            if ($currentValue !== $incomingValue) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /** @param list<array<string, mixed>> $postedRows */
+    private function hasJefesChanges(int $empresaId, array $postedRows): bool
+    {
+        $currentRows = EmpresaJefe::listByEmpresa($empresaId);
+        $currentById = [];
+        foreach ($currentRows as $row) {
+            $rid = (int) ($row['id'] ?? 0);
+            if ($rid > 0) {
+                $currentById[$rid] = $row;
+            }
+        }
+
+        $postedById = [];
+        foreach ($postedRows as $row) {
+            $rid = (int) ($row['id'] ?? 0);
+            if ($rid > 0) {
+                $postedById[$rid] = $row;
+            }
+        }
+
+        if (count($currentById) !== count($postedById)) {
+            return true;
+        }
+
+        $fields = ['nombre', 'cargo', 'correo', 'telefono', 'nombre_contacto2', 'correo_contacto2'];
+        foreach ($currentById as $rid => $current) {
+            if (!isset($postedById[$rid])) {
+                return true;
+            }
+            $incoming = $postedById[$rid];
+            foreach ($fields as $field) {
+                $currentValue = trim((string) ($current[$field] ?? ''));
+                $incomingValue = trim((string) ($incoming[$field] ?? ''));
+                if ($currentValue !== $incomingValue) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     public function pendientesPrograma(): void

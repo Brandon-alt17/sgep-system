@@ -7,6 +7,7 @@ $isDetail = isset($empresa['id']) && (int) $empresa['id'] > 0;
 $eid = $isDetail ? (int) $empresa['id'] : 0;
 $editing = $isDetail && (bool) ($editing ?? false);
 $aprendicesCount = $isDetail ? (int) ($aprendicesCount ?? 0) : 0;
+$jefes = (array) ($jefes ?? []);
 $val = static function (string $key) use ($empresa): string {
     return e(trim((string) ($empresa[$key] ?? '')));
 };
@@ -15,14 +16,16 @@ $showField = static function (string $key) use ($empresa): string {
     $t = trim((string) ($empresa[$key] ?? ''));
     return $t !== ''
         ? e($t)
-        : '<span class="font-medium text-rose-600">Dato no registrado</span>';
+        : '<span class="italic">Dato no registrado</span>';
 };
 
 $toastKey = trim((string) ($_GET['toast'] ?? ''));
 $toastMessage = match ($toastKey) {
     'empresa_actualizada' => 'Empresa actualizada correctamente.',
+    'empresa_sin_cambios' => 'No se detectaron cambios para guardar.',
     default => '',
 };
+$toastVariant = $toastKey === 'empresa_sin_cambios' ? 'warning' : 'success';
 
 $verUrl = APP_BASE_PATH . '/catalogo/empresas/ver?id=' . $eid;
 $verEditUrl = $verUrl . '&edit=1';
@@ -32,6 +35,7 @@ $listadoAprendicesUrl = APP_BASE_PATH . '/aprendices?' . http_build_query([
 ]);
 
 $formFieldCls = ui_input_classes();
+$editInputCls = $formFieldCls . ' mt-2 mb-1';
 $viewLabelCls = 'm-0 text-xs font-medium uppercase tracking-wide text-app-muted';
 ?>
 
@@ -79,26 +83,6 @@ $viewLabelCls = 'm-0 text-xs font-medium uppercase tracking-wide text-app-muted'
         </label>
     </div>
 
-    <h3 class="text-sm font-semibold text-app-text">Contacto principal (jefe de área / prácticas)</h3>
-    <div class="grid gap-4 md:grid-cols-2">
-        <label class="<?= e(ui_label_classes()) ?>">
-            Nombre
-            <input type="text" name="nombre_jefe" value="<?= $val('nombre_jefe') ?>" class="<?= e(ui_input_classes()) ?>">
-        </label>
-        <label class="<?= e(ui_label_classes()) ?>">
-            Cargo
-            <input type="text" name="cargo_jefe" value="<?= $val('cargo_jefe') ?>" class="<?= e(ui_input_classes()) ?>">
-        </label>
-        <label class="<?= e(ui_label_classes()) ?>">
-            Correo
-            <input type="email" name="correo_jefe" value="<?= $val('correo_jefe') ?>" class="<?= e(ui_input_classes()) ?>">
-        </label>
-        <label class="<?= e(ui_label_classes()) ?>">
-            Teléfono
-            <input type="text" name="telefono_jefe" value="<?= $val('telefono_jefe') ?>" class="<?= e(ui_input_classes()) ?>">
-        </label>
-    </div>
-
     <h3 class="text-sm font-semibold text-app-text">Contacto alternativo</h3>
     <div class="grid gap-4 md:grid-cols-2">
         <label class="<?= e(ui_label_classes()) ?>">
@@ -119,6 +103,7 @@ $viewLabelCls = 'm-0 text-xs font-medium uppercase tracking-wide text-app-muted'
 
 <?php elseif ($editing): ?>
 <?php partial('components/ui'); ?>
+<?php partial('components/toast', ['message' => $toastMessage, 'variant' => $toastVariant, 'positionClass' => 'bottom-24 right-6']); ?>
 
 <?php if ($errors !== []): ?>
     <section class="mb-4 rounded-md border border-rose-200 bg-rose-50 p-4 text-sm text-rose-900" role="alert">
@@ -146,70 +131,103 @@ $viewLabelCls = 'm-0 text-xs font-medium uppercase tracking-wide text-app-muted'
     <input type="hidden" name="id" value="<?= $eid ?>">
 
     <section class="<?= e(ui_card_classes()) ?> p-6">
-
-    <div class="grid gap-6 md:grid-cols-2">
-        <div class="md:col-span-2">
+        <div class="border-b border-app-border pb-6">
             <p class="<?= e($viewLabelCls) ?>">Razón social *</p>
-            <input type="text" name="nombre" required value="<?= $val('nombre') ?>" class="mt-1 <?= e($formFieldCls) ?>">
+            <input type="text" name="nombre" required value="<?= $val('nombre') ?>" class="<?= e($editInputCls) ?>">
         </div>
-        <div>
-            <p class="<?= e($viewLabelCls) ?>">NIT</p>
-            <input type="text" name="nit" value="<?= $val('nit') ?>" class="mt-1 <?= e($formFieldCls) ?>">
-        </div>
-        <div>
-            <p class="<?= e($viewLabelCls) ?>">Ciudad</p>
-            <input type="text" name="ciudad" value="<?= $val('ciudad') ?>" class="mt-1 <?= e($formFieldCls) ?>">
-        </div>
-        <div class="md:col-span-2">
-            <p class="<?= e($viewLabelCls) ?>">Dirección</p>
-            <input type="text" name="direccion" value="<?= $val('direccion') ?>" class="mt-1 <?= e($formFieldCls) ?>">
-        </div>
-        <div class="md:col-span-2">
-            <p class="<?= e($viewLabelCls) ?>">Dirección de práctica</p>
-            <input type="text" name="direccion_practica" value="<?= $val('direccion_practica') ?>" class="mt-1 <?= e($formFieldCls) ?>">
-        </div>
-        <div class="md:col-span-2">
-            <p class="<?= e($viewLabelCls) ?>">Correo institucional / organización</p>
-            <input type="email" name="correo_org" value="<?= $val('correo_org') ?>" class="mt-1 <?= e($formFieldCls) ?>">
-        </div>
-    </div>
 
-    <div class="border-t border-app-border pt-6">
-        <h3 class="m-0 text-sm font-semibold text-app-text">Contacto principal (jefe de área / prácticas)</h3>
-        <div class="mt-4 grid gap-6 md:grid-cols-2">
-            <div>
-                <p class="<?= e($viewLabelCls) ?>">Nombre</p>
-                <input type="text" name="nombre_jefe" value="<?= $val('nombre_jefe') ?>" class="mt-1 <?= e($formFieldCls) ?>">
-            </div>
-            <div>
-                <p class="<?= e($viewLabelCls) ?>">Cargo</p>
-                <input type="text" name="cargo_jefe" value="<?= $val('cargo_jefe') ?>" class="mt-1 <?= e($formFieldCls) ?>">
-            </div>
-            <div>
-                <p class="<?= e($viewLabelCls) ?>">Correo</p>
-                <input type="email" name="correo_jefe" value="<?= $val('correo_jefe') ?>" class="mt-1 <?= e($formFieldCls) ?>">
-            </div>
-            <div>
-                <p class="<?= e($viewLabelCls) ?>">Teléfono</p>
-                <input type="text" name="telefono_jefe" value="<?= $val('telefono_jefe') ?>" class="mt-1 <?= e($formFieldCls) ?>">
-            </div>
-        </div>
-    </div>
-
-    <div class="border-t border-app-border pt-6">
-        <h3 class="m-0 text-sm font-semibold text-app-text">Contacto alternativo</h3>
-        <div class="mt-4 grid gap-6 md:grid-cols-2">
-            <div>
-                <p class="<?= e($viewLabelCls) ?>">Nombre</p>
-                <input type="text" name="nombre_contacto2" value="<?= $val('nombre_contacto2') ?>" class="mt-1 <?= e($formFieldCls) ?>">
-            </div>
-            <div>
-                <p class="<?= e($viewLabelCls) ?>">Correo</p>
-                <input type="email" name="correo_contacto2" value="<?= $val('correo_contacto2') ?>" class="mt-1 <?= e($formFieldCls) ?>">
+        <div class="pt-6 pb-6">
+            <h3 class="m-0 text-sm font-semibold text-app-text">Datos generales</h3>
+            <div class="mt-4 grid gap-6 md:grid-cols-2">
+                <div>
+                    <p class="<?= e($viewLabelCls) ?>">NIT</p>
+                    <input type="text" name="nit" value="<?= $val('nit') ?>" class="<?= e($editInputCls) ?>">
+                </div>
+                <div>
+                    <p class="<?= e($viewLabelCls) ?>">Ciudad</p>
+                    <input type="text" name="ciudad" value="<?= $val('ciudad') ?>" class="<?= e($editInputCls) ?>">
+                </div>
+                <div>
+                    <p class="<?= e($viewLabelCls) ?>">Dirección</p>
+                    <input type="text" name="direccion" value="<?= $val('direccion') ?>" class="<?= e($editInputCls) ?>">
+                </div>
+                <div>
+                    <p class="<?= e($viewLabelCls) ?>">Dirección de práctica</p>
+                    <input type="text" name="direccion_practica" value="<?= $val('direccion_practica') ?>" class="<?= e($editInputCls) ?>">
+                </div>
             </div>
         </div>
-    </div>
 
+        <div class="border-t border-app-border py-6">
+            <h3 class="m-0 text-sm font-semibold text-app-text">Contactos</h3>
+            <div class="mt-4 grid gap-6 md:grid-cols-2">
+                <div class="md:col-span-2">
+                    <p class="<?= e($viewLabelCls) ?>">Correo institucional / organización</p>
+                    <input type="email" name="correo_org" value="<?= $val('correo_org') ?>" class="<?= e($editInputCls) ?>">
+                </div>
+                <div>
+                    <p class="<?= e($viewLabelCls) ?>">Contacto alternativo (nombre)</p>
+                    <input type="text" name="nombre_contacto2" value="<?= $val('nombre_contacto2') ?>" class="<?= e($editInputCls) ?>">
+                </div>
+                <div>
+                    <p class="<?= e($viewLabelCls) ?>">Contacto alternativo (correo)</p>
+                    <input type="email" name="correo_contacto2" value="<?= $val('correo_contacto2') ?>" class="<?= e($editInputCls) ?>">
+                </div>
+            </div>
+        </div>
+
+        <div class="border-t border-app-border py-6">
+            <h3 class="m-0 text-sm font-semibold text-app-text">Jefes y contacto alternativo</h3>
+            <p class="m-0 mt-1 text-xs text-app-muted">Puedes actualizar cada jefe desde aquí.</p>
+            <?php if ($jefes === []): ?>
+                <div class="mt-4 grid gap-6 md:grid-cols-2">
+                    <div>
+                        <p class="<?= e($viewLabelCls) ?>">Supervisor</p>
+                        <p class="mt-1 text-base text-app-text"><span class="italic">Dato no registrado</span></p>
+                    </div>
+                    <div>
+                        <p class="<?= e($viewLabelCls) ?>">Contacto alternativo</p>
+                        <p class="mt-1 text-base text-app-text"><span class="italic">Dato no registrado</span></p>
+                    </div>
+                </div>
+            <?php endif; ?>
+
+            <div class="mt-4 space-y-5">
+                <?php foreach ($jefes as $idx => $jefe): ?>
+                    <?php $jefeId = (int) ($jefe['id'] ?? 0); ?>
+                    <article class="rounded-lg border border-app-border bg-app-panelSubtle p-4">
+                        <input type="hidden" name="jefes[<?= $jefeId ?>][id]" value="<?= $jefeId ?>">
+                        <h4 class="m-0 text-sm font-semibold text-app-text">Jefe #<?= (int) ($idx + 1) ?></h4>
+                        <div class="mt-4 grid gap-6 md:grid-cols-2">
+                            <div>
+                                <p class="<?= e($viewLabelCls) ?>">Supervisor</p>
+                                <input type="text" name="jefes[<?= $jefeId ?>][nombre]" value="<?= e((string) ($jefe['nombre'] ?? '')) ?>" class="<?= e($editInputCls) ?>">
+                            </div>
+                            <div>
+                                <p class="<?= e($viewLabelCls) ?>">Cargo</p>
+                                <input type="text" name="jefes[<?= $jefeId ?>][cargo]" value="<?= e((string) ($jefe['cargo'] ?? '')) ?>" class="<?= e($editInputCls) ?>">
+                            </div>
+                            <div>
+                                <p class="<?= e($viewLabelCls) ?>">Correo supervisor</p>
+                                <input type="email" name="jefes[<?= $jefeId ?>][correo]" value="<?= e((string) ($jefe['correo'] ?? '')) ?>" class="<?= e($editInputCls) ?>">
+                            </div>
+                            <div>
+                                <p class="<?= e($viewLabelCls) ?>">Teléfono supervisor</p>
+                                <input type="text" name="jefes[<?= $jefeId ?>][telefono]" value="<?= e((string) ($jefe['telefono'] ?? '')) ?>" class="<?= e($editInputCls) ?>">
+                            </div>
+                            <div>
+                                <p class="<?= e($viewLabelCls) ?>">Contacto alternativo (nombre)</p>
+                                <input type="text" name="jefes[<?= $jefeId ?>][nombre_contacto2]" value="<?= e((string) ($jefe['nombre_contacto2'] ?? '')) ?>" class="<?= e($editInputCls) ?>">
+                            </div>
+                            <div>
+                                <p class="<?= e($viewLabelCls) ?>">Contacto alternativo (correo)</p>
+                                <input type="email" name="jefes[<?= $jefeId ?>][correo_contacto2]" value="<?= e((string) ($jefe['correo_contacto2'] ?? '')) ?>" class="<?= e($editInputCls) ?>">
+                            </div>
+                        </div>
+                    </article>
+                <?php endforeach; ?>
+            </div>
+        </div>
     </section>
 </form>
 
@@ -236,21 +254,20 @@ $viewLabelCls = 'm-0 text-xs font-medium uppercase tracking-wide text-app-muted'
 </section>
 
 <section class="<?= e(ui_card_classes()) ?> relative mx-auto max-w-5xl space-y-8 p-6">
-    <a href="<?= e($verEditUrl) ?>"
-       class="<?= e(ui_button_small_classes()) ?> absolute right-6 top-6 z-10 inline-flex items-center gap-2 shadow-xsSoft bg-white hover:bg-app-panelSubtle"
-       aria-label="Editar información">
-        <span class="inline-flex h-4 w-4 [&_svg]:h-4 [&_svg]:w-4" aria-hidden="true"><?= ui_icon('pencil') ?></span>
-        Editar
-    </a>
-
-    <div class="flex flex-wrap items-center gap-3 border-b border-app-border pb-6 pr-14">
-        <div class="min-w-0">
+    <div class="flex flex-wrap items-center justify-between gap-3 border-b border-app-border pb-6">
+        <div class="min-w-0 flex flex-wrap items-center gap-3">
             <h3 class="m-0 text-sm font-semibold text-app-text">Aprendices asociados</h3>
             <p class="m-0 mt-0.5 text-xs text-app-muted"><?= (int) $aprendicesCount ?> <?= (int) $aprendicesCount === 1 ? 'aprendiz' : 'aprendices' ?></p>
+            <a href="<?= e($listadoAprendicesUrl) ?>" class="<?= e(ui_button_small_classes()) ?> inline-flex shrink-0 items-center gap-2">
+                <span class="inline-flex h-4 w-4 [&_svg]:h-4 [&_svg]:w-4" aria-hidden="true"><?= ui_icon('users') ?></span>
+                Ver aprendices (<?= (int) $aprendicesCount ?>)
+            </a>
         </div>
-        <a href="<?= e($listadoAprendicesUrl) ?>" class="<?= e(ui_button_small_classes()) ?> inline-flex shrink-0 items-center gap-2">
-            <span class="inline-flex h-4 w-4 [&_svg]:h-4 [&_svg]:w-4" aria-hidden="true"><?= ui_icon('users') ?></span>
-            Ver aprendices (<?= (int) $aprendicesCount ?>)
+        <a href="<?= e($verEditUrl) ?>"
+           class="<?= e(ui_button_small_classes()) ?> inline-flex shrink-0 items-center gap-2 shadow-xsSoft bg-white hover:bg-app-panelSubtle"
+           aria-label="Editar información">
+            <span class="inline-flex h-4 w-4 [&_svg]:h-4 [&_svg]:w-4" aria-hidden="true"><?= ui_icon('pencil') ?></span>
+            Editar
         </a>
     </div>
 
@@ -283,39 +300,70 @@ $viewLabelCls = 'm-0 text-xs font-medium uppercase tracking-wide text-app-muted'
     </div>
 
     <div class="border-t border-app-border pt-6">
-        <h3 class="m-0 text-sm font-semibold text-app-text">Contacto principal (jefe de área / prácticas)</h3>
-        <div class="mt-4 grid gap-6 md:grid-cols-2">
-            <div>
-                <p class="<?= e($viewLabelCls) ?>">Nombre</p>
-                <p class="mt-1 text-base text-app-text"><?= $showField('nombre_jefe') ?></p>
+        <h3 class="m-0 text-sm font-semibold text-app-text">Jefes y contacto alternativo</h3>
+        <?php if ($jefes === []): ?>
+            <div class="mt-4 grid gap-6 md:grid-cols-2">
+                <div>
+                    <p class="<?= e($viewLabelCls) ?>">Supervisor</p>
+                    <p class="mt-1 text-base text-app-text"><span class="italic">Dato no registrado</span></p>
+                </div>
+                <div>
+                    <p class="<?= e($viewLabelCls) ?>">Cargo</p>
+                    <p class="mt-1 text-base text-app-text"><span class="italic">Dato no registrado</span></p>
+                </div>
+                <div>
+                    <p class="<?= e($viewLabelCls) ?>">Correo supervisor</p>
+                    <p class="mt-1 text-base text-app-text"><span class="italic">Dato no registrado</span></p>
+                </div>
+                <div>
+                    <p class="<?= e($viewLabelCls) ?>">Teléfono supervisor</p>
+                    <p class="mt-1 text-base text-app-text"><span class="italic">Dato no registrado</span></p>
+                </div>
+                <div>
+                    <p class="<?= e($viewLabelCls) ?>">Contacto alternativo (nombre)</p>
+                    <p class="mt-1 text-base text-app-text"><span class="italic">Dato no registrado</span></p>
+                </div>
+                <div>
+                    <p class="<?= e($viewLabelCls) ?>">Contacto alternativo (correo)</p>
+                    <p class="mt-1 text-base text-app-text break-all"><span class="italic">Dato no registrado</span></p>
+                </div>
             </div>
-            <div>
-                <p class="<?= e($viewLabelCls) ?>">Cargo</p>
-                <p class="mt-1 text-base text-app-text"><?= $showField('cargo_jefe') ?></p>
+        <?php else: ?>
+            <div class="mt-4 space-y-6">
+                <?php foreach ($jefes as $idx => $jefe): ?>
+                    <?php $num = $idx + 1; ?>
+                    <article class="rounded-lg border border-app-border bg-app-panelSubtle p-4">
+                        <h4 class="m-0 text-sm font-semibold text-app-text">Jefe <?= (int) $num ?></h4>
+                        <div class="mt-4 grid gap-6 md:grid-cols-2">
+                            <div>
+                                <p class="<?= e($viewLabelCls) ?>">Supervisor</p>
+                                <p class="mt-1 text-base text-app-text"><?= trim((string) ($jefe['nombre'] ?? '')) !== '' ? e((string) $jefe['nombre']) : '<span class="italic">Dato no registrado</span>' ?></p>
+                            </div>
+                            <div>
+                                <p class="<?= e($viewLabelCls) ?>">Cargo</p>
+                                <p class="mt-1 text-base text-app-text"><?= trim((string) ($jefe['cargo'] ?? '')) !== '' ? e((string) $jefe['cargo']) : '<span class="italic">Dato no registrado</span>' ?></p>
+                            </div>
+                            <div>
+                                <p class="<?= e($viewLabelCls) ?>">Correo supervisor</p>
+                                <p class="mt-1 text-base text-app-text break-all"><?= trim((string) ($jefe['correo'] ?? '')) !== '' ? e((string) $jefe['correo']) : '<span class="italic">Dato no registrado</span>' ?></p>
+                            </div>
+                            <div>
+                                <p class="<?= e($viewLabelCls) ?>">Teléfono supervisor</p>
+                                <p class="mt-1 text-base text-app-text"><?= trim((string) ($jefe['telefono'] ?? '')) !== '' ? e((string) $jefe['telefono']) : '<span class="italic">Dato no registrado</span>' ?></p>
+                            </div>
+                            <div>
+                                <p class="<?= e($viewLabelCls) ?>">Contacto alternativo (nombre)</p>
+                                <p class="mt-1 text-base text-app-text"><?= trim((string) ($jefe['nombre_contacto2'] ?? '')) !== '' ? e((string) $jefe['nombre_contacto2']) : '<span class="italic">Dato no registrado</span>' ?></p>
+                            </div>
+                            <div>
+                                <p class="<?= e($viewLabelCls) ?>">Contacto alternativo (correo)</p>
+                                <p class="mt-1 text-base text-app-text break-all"><?= trim((string) ($jefe['correo_contacto2'] ?? '')) !== '' ? e((string) $jefe['correo_contacto2']) : '<span class="italic">Dato no registrado</span>' ?></p>
+                            </div>
+                        </div>
+                    </article>
+                <?php endforeach; ?>
             </div>
-            <div>
-                <p class="<?= e($viewLabelCls) ?>">Correo</p>
-                <p class="mt-1 text-base text-app-text break-all"><?= $showField('correo_jefe') ?></p>
-            </div>
-            <div>
-                <p class="<?= e($viewLabelCls) ?>">Teléfono</p>
-                <p class="mt-1 text-base text-app-text"><?= $showField('telefono_jefe') ?></p>
-            </div>
-        </div>
-    </div>
-
-    <div class="border-t border-app-border pt-6">
-        <h3 class="m-0 text-sm font-semibold text-app-text">Contacto alternativo</h3>
-        <div class="mt-4 grid gap-6 md:grid-cols-2">
-            <div>
-                <p class="<?= e($viewLabelCls) ?>">Nombre</p>
-                <p class="mt-1 text-base text-app-text"><?= $showField('nombre_contacto2') ?></p>
-            </div>
-            <div>
-                <p class="<?= e($viewLabelCls) ?>">Correo</p>
-                <p class="mt-1 text-base text-app-text break-all"><?= $showField('correo_contacto2') ?></p>
-            </div>
-        </div>
+        <?php endif; ?>
     </div>
 
     <div class="flex justify-end border-t border-app-border pt-6">
