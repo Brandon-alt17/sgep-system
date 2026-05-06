@@ -87,14 +87,14 @@ sgep/
 │ nivel           │       │ direccion        │
 │ modalidad       │       │ ciudad           │
 └────────┬────────┘       │ correo_org       │
-         │                │ nombre_jefe      │
-         │ pertenece a    │ cargo_jefe       │
-         ▼                │ correo_jefe      │
-┌─────────────────┐       │ telefono_jefe    │
-│   aprendices    │       │ nombre_contacto2 │
-├─────────────────┤       │ correo_contacto2 │
-│ id              │◀──────┤ id               │
-│ nombre          │       └──────────────────┘
+         │                │ nombre_contacto2 │
+         │ pertenece a    │ correo_contacto2 │
+         ▼                ├──────────────────┤
+┌─────────────────┐       │ id               │
+│   aprendices    │◀──────┤                  │
+├─────────────────┤       └──────────────────┘
+│ id              │
+│ nombre          │
 │ tipo_documento  │
 │ numero_documento│◀── clave única (sin duplicados)
 │ telefono        │
@@ -110,9 +110,9 @@ sgep/
 │ telefono_inst   │       │ modalidad        │
 │ tipo_asistencia │       │ enlace_grabacion │
 │ empresa_id (FK) │       │ proxima_visita   │
-│ programa_id (FK)│       │ obs_instructor   │
-└─────────────────┘       │ obs_aprendiz     │
-                          │ obs_coformador   │
+│ jefe_id (FK)    │       │ obs_instructor   │
+│ programa_id (FK)│       │ obs_aprendiz     │
+└─────────────────┘       │ obs_coformador   │
                           │ juicio_final     │
                           └────────┬─────────┘
                                    │ tiene muchos
@@ -127,6 +127,14 @@ sgep/
                           │ valoracion (S/PM)│
                           │ observacion      │
                           └──────────────────┘
+
+┌──────────────────┐
+│  empresa_jefes   │   ← varios por empresa; aprendices.jefe_id (FK)
+├──────────────────┤
+│ id               │
+│ empresa_id (FK)  │
+│ nombre, cargo…   │
+└──────────────────┘
 
 ┌──────────────────────┐
 │  documentos_generados│

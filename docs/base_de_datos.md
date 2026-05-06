@@ -49,6 +49,7 @@ Tabla principal. Cada fila es un aprendiz único. La clave de unicidad es `numer
 | `arl_nombre` | `varchar(100)` | Sí | null | Nombre de la ARL |
 | `arl_fecha_afiliacion` | `date` | Sí | null | Fecha de afiliación a ARL |
 | `empresa_id` | `bigint unsigned` | Sí | null | FK → empresas.id |
+| `jefe_id` | `int` | Sí | null | FK → empresa_jefes.id (supervisor en la empresa) |
 | `programa_id` | `bigint unsigned` | Sí | null | FK → programas.id |
 | `created_at` | `timestamp` | No | — | Fecha de creación del registro |
 | `updated_at` | `timestamp` | No | — | Fecha de última modificación |
@@ -59,6 +60,7 @@ UNIQUE INDEX idx_numero_documento (numero_documento)
 INDEX idx_estado (estado)
 INDEX idx_ficha (ficha)
 INDEX idx_empresa_id (empresa_id)
+INDEX idx_aprendices_jefe_id (jefe_id)
 ```
 
 ---
@@ -75,16 +77,29 @@ Datos del ente co-formador donde el aprendiz realiza su práctica.
 | `direccion` | `varchar(250)` | Sí | Dirección de la empresa |
 | `ciudad` | `varchar(100)` | Sí | Ciudad sede de la práctica |
 | `correo_org` | `varchar(150)` | Sí | Correo organizacional/institucional |
-| `nombre_jefe` | `varchar(200)` | No | Nombre del jefe inmediato/co-formador |
-| `cargo_jefe` | `varchar(150)` | Sí | Cargo del jefe inmediato |
-| `correo_jefe` | `varchar(150)` | Sí | Correo del jefe inmediato |
-| `telefono_jefe` | `varchar(20)` | Sí | Teléfono del jefe inmediato |
 | `nombre_contacto2` | `varchar(200)` | Sí | Nombre de contacto secundario (RRHH) |
 | `correo_contacto2` | `varchar(150)` | Sí | Correo de contacto secundario |
 | `created_at` | `timestamp` | No | — |
 | `updated_at` | `timestamp` | No | — |
 
-> Una misma empresa puede tener múltiples aprendices. La empresa se guarda por aprendiz (no se deduplica en el MVP) para preservar los datos exactos del formulario de cada uno.
+> Una misma empresa puede tener múltiples aprendices. Los supervisores/jefes de práctica se modelan en `empresa_jefes` y cada aprendiz referencia uno mediante `aprendices.jefe_id`.
+
+---
+
+## empresa_jefes
+
+Supervisores o contactos de práctica asociados a una empresa. Una empresa puede tener varios; cada aprendiz elige uno (`aprendices.jefe_id`).
+
+| Columna | Tipo | Nulo | Descripción |
+|---------|------|------|-------------|
+| `id` | `int` | No | Clave primaria |
+| `empresa_id` | `int` | No | FK → empresas.id |
+| `nombre` | `varchar(160)` | No | Nombre del supervisor |
+| `cargo` | `varchar(120)` | Sí | Cargo |
+| `correo` | `varchar(150)` | Sí | Correo |
+| `telefono` | `varchar(30)` | Sí | Teléfono |
+| `created_at` | `timestamp` | Sí | — |
+| `updated_at` | `timestamp` | Sí | — |
 
 ---
 

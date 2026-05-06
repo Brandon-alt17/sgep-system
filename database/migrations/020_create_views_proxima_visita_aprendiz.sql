@@ -1,3 +1,8 @@
+-- Asegura la columna antes de las vistas (entornos sin 019 aplicada o BD restaurada parcialmente).
+-- run_migrations.php ignora duplicados MySQL 1060/1061.
+ALTER TABLE aprendices ADD COLUMN proxima_visita DATE NULL;
+ALTER TABLE aprendices ADD INDEX idx_aprendiz_proxima_visita (proxima_visita);
+
 DROP VIEW IF EXISTS vw_momentos_con_proxima_visita;
 
 CREATE VIEW vw_momentos_con_proxima_visita AS

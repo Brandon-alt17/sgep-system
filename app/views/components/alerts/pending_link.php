@@ -12,9 +12,7 @@ $messageTail = trim((string) ($messageTail ?? 'pendientes de enlazar.'));
 $ctaText = trim((string) ($ctaText ?? 'Gestionar ahora'));
 $extraClasses = trim((string) ($extraClasses ?? ''));
 
-$alertClasses = $count > 5
-    ? 'rounded-[10px] border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700'
-    : (string) ui_warning_card_classes();
+$alertClasses = ui_pending_enlace_alert_section_classes($count);
 ?>
 <section class="<?= e(trim($alertClasses . ' ' . $extraClasses)) ?>">
     <p class="m-0">

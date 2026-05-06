@@ -46,8 +46,11 @@ foreach ($files as $file) {
             $statement->closeCursor();
         } catch (\PDOException $e) {
             $driverCode = (int) ($e->errorInfo[1] ?? 0);
-            // MySQL/MariaDB: 1060 = columna duplicada, 1061 = índice duplicado
-            if ($driverCode === 1060 || $driverCode === 1061) {
+            // MySQL/MariaDB: 1060 = columna duplicada, 1061 = índice duplicado,
+            // 1054 = columna inexistente (migraciones idempotentes tras DROP),
+            // 1091 = no se puede DROP columna que ya no existe,
+            // 1826 = FK duplicada / ya existe (re-ejecución).
+            if (in_array($driverCode, [1060, 1061, 1054, 1091, 1826], true)) {
                 continue;
             }
             throw $e;

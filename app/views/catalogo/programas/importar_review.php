@@ -117,29 +117,13 @@ foreach ($metaFieldLabels as $metaKey => $metaLabel) {
 <?php endif; ?>
 
 <?php if ($competencias !== []): ?>
-<section class="<?= e(ui_card_classes()) ?> mt-6" data-live-filter-root>
-    <div class="relative">
-        <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-app-muted [&_svg]:h-4 [&_svg]:w-4">
-            <?= ui_icon('search') ?>
-        </span>
-        <input
-            type="text"
-            class="<?= e(ui_input_classes()) ?> pl-10 pr-10"
-            placeholder="Buscar por competencia, RAE o código"
-            aria-label="Buscar por competencia, RAE o código"
-            data-live-filter-input
-        >
-        <button
-            type="button"
-            class="hidden absolute right-2 top-1/2 -translate-y-1/2 rounded-md px-2 py-1 text-sm text-app-muted hover:bg-app-panelSubtle hover:text-app-text"
-            aria-label="Limpiar búsqueda"
-            data-live-filter-clear
-        >&times;</button>
-    </div>
-    <p class="mt-2 hidden rounded-md border border-app-border bg-app-panelSubtle p-3 text-sm text-app-muted" data-live-filter-empty>
-        No hay coincidencias para la búsqueda.
-    </p>
-</section>
+    <?php partial('components/live_filter_search', [
+        'items_target' => '#importar-review-competencias-live-items',
+        'placeholder' => 'Buscar por competencia, RAE o código',
+        'aria_label' => 'Buscar por competencia, RAE o código',
+        'variant' => 'card',
+        'class' => '',
+    ]); ?>
 <?php endif; ?>
 
 <section class="<?= e(ui_card_classes()) ?> mb-6 mt-4 p-6">
@@ -150,7 +134,7 @@ foreach ($metaFieldLabels as $metaKey => $metaLabel) {
             No se detectaron competencias automáticamente.
         </div>
     <?php else: ?>
-        <div class="mt-6 space-y-6" data-live-filter-items>
+        <div id="importar-review-competencias-live-items" class="mt-6 space-y-6" data-live-filter-items>
             <?php foreach ($competencias as $compIndex => $comp): ?>
                 <?php
                 $resultadosComp = (array) ($comp['resultados'] ?? []);

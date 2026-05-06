@@ -27,6 +27,9 @@ $titles = [
     '/catalogo/programas/nuevo' => 'Catálogo',
     '/catalogo/grupos' => 'Catálogo',
     '/catalogo/empresas' => 'Catálogo',
+    '/catalogo/empresas/nuevo' => 'Catálogo',
+    '/catalogo/empresas/ver' => 'Catálogo',
+    '/catalogo/empresas/editar' => 'Catálogo',
     '/documentos/generar' => 'Configuración',
 ];
 $pageTitle = $titles[$currentPath] ?? 'SGEP';

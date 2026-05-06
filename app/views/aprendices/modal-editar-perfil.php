@@ -232,8 +232,15 @@
         </div>
 
         <!-- FORM (resto del contenido igual) -->
+        <?php
+        $jefes = (array) ($jefes ?? []);
+        $currentJefeId = (int) ($aprendiz['jefe_id'] ?? 0);
+        $empresaIdAp = (int) ($aprendiz['empresa_id'] ?? 0);
+        $jefeIdsInList = array_map(static fn (array $j): int => (int) ($j['id'] ?? 0), $jefes);
+        ?>
         <form method="POST" action="<?= e(APP_BASE_PATH) ?>/aprendices/update" class="p-6 pt-4">
-            <input type="hidden" name="id" value="<?= (int)$aprendiz['id'] ?>">
+            <input type="hidden" name="id" value="<?= (int) $aprendiz['id'] ?>">
+            <input type="hidden" name="empresa_id" value="<?= $empresaIdAp ?>">
 
             <!-- ===================== -->
             <!-- DATOS APRENDIZ (Más campos, más ancho) -->
@@ -317,17 +324,55 @@
                         <label class="form-label">Dirección</label>
                         <input type="text" name="direccion" value="<?= e($aprendiz['direccion'] ?? '') ?>" class="form-input">
                     </div>
-                    <div class="form-field">
-                        <label class="form-label">Supervisor</label>
-                        <input type="text" name="nombre_jefe" value="<?= e($aprendiz['nombre_jefe'] ?? '') ?>" class="form-input">
+                    <div class="form-field md:col-span-2">
+                        <label class="form-label" for="select-jefe-id">Supervisor</label>
+                        <select name="jefe_id" id="select-jefe-id" class="form-input" onchange="toggleJefeNuevoFields(this)">
+                            <option value="">Sin supervisor asignado</option>
+                            <?php foreach ($jefes as $jefeRow): ?>
+                                <?php $jid = (int) ($jefeRow['id'] ?? 0); ?>
+                                <option value="<?= $jid ?>" <?= $currentJefeId === $jid ? 'selected' : '' ?>>
+                                    <?= e(trim((string) ($jefeRow['nombre'] ?? ''))) ?><?php
+                                    $cj = trim((string) ($jefeRow['cargo'] ?? ''));
+                                    echo $cj !== '' ? ' — ' . e($cj) : '';
+                                    ?>
+                                </option>
+                            <?php endforeach; ?>
+                            <?php if ($currentJefeId > 0 && !in_array($currentJefeId, $jefeIdsInList, true)): ?>
+                                <option value="<?= $currentJefeId ?>" selected>
+                                    <?= e(trim((string) ($aprendiz['nombre_jefe'] ?? 'Supervisor #' . $currentJefeId))) ?> (actual)
+                                </option>
+                            <?php endif; ?>
+                            <option value="__new__">+ Crear nuevo supervisor</option>
+                        </select>
                     </div>
-                    <div class="form-field">
-                        <label class="form-label">Cargo del supervisor</label>
-                        <input type="text" name="cargo_jefe" value="<?= e($aprendiz['cargo_jefe'] ?? '') ?>" class="form-input">
-                    </div>
-                    <div class="form-field">
-                        <label class="form-label">Teléfono de contacto</label>
-                        <input type="text" name="telefono_jefe" value="<?= e($aprendiz['telefono_jefe'] ?? '') ?>" class="form-input">
+                    <div id="jefe-nuevo-fields" class="form-grid hidden md:col-span-2" style="grid-column: 1 / -1;">
+                        <div class="form-field md:col-span-2">
+                            <p class="text-xs text-gray-500 m-0 mb-2">Complete los datos del nuevo supervisor; se guardará vinculado a esta empresa.</p>
+                        </div>
+                        <div class="form-field">
+                            <label class="form-label">Nombre del supervisor</label>
+                            <input type="text" name="nombre_jefe" value="" class="form-input" autocomplete="off">
+                        </div>
+                        <div class="form-field">
+                            <label class="form-label">Cargo</label>
+                            <input type="text" name="cargo_jefe" value="" class="form-input" autocomplete="off">
+                        </div>
+                        <div class="form-field">
+                            <label class="form-label">Correo</label>
+                            <input type="email" name="correo_jefe" value="" class="form-input" autocomplete="off">
+                        </div>
+                        <div class="form-field">
+                            <label class="form-label">Teléfono</label>
+                            <input type="text" name="telefono_jefe" value="" class="form-input" autocomplete="off">
+                        </div>
+                        <div class="form-field">
+                            <label class="form-label">Contacto alternativo (nombre)</label>
+                            <input type="text" name="nombre_contacto2_jefe" value="" class="form-input" autocomplete="off">
+                        </div>
+                        <div class="form-field">
+                            <label class="form-label">Contacto alternativo (correo)</label>
+                            <input type="email" name="correo_contacto2_jefe" value="" class="form-input" autocomplete="off">
+                        </div>
                     </div>
                 </div>
             </div>
