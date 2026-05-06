@@ -83,6 +83,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (selJefe) {
         toggleJefeNuevoFields(selJefe);
     }
+
 });
 
 /** Muestra u oculta los campos para crear un supervisor nuevo (modal aprendiz). */
