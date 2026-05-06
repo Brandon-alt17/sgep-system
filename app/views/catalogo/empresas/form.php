@@ -13,7 +13,9 @@ $val = static function (string $key) use ($empresa): string {
 
 $showField = static function (string $key) use ($empresa): string {
     $t = trim((string) ($empresa[$key] ?? ''));
-    return $t !== '' ? e($t) : '—';
+    return $t !== ''
+        ? e($t)
+        : '<span class="font-medium text-rose-600">Dato no registrado</span>';
 };
 
 $toastKey = trim((string) ($_GET['toast'] ?? ''));
@@ -235,9 +237,10 @@ $viewLabelCls = 'm-0 text-xs font-medium uppercase tracking-wide text-app-muted'
 
 <section class="<?= e(ui_card_classes()) ?> relative mx-auto max-w-5xl space-y-8 p-6">
     <a href="<?= e($verEditUrl) ?>"
-       class="<?= e(ui_button_icon_classes()) ?> absolute right-6 top-6 z-10 shadow-xsSoft bg-white hover:bg-app-panelSubtle"
+       class="<?= e(ui_button_small_classes()) ?> absolute right-6 top-6 z-10 inline-flex items-center gap-2 shadow-xsSoft bg-white hover:bg-app-panelSubtle"
        aria-label="Editar información">
         <span class="inline-flex h-4 w-4 [&_svg]:h-4 [&_svg]:w-4" aria-hidden="true"><?= ui_icon('pencil') ?></span>
+        Editar
     </a>
 
     <div class="flex flex-wrap items-center gap-3 border-b border-app-border pb-6 pr-14">
@@ -251,11 +254,12 @@ $viewLabelCls = 'm-0 text-xs font-medium uppercase tracking-wide text-app-muted'
         </a>
     </div>
 
+    <div class="pb-4">
+        <p class="<?= e($viewLabelCls) ?>">Razón social</p>
+        <p class="mt-1 text-2xl font-semibold leading-tight text-app-text"><?= $showField('nombre') ?></p>
+    </div>
+
     <div class="grid gap-6 md:grid-cols-2">
-        <div class="md:col-span-2">
-            <p class="<?= e($viewLabelCls) ?>">Razón social</p>
-            <p class="mt-1 text-base font-semibold text-app-text"><?= $showField('nombre') ?></p>
-        </div>
         <div>
             <p class="<?= e($viewLabelCls) ?>">NIT</p>
             <p class="mt-1 text-base text-app-text"><?= $showField('nit') ?></p>
@@ -264,15 +268,15 @@ $viewLabelCls = 'm-0 text-xs font-medium uppercase tracking-wide text-app-muted'
             <p class="<?= e($viewLabelCls) ?>">Ciudad</p>
             <p class="mt-1 text-base text-app-text"><?= $showField('ciudad') ?></p>
         </div>
-        <div class="md:col-span-2">
+        <div>
             <p class="<?= e($viewLabelCls) ?>">Dirección</p>
             <p class="mt-1 text-base text-app-text"><?= $showField('direccion') ?></p>
         </div>
-        <div class="md:col-span-2">
+        <div>
             <p class="<?= e($viewLabelCls) ?>">Dirección de práctica</p>
             <p class="mt-1 text-base text-app-text"><?= $showField('direccion_practica') ?></p>
         </div>
-        <div class="md:col-span-2">
+        <div>
             <p class="<?= e($viewLabelCls) ?>">Correo institucional / organización</p>
             <p class="mt-1 text-base text-app-text break-all"><?= $showField('correo_org') ?></p>
         </div>
