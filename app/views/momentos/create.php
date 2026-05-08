@@ -28,37 +28,68 @@ partial('components/page_header', [
         </section>
     <?php endif; ?>
 
-    <form method="post" action="<?= e(APP_BASE_PATH) ?>/momentos/store" class="<?= e(ui_card_classes()) ?>">
+    <form id="momento-form" method="post" action="<?= e($accion) ?>" class="<?= e(ui_card_classes()) ?>">
+        <?php if ($modoEdicion): ?>
+            <input type="hidden" name="id" value="<?= (int) ($momentoExistente['id'] ?? 0) ?>">
+        <?php endif; ?>
         <input type="hidden" name="aprendiz_id" value="<?= (int) $aprendiz['id'] ?>">
         <input type="hidden" name="tipo" value="<?= e((string) $tipo) ?>">
 
-        <div class="grid gap-4 md:grid-cols-2">
-            <label class="<?= e(ui_label_classes()) ?>">Fecha visita
-                <input type="date" name="fecha_visita" required class="<?= e(ui_input_classes()) ?>">
-            </label>
-            <label class="<?= e(ui_label_classes()) ?>">Modalidad
-                <span class="<?= e(ui_select_wrapper_classes()) ?>">
-                    <select name="modalidad" class="<?= e(ui_select_classes()) ?>">
-                        <option value="Presencial">Presencial</option>
-                        <option value="Virtual">Virtual</option>
-                    </select>
-                    <span class="<?= e(ui_select_chevron_classes()) ?>" data-select-chevron aria-hidden="true">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-4 w-4">
-                            <path d="m6 9 6 6 6-6"></path>
-                        </svg>
-                    </span>
-                </span>
-            </label>
-            <?php if ($tipo !== 'M3'): ?>
-                <label class="<?= e(ui_label_classes()) ?> md:col-span-2">Próxima visita
-                    <input type="date" name="proxima_visita" required class="<?= e(ui_input_classes()) ?> md:max-w-xs">
+        <?php if ($tipo === 'M1'): ?>
+            <div class="grid gap-4 md:grid-cols-3">
+                <label class="<?= e(ui_label_classes()) ?>">Fecha inicio etapa productiva
+                    <input type="date" name="fecha_inicio_etapa" value="<?= e($valueFrom($momento, 'fecha_inicio_etapa')) ?>" class="<?= e(ui_input_classes()) ?>">
+                </label>
+                <label class="<?= e(ui_label_classes()) ?>">Fecha fin etapa productiva
+                    <input type="date" name="fecha_fin_etapa" value="<?= e($valueFrom($momento, 'fecha_fin_etapa')) ?>" class="<?= e(ui_input_classes()) ?>">
+                </label>
+                <label class="<?= e(ui_label_classes()) ?>">Fecha afiliación ARL
+                    <input type="date" name="fecha_arl" value="<?= e($valueFrom($momento, 'fecha_arl')) ?>" class="<?= e(ui_input_classes()) ?>">
+                </label>
+                <label class="<?= e(ui_label_classes()) ?>">Número póliza ARL
+                    <input type="text" name="numero_poliza_arl" maxlength="<?= $maxShortText ?>" value="<?= e($valueFrom($momento, 'numero_poliza_arl')) ?>" class="<?= e(ui_input_classes()) ?>">
+                </label>
+                <label class="<?= e(ui_label_classes()) ?>">Horario
+                    <input type="text" name="horario" maxlength="<?= $maxShortText ?>" value="<?= e($valueFrom($momento, 'horario')) ?>" placeholder="Diurno/nocturno, días y hora" class="<?= e(ui_input_classes()) ?>">
+                </label>
+                <label class="<?= e(ui_label_classes()) ?> md:col-span-3">Enlace grabación momento 1
+                    <input type="url" name="enlace_grabacion" maxlength="<?= $maxUrl ?>" value="<?= e($valueFrom($momento, 'enlace_grabacion')) ?>" class="<?= e(ui_input_classes()) ?>">
                 </label>
             <?php endif; ?>
         </div>
 
-        <label class="mt-4 <?= e(ui_label_classes()) ?>">Observación instructor
-            <textarea name="obs_instructor" data-max="500" class="<?= e(ui_input_classes()) ?> min-h-24"></textarea>
-        </label>
+            <div class="mt-5 grid gap-4">
+                <label class="<?= e(ui_label_classes()) ?>">Competencias a desarrollar
+                    <textarea name="m1_competencias" maxlength="<?= $maxM1Competencias ?>" class="<?= e(ui_input_classes()) ?> min-h-24"><?= e($valueFrom($momento, 'm1_competencias')) ?></textarea>
+                </label>
+                <label class="<?= e(ui_label_classes()) ?>">Resultados de aprendizaje
+                    <textarea name="m1_resultados" maxlength="<?= $maxM1Resultados ?>" class="<?= e(ui_input_classes()) ?> min-h-24"><?= e($valueFrom($momento, 'm1_resultados')) ?></textarea>
+                </label>
+                <label class="<?= e(ui_label_classes()) ?>">Actividades a desarrollar
+                    <textarea name="m1_actividades" maxlength="<?= $maxM1Actividades ?>" class="<?= e(ui_input_classes()) ?> min-h-24"><?= e($valueFrom($momento, 'm1_actividades')) ?></textarea>
+                </label>
+                <label class="<?= e(ui_label_classes()) ?>">Evidencias de aprendizaje
+                    <textarea name="m1_evidencias" maxlength="<?= $maxM1Evidencias ?>" class="<?= e(ui_input_classes()) ?> min-h-24"><?= e($valueFrom($momento, 'm1_evidencias')) ?></textarea>
+                </label>
+                <label class="<?= e(ui_label_classes()) ?>">Observaciones adicionales
+                    <textarea name="m1_observaciones_adicionales" maxlength="<?= $maxM1ObsAdicionales ?>" class="<?= e(ui_input_classes()) ?> min-h-24"><?= e($valueFrom($momento, 'm1_observaciones_adicionales')) ?></textarea>
+                </label>
+            </div>
+        <?php else: ?>
+            <div class="grid gap-4 md:grid-cols-3">
+                <label class="<?= e(ui_label_classes()) ?>">Fecha inicio etapa productiva
+                    <input type="date" name="fecha_inicio_etapa" value="<?= e($valueFrom($momento, 'fecha_inicio_etapa')) ?>" class="<?= e(ui_input_classes()) ?>">
+                </label>
+                <label class="<?= e(ui_label_classes()) ?>">
+                    <?= $tipo === 'M2' ? 'Fecha momento de seguimiento' : 'Fecha fin etapa de ejecución' ?>
+                    <input type="date" name="fecha_visita" value="<?= e($valueFrom($momento, 'fecha_visita')) ?>" class="<?= e(ui_input_classes()) ?>">
+                </label>
+                <?php if ($tipo === 'M3'): ?>
+                    <label class="<?= e(ui_label_classes()) ?>">Número de visitas realizadas
+                        <input type="number" min="0" name="numero_visitas_realizadas" value="<?= e($valueFrom($momento, 'numero_visitas_realizadas')) ?>" class="<?= e(ui_input_classes()) ?>">
+                    </label>
+                <?php endif; ?>
+            </div>
 
         <?php if ($tipo === 'M3'): ?>
             <label class="mt-2 <?= e(ui_label_classes()) ?>">Juicio final
@@ -72,7 +103,16 @@ partial('components/page_header', [
                             <path d="m6 9 6 6 6-6"></path>
                         </svg>
                     </span>
-                </span>
+                </label>
+                <label class="<?= e(ui_label_classes()) ?>">Enlace de grabación
+                    <input type="url" name="enlace_grabacion" maxlength="<?= $maxUrl ?>" value="<?= e($valueFrom($momento, 'enlace_grabacion')) ?>" class="<?= e(ui_input_classes()) ?>">
+                </label>
+            </div>
+        <?php endif; ?>
+
+        <?php if ($tipo !== 'M3'): ?>
+            <label class="mt-4 <?= e(ui_label_classes()) ?> md:max-w-sm">Próxima visita
+                <input type="date" name="proxima_visita" value="<?= e($valueFrom($momento, 'proxima_visita', (string) ($aprendiz['proxima_visita'] ?? ''))) ?>" class="<?= e(ui_input_classes()) ?>">
             </label>
         <?php endif; ?>
 
@@ -93,7 +133,7 @@ partial('components/page_header', [
                                 <label class="inline-flex items-center gap-2"><input type="radio" name="factores[<?= $idx ?>][valoracion]" value="S" required class="h-4 w-4"> S</label>
                                 <label class="inline-flex items-center gap-2"><input type="radio" name="factores[<?= $idx ?>][valoracion]" value="PM" required class="h-4 w-4"> PM</label>
                             </div>
-                            <input type="text" name="factores[<?= $idx ?>][observacion]" placeholder="Observación" class="<?= e(ui_input_classes()) ?> mt-2">
+                            <input type="text" name="factores[<?= $idx ?>][observacion]" maxlength="<?= $maxCompromisos ?>" value="<?= e((string) ($factorActual['observacion'] ?? '')) ?>" placeholder="Observación / compromiso de mejora" class="<?= e(ui_input_classes()) ?> mt-2">
                         </div>
                     <?php endforeach; ?>
                 </div>
@@ -112,13 +152,106 @@ partial('components/page_header', [
                                 <label class="inline-flex items-center gap-2"><input type="radio" name="factores[<?= $i ?>][valoracion]" value="S" required class="h-4 w-4"> S</label>
                                 <label class="inline-flex items-center gap-2"><input type="radio" name="factores[<?= $i ?>][valoracion]" value="PM" required class="h-4 w-4"> PM</label>
                             </div>
-                            <input type="text" name="factores[<?= $i ?>][observacion]" placeholder="Observación" class="<?= e(ui_input_classes()) ?> mt-2">
+                            <input type="text" name="factores[<?= $i ?>][observacion]" maxlength="<?= $maxCompromisos ?>" value="<?= e((string) ($factorActual['observacion'] ?? '')) ?>" placeholder="Observación / compromiso de mejora" class="<?= e(ui_input_classes()) ?> mt-2">
                         </div>
                     <?php endforeach; ?>
                 </div>
             </section>
         <?php endif; ?>
 
-        <button type="submit" class="mt-6 <?= e(ui_button_primary_classes()) ?>">Guardar momento</button>
+        <?php if ($tipo === 'M2' || $tipo === 'M3'): ?>
+            <section class="mt-6 grid gap-4">
+                <label class="<?= e(ui_label_classes()) ?>">Observaciones instructor de seguimiento
+                    <textarea name="obs_instructor" data-max="<?= $maxObsInstructor ?>" maxlength="<?= $maxObsInstructor ?>" class="<?= e(ui_input_classes()) ?> min-h-24"><?= e($valueFrom($momento, 'obs_instructor')) ?></textarea>
+                </label>
+                <label class="<?= e(ui_label_classes()) ?>">Observaciones del aprendiz
+                    <textarea name="obs_aprendiz" maxlength="<?= $maxObsAprendiz ?>" class="<?= e(ui_input_classes()) ?> min-h-20"><?= e($valueFrom($momento, 'obs_aprendiz')) ?></textarea>
+                </label>
+                <label class="<?= e(ui_label_classes()) ?>">Observaciones del responsable ente co-formador
+                    <textarea name="obs_coformador" maxlength="<?= $maxObsCoformador ?>" class="<?= e(ui_input_classes()) ?> min-h-20"><?= e($valueFrom($momento, 'obs_coformador')) ?></textarea>
+                </label>
+            </section>
+        <?php endif; ?>
+
+        <?php if ($tipo === 'M3'): ?>
+            <section class="mt-6 rounded-lg border border-app-border p-4">
+                <h3 class="<?= e(ui_heading_sm_classes()) ?>">Página 2 - Retroalimentación</h3>
+                <div class="mt-3 grid gap-4 md:grid-cols-2">
+                    <label class="<?= e(ui_label_classes()) ?>">Retroalimentación ente co-formador - Proceso de formación
+                        <textarea name="m3_retro_coformador_proceso" maxlength="<?= $maxRetroM3 ?>" class="<?= e(ui_input_classes()) ?> min-h-24"><?= e($valueFrom($momento, 'm3_retro_coformador_proceso')) ?></textarea>
+                    </label>
+                    <label class="<?= e(ui_label_classes()) ?>">Retroalimentación ente co-formador - Desempeño de competencias
+                        <textarea name="m3_retro_coformador_desempeno" maxlength="<?= $maxRetroM3 ?>" class="<?= e(ui_input_classes()) ?> min-h-24"><?= e($valueFrom($momento, 'm3_retro_coformador_desempeno')) ?></textarea>
+                    </label>
+                    <label class="<?= e(ui_label_classes()) ?>">Retroalimentación instructor - Proceso de formación
+                        <textarea name="m3_retro_instructor_proceso" maxlength="<?= $maxRetroM3 ?>" class="<?= e(ui_input_classes()) ?> min-h-24"><?= e($valueFrom($momento, 'm3_retro_instructor_proceso')) ?></textarea>
+                    </label>
+                    <label class="<?= e(ui_label_classes()) ?>">Retroalimentación instructor - Desempeño de competencias
+                        <textarea name="m3_retro_instructor_desempeno" maxlength="<?= $maxRetroM3 ?>" class="<?= e(ui_input_classes()) ?> min-h-24"><?= e($valueFrom($momento, 'm3_retro_instructor_desempeno')) ?></textarea>
+                    </label>
+                    <label class="<?= e(ui_label_classes()) ?>">Retroalimentación del aprendiz - Proceso de formación
+                        <textarea name="m3_retro_aprendiz_proceso" maxlength="<?= $maxRetroM3 ?>" class="<?= e(ui_input_classes()) ?> min-h-24"><?= e($valueFrom($momento, 'm3_retro_aprendiz_proceso')) ?></textarea>
+                    </label>
+                    <label class="<?= e(ui_label_classes()) ?>">Retroalimentación del aprendiz - Desempeño de competencias
+                        <textarea name="m3_retro_aprendiz_desempeno" maxlength="<?= $maxRetroM3 ?>" class="<?= e(ui_input_classes()) ?> min-h-24"><?= e($valueFrom($momento, 'm3_retro_aprendiz_desempeno')) ?></textarea>
+                    </label>
+                </div>
+            </section>
+
+            <section class="mt-4 grid gap-4 md:grid-cols-3">
+                <label class="<?= e(ui_label_classes()) ?>">Juicio de evaluación
+                    <span class="<?= e(ui_select_wrapper_classes()) ?>">
+                        <?php $juicio = $valueFrom($momento, 'juicio_final', 'Aprobado'); ?>
+                        <select name="juicio_final" class="<?= e(ui_select_classes()) ?>">
+                            <option value="Aprobado" <?= $juicio === 'Aprobado' ? 'selected' : '' ?>>Aprobado</option>
+                            <option value="No aprobado" <?= $juicio === 'No aprobado' ? 'selected' : '' ?>>No aprobado</option>
+                        </select>
+                        <span class="<?= e(ui_select_chevron_classes()) ?>" data-select-chevron aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-4 w-4"><path d="m6 9 6 6 6-6"></path></svg>
+                        </span>
+                    </span>
+                </label>
+                <label class="<?= e(ui_label_classes()) ?>">Ciudad diligenciamiento
+                    <input type="text" name="ciudad_diligenciamiento" maxlength="<?= $maxShortText ?>" value="<?= e($valueFrom($momento, 'ciudad_diligenciamiento')) ?>" class="<?= e(ui_input_classes()) ?>">
+                </label>
+                <label class="<?= e(ui_label_classes()) ?>">Fecha diligenciamiento
+                    <input type="date" name="fecha_diligenciamiento" value="<?= e($valueFrom($momento, 'fecha_diligenciamiento')) ?>" class="<?= e(ui_input_classes()) ?>">
+                </label>
+            </section>
+        <?php endif; ?>
+
+        <section class="mt-4 grid gap-4 md:grid-cols-3">
+            <?php if ($tipo !== 'M3'): ?>
+                <label class="<?= e(ui_label_classes()) ?>">Ciudad diligenciamiento
+                    <input type="text" name="ciudad_diligenciamiento" maxlength="<?= $maxShortText ?>" value="<?= e($valueFrom($momento, 'ciudad_diligenciamiento')) ?>" class="<?= e(ui_input_classes()) ?>">
+                </label>
+                <label class="<?= e(ui_label_classes()) ?>">Fecha diligenciamiento
+                    <input type="date" name="fecha_diligenciamiento" value="<?= e($valueFrom($momento, 'fecha_diligenciamiento')) ?>" class="<?= e(ui_input_classes()) ?>">
+                </label>
+            <?php endif; ?>
+            <label class="<?= e(ui_label_classes()) ?>">Modalidad diligenciamiento
+                <span class="<?= e(ui_select_wrapper_classes()) ?>">
+                    <?php $modalidadD = $valueFrom($momento, 'modalidad_diligenciamiento', ''); ?>
+                    <select name="modalidad_diligenciamiento" class="<?= e(ui_select_classes()) ?>">
+                        <option value="" <?= $modalidadD === '' ? 'selected' : '' ?>>Sin definir</option>
+                        <option value="Presencial" <?= $modalidadD === 'Presencial' ? 'selected' : '' ?>>Presencial</option>
+                        <option value="Virtual" <?= $modalidadD === 'Virtual' ? 'selected' : '' ?>>Virtual</option>
+                    </select>
+                    <span class="<?= e(ui_select_chevron_classes()) ?>" data-select-chevron aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-4 w-4"><path d="m6 9 6 6 6-6"></path></svg>
+                    </span>
+                </span>
+            </label>
+        </section>
+
     </form>
+
+    <div class="pb-20" aria-hidden="true"></div>
+    <div class="fixed inset-x-0 bottom-0 z-[60] border-t border-app-border bg-app-panel shadow-xsSoft">
+        <div class="mx-auto flex min-h-[70px] w-full items-center justify-end gap-3 px-4 py-3">
+            <button form="momento-form" type="submit" class="<?= e(ui_button_primary_classes()) ?> self-center justify-center text-white">
+                <?= $modoEdicion ? 'Actualizar momento' : 'Guardar momento' ?>
+            </button>
+        </div>
+    </div>
 <?php endif; ?>

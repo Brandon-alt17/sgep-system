@@ -1,0 +1,20 @@
+CREATE TABLE IF NOT EXISTS aprendiz_info_general (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    aprendiz_id INT NOT NULL,
+    regional VARCHAR(120) NULL,
+    centro_formacion VARCHAR(180) NULL,
+    nivel_formativo VARCHAR(120) NULL,
+    programa_formacion VARCHAR(180) NULL,
+    numero_grupo VARCHAR(80) NULL,
+    modalidad_formacion VARCHAR(40) NULL,
+    estrategia_formativa VARCHAR(120) NULL,
+    fecha_fin_etapa_lectiva DATE NULL,
+    fecha_registro_sofiaplus DATE NULL,
+    asistencia_nombre VARCHAR(180) NULL,
+    asistencia_tipo VARCHAR(200) NULL,
+    asistencia_contacto VARCHAR(80) NULL,
+    created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_aprendiz_info_general_aprendiz (aprendiz_id),
+    CONSTRAINT fk_aprendiz_info_general_aprendiz FOREIGN KEY (aprendiz_id) REFERENCES aprendices(id) ON DELETE CASCADE
+);

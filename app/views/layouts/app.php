@@ -14,6 +14,12 @@ $uri = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
 $base = rtrim((string) APP_BASE_PATH, '/');
 $currentPath = ($base !== '' && str_starts_with($uri, $base)) ? (substr($uri, strlen($base)) ?: '/') : $uri;
 $currentPath = $currentPath === '' ? '/' : $currentPath;
+if (str_starts_with($currentPath, '/momentos/')) {
+    $currentPath = '/aprendices';
+}
+if (str_starts_with($currentPath, '/documentos/info')) {
+    $currentPath = '/aprendices';
+}
 
 $titles = [
     '/dashboard' => 'Dashboard',
