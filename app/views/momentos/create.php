@@ -1,68 +1,9 @@
 <?php
 $programaContenido = (array) ($programaContenido ?? []);
-$momento = (array) ($momento ?? []);
-$momentoExistente = (array) ($momentoExistente ?? []);
-$factoresExistentes = (array) ($factoresExistentes ?? []);
-$limites = require base_path('config/f023_limites.php');
-$maxShortText = (int) ($limites['short_text'] ?? 160);
-$maxUrl = (int) ($limites['url'] ?? 500);
-$maxObsInstructor = (int) ($limites['obs_instructor'] ?? 500);
-$maxObsAprendiz = (int) ($limites['obs_aprendiz'] ?? 500);
-$maxObsCoformador = (int) ($limites['obs_coformador'] ?? 500);
-$maxCompromisos = (int) ($limites['compromisos'] ?? 450);
-$maxM1Competencias = (int) ($limites['m1_competencias'] ?? 1200);
-$maxM1Resultados = (int) ($limites['m1_resultados'] ?? 1200);
-$maxM1Actividades = (int) ($limites['m1_actividades'] ?? 1200);
-$maxM1Evidencias = (int) ($limites['m1_evidencias'] ?? 1200);
-$maxM1ObsAdicionales = (int) ($limites['m1_observaciones_adicionales'] ?? 1200);
-$maxRetroM3 = (int) ($limites['retro_m3'] ?? 1200);
-
-$modoEdicion = !empty($momentoExistente);
-$accion = $modoEdicion ? (APP_BASE_PATH . '/momentos/update') : (APP_BASE_PATH . '/momentos/store');
-$tipoLabel = match ((string) $tipo) {
-    'M1' => 'Momento 1',
-    'M2' => 'Momento 2',
-    'M3' => 'Momento 3',
-    'EX' => 'Momento extraordinario',
-    default => 'Momento',
-};
-$titulo = 'Registro de ' . $tipoLabel;
-if ($modoEdicion) {
-    $titulo = 'Edición de ' . $tipoLabel;
-}
-$volverUrl = APP_BASE_PATH . '/aprendices/show?id=' . (int) ($aprendiz['id'] ?? 0);
-
-$factorMap = [];
-foreach ($factoresExistentes as $factorItem) {
-    $nombre = trim((string) ($factorItem['nombre_factor'] ?? ''));
-    if ($nombre === '') {
-        continue;
-    }
-    $factorMap[$nombre] = [
-        'valoracion' => (string) ($factorItem['valoracion'] ?? ''),
-        'observacion' => (string) ($factorItem['observacion'] ?? ''),
-    ];
-}
-
-$valueFrom = static function (array $source, string $key, string $fallback = ''): string {
-    $raw = $source[$key] ?? $fallback;
-    if ($raw === null) {
-        return '';
-    }
-    return trim((string) $raw);
-};
-
-?>
-
-<section class="bg-app-bg flex flex-row items-start gap-2">
-    <a class="<?= e(ui_button_icon_classes()) ?> mt-2.5 self-start" href="<?= e($volverUrl) ?>" aria-label="Volver al perfil del aprendiz">
-        <span class="inline-flex h-3.5 w-3.5 [&_svg]:h-3.5 [&_svg]:w-3.5"><?= ui_icon('arrow') ?></span>
-    </a>
-    <div class="mb-3 flex flex-col gap-2 pl-4">
-        <h2 class="m-0 text-2xl font-semibold text-app-text"><?= e($titulo) ?></h2>
-        <p class="m-0 text-sm text-app-muted">Diligencie la información del formato GFPI-F-023. Todos los campos son editables y pueden quedar vacíos.</p>
-    </div>
-</section>
+partial('components/page_header', [
+    'title' => 'Registro de momento ' . (string) $tipo,
+    'subtitle' => 'Diligencie la visita y la valoración del aprendiz según el momento seleccionado.',
+]); ?>
 
 <?php if (empty($aprendiz)): ?>
     <section class="<?= e(ui_warning_card_classes()) ?>">Aprendiz no encontrado.</section>
@@ -71,7 +12,7 @@ $valueFrom = static function (array $source, string $key, string $fallback = '')
         <p class="m-0 text-sm"><?= e((string) $aprendiz['nombre_completo']) ?> - <?= e((string) $aprendiz['numero_documento']) ?></p>
     </section>
 
-    <?php if ($programaContenido !== [] && $tipo === 'M1'): ?>
+    <?php if ($programaContenido !== []): ?>
         <section class="mb-4 <?= e(ui_card_classes()) ?>">
             <h3 class="<?= e(ui_heading_sm_classes()) ?>">Resultados sugeridos por programa</h3>
             <div class="mt-2 max-h-56 overflow-auto rounded border border-app-border p-3">
@@ -114,7 +55,8 @@ $valueFrom = static function (array $source, string $key, string $fallback = '')
                 <label class="<?= e(ui_label_classes()) ?> md:col-span-3">Enlace grabación momento 1
                     <input type="url" name="enlace_grabacion" maxlength="<?= $maxUrl ?>" value="<?= e($valueFrom($momento, 'enlace_grabacion')) ?>" class="<?= e(ui_input_classes()) ?>">
                 </label>
-            </div>
+            <?php endif; ?>
+        </div>
 
             <div class="mt-5 grid gap-4">
                 <label class="<?= e(ui_label_classes()) ?>">Competencias a desarrollar
@@ -149,18 +91,17 @@ $valueFrom = static function (array $source, string $key, string $fallback = '')
                 <?php endif; ?>
             </div>
 
-            <div class="mt-4 grid gap-4 md:grid-cols-2">
-                <label class="<?= e(ui_label_classes()) ?>">
-                    <?= $tipo === 'M2' ? 'Modalidad del seguimiento' : 'Evaluación realizada de forma' ?>
-                    <span class="<?= e(ui_select_wrapper_classes()) ?>">
-                        <?php $modalidad = $valueFrom($momento, 'modalidad', 'Presencial'); ?>
-                        <select name="modalidad" class="<?= e(ui_select_classes()) ?>">
-                            <option value="Presencial" <?= $modalidad === 'Presencial' ? 'selected' : '' ?>>Presencial</option>
-                            <option value="Virtual" <?= $modalidad === 'Virtual' ? 'selected' : '' ?>>Virtual</option>
-                        </select>
-                        <span class="<?= e(ui_select_chevron_classes()) ?>" data-select-chevron aria-hidden="true">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-4 w-4"><path d="m6 9 6 6 6-6"></path></svg>
-                        </span>
+        <?php if ($tipo === 'M3'): ?>
+            <label class="mt-2 <?= e(ui_label_classes()) ?>">Juicio final
+                <span class="<?= e(ui_select_wrapper_classes()) ?> md:max-w-xs">
+                    <select name="juicio_final" class="<?= e(ui_select_classes()) ?>">
+                        <option value="Aprobado">Aprobado</option>
+                        <option value="No aprobado">No aprobado</option>
+                    </select>
+                    <span class="<?= e(ui_select_chevron_classes()) ?>" data-select-chevron aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-4 w-4">
+                            <path d="m6 9 6 6 6-6"></path>
+                        </svg>
                     </span>
                 </label>
                 <label class="<?= e(ui_label_classes()) ?>">Enlace de grabación
@@ -177,18 +118,20 @@ $valueFrom = static function (array $source, string $key, string $fallback = '')
 
         <?php if (in_array($tipo, ['M2', 'M3', 'EX'], true)): ?>
             <?php $factores = require base_path('config/factores.php'); ?>
+            <?php
+            // Se renderizan factores técnicos y actitudinales en tarjetas uniformes para facilitar futuras iteraciones de UX.
+            ?>
             <section class="mt-6">
                 <h3 class="<?= e(ui_heading_sm_classes()) ?>">Factores técnicos</h3>
                 <div class="space-y-2">
                     <?php foreach ($factores['tecnicos'] as $idx => $nombre): ?>
-                        <?php $factorActual = (array) ($factorMap[$nombre] ?? []); ?>
                         <div class="rounded-lg border border-app-border bg-app-panelSubtle p-3">
                             <input type="hidden" name="factores[<?= $idx ?>][tipo_factor]" value="tecnico">
                             <input type="hidden" name="factores[<?= $idx ?>][nombre_factor]" value="<?= e($nombre) ?>">
                             <p class="m-0 text-sm font-semibold text-app-text"><?= e($nombre) ?></p>
                             <div class="mt-2 flex flex-wrap items-center gap-4 text-sm">
-                                <label class="inline-flex items-center gap-2"><input type="radio" name="factores[<?= $idx ?>][valoracion]" value="S" <?= ($factorActual['valoracion'] ?? '') === 'S' ? 'checked' : '' ?> class="h-4 w-4"> Satisfactorio</label>
-                                <label class="inline-flex items-center gap-2"><input type="radio" name="factores[<?= $idx ?>][valoracion]" value="PM" <?= ($factorActual['valoracion'] ?? '') === 'PM' ? 'checked' : '' ?> class="h-4 w-4"> Por mejorar</label>
+                                <label class="inline-flex items-center gap-2"><input type="radio" name="factores[<?= $idx ?>][valoracion]" value="S" required class="h-4 w-4"> S</label>
+                                <label class="inline-flex items-center gap-2"><input type="radio" name="factores[<?= $idx ?>][valoracion]" value="PM" required class="h-4 w-4"> PM</label>
                             </div>
                             <input type="text" name="factores[<?= $idx ?>][observacion]" maxlength="<?= $maxCompromisos ?>" value="<?= e((string) ($factorActual['observacion'] ?? '')) ?>" placeholder="Observación / compromiso de mejora" class="<?= e(ui_input_classes()) ?> mt-2">
                         </div>
@@ -197,18 +140,17 @@ $valueFrom = static function (array $source, string $key, string $fallback = '')
             </section>
 
             <section class="mt-6">
-                <h3 class="<?= e(ui_heading_sm_classes()) ?>">Factores actitudinales y comportamentales</h3>
+                <h3 class="<?= e(ui_heading_sm_classes()) ?>">Factores actitudinales</h3>
                 <div class="space-y-2">
                     <?php foreach ($factores['actitudinales'] as $offset => $nombre): ?>
                         <?php $i = $offset + 8; ?>
-                        <?php $factorActual = (array) ($factorMap[$nombre] ?? []); ?>
                         <div class="rounded-lg border border-app-border bg-app-panelSubtle p-3">
                             <input type="hidden" name="factores[<?= $i ?>][tipo_factor]" value="actitudinal">
                             <input type="hidden" name="factores[<?= $i ?>][nombre_factor]" value="<?= e($nombre) ?>">
                             <p class="m-0 text-sm font-semibold text-app-text"><?= e($nombre) ?></p>
                             <div class="mt-2 flex flex-wrap items-center gap-4 text-sm">
-                                <label class="inline-flex items-center gap-2"><input type="radio" name="factores[<?= $i ?>][valoracion]" value="S" <?= ($factorActual['valoracion'] ?? '') === 'S' ? 'checked' : '' ?> class="h-4 w-4"> Satisfactorio</label>
-                                <label class="inline-flex items-center gap-2"><input type="radio" name="factores[<?= $i ?>][valoracion]" value="PM" <?= ($factorActual['valoracion'] ?? '') === 'PM' ? 'checked' : '' ?> class="h-4 w-4"> Por mejorar</label>
+                                <label class="inline-flex items-center gap-2"><input type="radio" name="factores[<?= $i ?>][valoracion]" value="S" required class="h-4 w-4"> S</label>
+                                <label class="inline-flex items-center gap-2"><input type="radio" name="factores[<?= $i ?>][valoracion]" value="PM" required class="h-4 w-4"> PM</label>
                             </div>
                             <input type="text" name="factores[<?= $i ?>][observacion]" maxlength="<?= $maxCompromisos ?>" value="<?= e((string) ($factorActual['observacion'] ?? '')) ?>" placeholder="Observación / compromiso de mejora" class="<?= e(ui_input_classes()) ?> mt-2">
                         </div>

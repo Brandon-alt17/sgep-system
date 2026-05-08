@@ -11,96 +11,51 @@ use App\Models\ProgramaContenido;
 
 class MomentoController
 {
-    private const TIPOS_VALIDOS = ['M1', 'M2', 'M3', 'EX'];
-
     public function create(): void
     {
         $aprendizId = (int) ($_GET['aprendiz_id'] ?? 0);
-        $tipo = $this->normalizeTipo((string) ($_GET['tipo'] ?? 'M1'));
+        $tipo = (string) ($_GET['tipo'] ?? 'M1');
         $aprendiz = Aprendiz::findById($aprendizId);
-        $momentoExistente = $aprendiz ? Momento::findOneByAprendizTipo($aprendizId, $tipo) : null;
-        $factoresExistentes = [];
-        if ($momentoExistente !== null) {
-            $factoresExistentes = Momento::factoresByMomento((int) ($momentoExistente['id'] ?? 0));
-        }
         $programaContenido = [];
         if ($aprendiz && !empty($aprendiz['programa_id'])) {
             $programaContenido = ProgramaContenido::competenciasConResultados((int) $aprendiz['programa_id']);
         }
-
-        $defaultMomento = $this->buildDefaultMomentoData($aprendiz ?? [], $tipo, $momentoExistente, $programaContenido);
-        view('momentos/create', [
-            'aprendiz' => $aprendiz,
-            'tipo' => $tipo,
-            'programaContenido' => $programaContenido,
-            'momento' => $defaultMomento,
-            'momentoExistente' => $momentoExistente,
-            'factoresExistentes' => $factoresExistentes,
-        ]);
+        view('momentos/create', ['aprendiz' => $aprendiz, 'tipo' => $tipo, 'programaContenido' => $programaContenido]);
     }
 
     public function store(): void
     {
         $aprendizId = (int) ($_POST['aprendiz_id'] ?? 0);
-        $tipo = $this->normalizeTipo((string) ($_POST['tipo'] ?? ''));
-        $_POST['tipo'] = $tipo;
+        $tipo = (string) ($_POST['tipo'] ?? '');
         if (in_array($tipo, ['M1', 'M2', 'M3'], true) && Momento::existsTipo($aprendizId, $tipo)) {
             redirect(APP_BASE_PATH . '/aprendices/show?id=' . $aprendizId);
         }
         if ($tipo === 'M3' && !Momento::existsTipo($aprendizId, 'M2')) {
             redirect(APP_BASE_PATH . '/momentos/create?aprendiz_id=' . $aprendizId . '&tipo=M3');
         }
+        if (in_array($tipo, ['M2', 'M3', 'EX'], true) && count((array) ($_POST['factores'] ?? [])) !== 13) {
+            redirect(APP_BASE_PATH . '/momentos/create?aprendiz_id=' . $aprendizId . '&tipo=' . $tipo);
+        }
         $limites = require base_path('config/f023_limites.php');
         $_POST = $this->applyTextLimits($_POST, $limites);
         if ($tipo === 'EX') {
             $_POST['numero_visita'] = Momento::nextExtraNumero($aprendizId);
         }
-
-        $fechaVisita = trim((string) ($_POST['fecha_visita'] ?? ''));
-        if ($fechaVisita === '') {
-            $fechaVisita = trim((string) ($_POST['fecha_fin_etapa'] ?? ''));
-        }
-        if ($fechaVisita === '') {
-            $fechaVisita = trim((string) ($_POST['fecha_inicio_etapa'] ?? ''));
-        }
-        if ($fechaVisita === '') {
-            $fechaVisita = date('Y-m-d');
-        }
-        $_POST['fecha_visita'] = $fechaVisita;
-
         $pdo = Database::connection();
         $pdo->beginTransaction();
         try {
             $id = Momento::create($_POST);
             $factores = $_POST['factores'] ?? [];
-            foreach ((array) $factores as $f) {
-                if (!is_array($f)) {
-                    continue;
-                }
-                $nombreFactor = trim((string) ($f['nombre_factor'] ?? ''));
-                $tipoFactor = trim((string) ($f['tipo_factor'] ?? ''));
-                if ($nombreFactor === '' || $tipoFactor === '') {
-                    continue;
-                }
+            foreach ($factores as $f) {
                 $pdo->prepare('INSERT INTO factores_valoracion (momento_id, tipo_factor, nombre_factor, valoracion, observacion) VALUES (:momento_id, :tipo_factor, :nombre_factor, :valoracion, :observacion)')
                     ->execute([
                         'momento_id' => $id,
-                        'tipo_factor' => $tipoFactor,
-                        'nombre_factor' => $nombreFactor,
-                        'valoracion' => ($f['valoracion'] ?? '') === 'S' ? 'S' : 'PM',
+                        'tipo_factor' => $f['tipo_factor'] ?? 'tecnico',
+                        'nombre_factor' => $f['nombre_factor'] ?? '',
+                        'valoracion' => $f['valoracion'] ?? 'PM',
                         'observacion' => $f['observacion'] ?? '',
                     ]);
             }
-
-            $proximaVisita = trim((string) ($_POST['proxima_visita'] ?? ''));
-            if ($proximaVisita !== '') {
-                $pdo->prepare('UPDATE aprendices SET proxima_visita = :proxima_visita, updated_at = NOW() WHERE id = :id')
-                    ->execute([
-                        'proxima_visita' => $proximaVisita,
-                        'id' => $aprendizId,
-                    ]);
-            }
-
             if ($tipo === 'M3') {
                 $estado = (($_POST['juicio_final'] ?? '') === 'Aprobado') ? 'Por certificar' : 'Pendiente por comité';
                 Aprendiz::updateEstado($aprendizId, $estado, 'Cambio automático por M3');
