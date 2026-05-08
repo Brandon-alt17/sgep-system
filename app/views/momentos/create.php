@@ -3,6 +3,19 @@ $programaContenido = (array) ($programaContenido ?? []);
 $momento = (array) ($momento ?? []);
 $momentoExistente = (array) ($momentoExistente ?? []);
 $factoresExistentes = (array) ($factoresExistentes ?? []);
+$limites = require base_path('config/f023_limites.php');
+$maxShortText = (int) ($limites['short_text'] ?? 160);
+$maxUrl = (int) ($limites['url'] ?? 500);
+$maxObsInstructor = (int) ($limites['obs_instructor'] ?? 500);
+$maxObsAprendiz = (int) ($limites['obs_aprendiz'] ?? 500);
+$maxObsCoformador = (int) ($limites['obs_coformador'] ?? 500);
+$maxCompromisos = (int) ($limites['compromisos'] ?? 450);
+$maxM1Competencias = (int) ($limites['m1_competencias'] ?? 1200);
+$maxM1Resultados = (int) ($limites['m1_resultados'] ?? 1200);
+$maxM1Actividades = (int) ($limites['m1_actividades'] ?? 1200);
+$maxM1Evidencias = (int) ($limites['m1_evidencias'] ?? 1200);
+$maxM1ObsAdicionales = (int) ($limites['m1_observaciones_adicionales'] ?? 1200);
+$maxRetroM3 = (int) ($limites['retro_m3'] ?? 1200);
 
 $modoEdicion = !empty($momentoExistente);
 $accion = $modoEdicion ? (APP_BASE_PATH . '/momentos/update') : (APP_BASE_PATH . '/momentos/store');
@@ -17,6 +30,7 @@ $titulo = 'Registro de ' . $tipoLabel;
 if ($modoEdicion) {
     $titulo = 'Edición de ' . $tipoLabel;
 }
+$volverUrl = APP_BASE_PATH . '/aprendices/show?id=' . (int) ($aprendiz['id'] ?? 0);
 
 $factorMap = [];
 foreach ($factoresExistentes as $factorItem) {
@@ -38,10 +52,17 @@ $valueFrom = static function (array $source, string $key, string $fallback = '')
     return trim((string) $raw);
 };
 
-partial('components/page_header', [
-    'title' => $titulo,
-    'subtitle' => 'Diligencie la información del formato GFPI-F-023. Todos los campos son editables y pueden quedar vacíos.',
-]); ?>
+?>
+
+<section class="bg-app-bg flex flex-row items-start gap-2">
+    <a class="<?= e(ui_button_icon_classes()) ?> mt-2.5 self-start" href="<?= e($volverUrl) ?>" aria-label="Volver al perfil del aprendiz">
+        <span class="inline-flex h-3.5 w-3.5 [&_svg]:h-3.5 [&_svg]:w-3.5"><?= ui_icon('arrow') ?></span>
+    </a>
+    <div class="mb-3 flex flex-col gap-2 pl-4">
+        <h2 class="m-0 text-2xl font-semibold text-app-text"><?= e($titulo) ?></h2>
+        <p class="m-0 text-sm text-app-muted">Diligencie la información del formato GFPI-F-023. Todos los campos son editables y pueden quedar vacíos.</p>
+    </div>
+</section>
 
 <?php if (empty($aprendiz)): ?>
     <section class="<?= e(ui_warning_card_classes()) ?>">Aprendiz no encontrado.</section>
@@ -66,7 +87,7 @@ partial('components/page_header', [
         </section>
     <?php endif; ?>
 
-    <form method="post" action="<?= e($accion) ?>" class="<?= e(ui_card_classes()) ?>">
+    <form id="momento-form" method="post" action="<?= e($accion) ?>" class="<?= e(ui_card_classes()) ?>">
         <?php if ($modoEdicion): ?>
             <input type="hidden" name="id" value="<?= (int) ($momentoExistente['id'] ?? 0) ?>">
         <?php endif; ?>
@@ -85,31 +106,31 @@ partial('components/page_header', [
                     <input type="date" name="fecha_arl" value="<?= e($valueFrom($momento, 'fecha_arl')) ?>" class="<?= e(ui_input_classes()) ?>">
                 </label>
                 <label class="<?= e(ui_label_classes()) ?>">Número póliza ARL
-                    <input type="text" name="numero_poliza_arl" value="<?= e($valueFrom($momento, 'numero_poliza_arl')) ?>" class="<?= e(ui_input_classes()) ?>">
+                    <input type="text" name="numero_poliza_arl" maxlength="<?= $maxShortText ?>" value="<?= e($valueFrom($momento, 'numero_poliza_arl')) ?>" class="<?= e(ui_input_classes()) ?>">
                 </label>
                 <label class="<?= e(ui_label_classes()) ?>">Horario
-                    <input type="text" name="horario" value="<?= e($valueFrom($momento, 'horario')) ?>" placeholder="Diurno/nocturno, días y hora" class="<?= e(ui_input_classes()) ?>">
+                    <input type="text" name="horario" maxlength="<?= $maxShortText ?>" value="<?= e($valueFrom($momento, 'horario')) ?>" placeholder="Diurno/nocturno, días y hora" class="<?= e(ui_input_classes()) ?>">
                 </label>
                 <label class="<?= e(ui_label_classes()) ?> md:col-span-3">Enlace grabación momento 1
-                    <input type="url" name="enlace_grabacion" value="<?= e($valueFrom($momento, 'enlace_grabacion')) ?>" class="<?= e(ui_input_classes()) ?>">
+                    <input type="url" name="enlace_grabacion" maxlength="<?= $maxUrl ?>" value="<?= e($valueFrom($momento, 'enlace_grabacion')) ?>" class="<?= e(ui_input_classes()) ?>">
                 </label>
             </div>
 
             <div class="mt-5 grid gap-4">
                 <label class="<?= e(ui_label_classes()) ?>">Competencias a desarrollar
-                    <textarea name="m1_competencias" class="<?= e(ui_input_classes()) ?> min-h-24"><?= e($valueFrom($momento, 'm1_competencias')) ?></textarea>
+                    <textarea name="m1_competencias" maxlength="<?= $maxM1Competencias ?>" class="<?= e(ui_input_classes()) ?> min-h-24"><?= e($valueFrom($momento, 'm1_competencias')) ?></textarea>
                 </label>
                 <label class="<?= e(ui_label_classes()) ?>">Resultados de aprendizaje
-                    <textarea name="m1_resultados" class="<?= e(ui_input_classes()) ?> min-h-24"><?= e($valueFrom($momento, 'm1_resultados')) ?></textarea>
+                    <textarea name="m1_resultados" maxlength="<?= $maxM1Resultados ?>" class="<?= e(ui_input_classes()) ?> min-h-24"><?= e($valueFrom($momento, 'm1_resultados')) ?></textarea>
                 </label>
                 <label class="<?= e(ui_label_classes()) ?>">Actividades a desarrollar
-                    <textarea name="m1_actividades" class="<?= e(ui_input_classes()) ?> min-h-24"><?= e($valueFrom($momento, 'm1_actividades')) ?></textarea>
+                    <textarea name="m1_actividades" maxlength="<?= $maxM1Actividades ?>" class="<?= e(ui_input_classes()) ?> min-h-24"><?= e($valueFrom($momento, 'm1_actividades')) ?></textarea>
                 </label>
                 <label class="<?= e(ui_label_classes()) ?>">Evidencias de aprendizaje
-                    <textarea name="m1_evidencias" class="<?= e(ui_input_classes()) ?> min-h-24"><?= e($valueFrom($momento, 'm1_evidencias')) ?></textarea>
+                    <textarea name="m1_evidencias" maxlength="<?= $maxM1Evidencias ?>" class="<?= e(ui_input_classes()) ?> min-h-24"><?= e($valueFrom($momento, 'm1_evidencias')) ?></textarea>
                 </label>
                 <label class="<?= e(ui_label_classes()) ?>">Observaciones adicionales
-                    <textarea name="m1_observaciones_adicionales" class="<?= e(ui_input_classes()) ?> min-h-24"><?= e($valueFrom($momento, 'm1_observaciones_adicionales')) ?></textarea>
+                    <textarea name="m1_observaciones_adicionales" maxlength="<?= $maxM1ObsAdicionales ?>" class="<?= e(ui_input_classes()) ?> min-h-24"><?= e($valueFrom($momento, 'm1_observaciones_adicionales')) ?></textarea>
                 </label>
             </div>
         <?php else: ?>
@@ -143,7 +164,7 @@ partial('components/page_header', [
                     </span>
                 </label>
                 <label class="<?= e(ui_label_classes()) ?>">Enlace de grabación
-                    <input type="url" name="enlace_grabacion" value="<?= e($valueFrom($momento, 'enlace_grabacion')) ?>" class="<?= e(ui_input_classes()) ?>">
+                    <input type="url" name="enlace_grabacion" maxlength="<?= $maxUrl ?>" value="<?= e($valueFrom($momento, 'enlace_grabacion')) ?>" class="<?= e(ui_input_classes()) ?>">
                 </label>
             </div>
         <?php endif; ?>
@@ -169,7 +190,7 @@ partial('components/page_header', [
                                 <label class="inline-flex items-center gap-2"><input type="radio" name="factores[<?= $idx ?>][valoracion]" value="S" <?= ($factorActual['valoracion'] ?? '') === 'S' ? 'checked' : '' ?> class="h-4 w-4"> Satisfactorio</label>
                                 <label class="inline-flex items-center gap-2"><input type="radio" name="factores[<?= $idx ?>][valoracion]" value="PM" <?= ($factorActual['valoracion'] ?? '') === 'PM' ? 'checked' : '' ?> class="h-4 w-4"> Por mejorar</label>
                             </div>
-                            <input type="text" name="factores[<?= $idx ?>][observacion]" value="<?= e((string) ($factorActual['observacion'] ?? '')) ?>" placeholder="Observación / compromiso de mejora" class="<?= e(ui_input_classes()) ?> mt-2">
+                            <input type="text" name="factores[<?= $idx ?>][observacion]" maxlength="<?= $maxCompromisos ?>" value="<?= e((string) ($factorActual['observacion'] ?? '')) ?>" placeholder="Observación / compromiso de mejora" class="<?= e(ui_input_classes()) ?> mt-2">
                         </div>
                     <?php endforeach; ?>
                 </div>
@@ -189,7 +210,7 @@ partial('components/page_header', [
                                 <label class="inline-flex items-center gap-2"><input type="radio" name="factores[<?= $i ?>][valoracion]" value="S" <?= ($factorActual['valoracion'] ?? '') === 'S' ? 'checked' : '' ?> class="h-4 w-4"> Satisfactorio</label>
                                 <label class="inline-flex items-center gap-2"><input type="radio" name="factores[<?= $i ?>][valoracion]" value="PM" <?= ($factorActual['valoracion'] ?? '') === 'PM' ? 'checked' : '' ?> class="h-4 w-4"> Por mejorar</label>
                             </div>
-                            <input type="text" name="factores[<?= $i ?>][observacion]" value="<?= e((string) ($factorActual['observacion'] ?? '')) ?>" placeholder="Observación / compromiso de mejora" class="<?= e(ui_input_classes()) ?> mt-2">
+                            <input type="text" name="factores[<?= $i ?>][observacion]" maxlength="<?= $maxCompromisos ?>" value="<?= e((string) ($factorActual['observacion'] ?? '')) ?>" placeholder="Observación / compromiso de mejora" class="<?= e(ui_input_classes()) ?> mt-2">
                         </div>
                     <?php endforeach; ?>
                 </div>
@@ -199,13 +220,13 @@ partial('components/page_header', [
         <?php if ($tipo === 'M2' || $tipo === 'M3'): ?>
             <section class="mt-6 grid gap-4">
                 <label class="<?= e(ui_label_classes()) ?>">Observaciones instructor de seguimiento
-                    <textarea name="obs_instructor" data-max="500" class="<?= e(ui_input_classes()) ?> min-h-24"><?= e($valueFrom($momento, 'obs_instructor')) ?></textarea>
+                    <textarea name="obs_instructor" data-max="<?= $maxObsInstructor ?>" maxlength="<?= $maxObsInstructor ?>" class="<?= e(ui_input_classes()) ?> min-h-24"><?= e($valueFrom($momento, 'obs_instructor')) ?></textarea>
                 </label>
                 <label class="<?= e(ui_label_classes()) ?>">Observaciones del aprendiz
-                    <textarea name="obs_aprendiz" class="<?= e(ui_input_classes()) ?> min-h-20"><?= e($valueFrom($momento, 'obs_aprendiz')) ?></textarea>
+                    <textarea name="obs_aprendiz" maxlength="<?= $maxObsAprendiz ?>" class="<?= e(ui_input_classes()) ?> min-h-20"><?= e($valueFrom($momento, 'obs_aprendiz')) ?></textarea>
                 </label>
                 <label class="<?= e(ui_label_classes()) ?>">Observaciones del responsable ente co-formador
-                    <textarea name="obs_coformador" class="<?= e(ui_input_classes()) ?> min-h-20"><?= e($valueFrom($momento, 'obs_coformador')) ?></textarea>
+                    <textarea name="obs_coformador" maxlength="<?= $maxObsCoformador ?>" class="<?= e(ui_input_classes()) ?> min-h-20"><?= e($valueFrom($momento, 'obs_coformador')) ?></textarea>
                 </label>
             </section>
         <?php endif; ?>
@@ -215,22 +236,22 @@ partial('components/page_header', [
                 <h3 class="<?= e(ui_heading_sm_classes()) ?>">Página 2 - Retroalimentación</h3>
                 <div class="mt-3 grid gap-4 md:grid-cols-2">
                     <label class="<?= e(ui_label_classes()) ?>">Retroalimentación ente co-formador - Proceso de formación
-                        <textarea name="m3_retro_coformador_proceso" class="<?= e(ui_input_classes()) ?> min-h-24"><?= e($valueFrom($momento, 'm3_retro_coformador_proceso')) ?></textarea>
+                        <textarea name="m3_retro_coformador_proceso" maxlength="<?= $maxRetroM3 ?>" class="<?= e(ui_input_classes()) ?> min-h-24"><?= e($valueFrom($momento, 'm3_retro_coformador_proceso')) ?></textarea>
                     </label>
                     <label class="<?= e(ui_label_classes()) ?>">Retroalimentación ente co-formador - Desempeño de competencias
-                        <textarea name="m3_retro_coformador_desempeno" class="<?= e(ui_input_classes()) ?> min-h-24"><?= e($valueFrom($momento, 'm3_retro_coformador_desempeno')) ?></textarea>
+                        <textarea name="m3_retro_coformador_desempeno" maxlength="<?= $maxRetroM3 ?>" class="<?= e(ui_input_classes()) ?> min-h-24"><?= e($valueFrom($momento, 'm3_retro_coformador_desempeno')) ?></textarea>
                     </label>
                     <label class="<?= e(ui_label_classes()) ?>">Retroalimentación instructor - Proceso de formación
-                        <textarea name="m3_retro_instructor_proceso" class="<?= e(ui_input_classes()) ?> min-h-24"><?= e($valueFrom($momento, 'm3_retro_instructor_proceso')) ?></textarea>
+                        <textarea name="m3_retro_instructor_proceso" maxlength="<?= $maxRetroM3 ?>" class="<?= e(ui_input_classes()) ?> min-h-24"><?= e($valueFrom($momento, 'm3_retro_instructor_proceso')) ?></textarea>
                     </label>
                     <label class="<?= e(ui_label_classes()) ?>">Retroalimentación instructor - Desempeño de competencias
-                        <textarea name="m3_retro_instructor_desempeno" class="<?= e(ui_input_classes()) ?> min-h-24"><?= e($valueFrom($momento, 'm3_retro_instructor_desempeno')) ?></textarea>
+                        <textarea name="m3_retro_instructor_desempeno" maxlength="<?= $maxRetroM3 ?>" class="<?= e(ui_input_classes()) ?> min-h-24"><?= e($valueFrom($momento, 'm3_retro_instructor_desempeno')) ?></textarea>
                     </label>
                     <label class="<?= e(ui_label_classes()) ?>">Retroalimentación del aprendiz - Proceso de formación
-                        <textarea name="m3_retro_aprendiz_proceso" class="<?= e(ui_input_classes()) ?> min-h-24"><?= e($valueFrom($momento, 'm3_retro_aprendiz_proceso')) ?></textarea>
+                        <textarea name="m3_retro_aprendiz_proceso" maxlength="<?= $maxRetroM3 ?>" class="<?= e(ui_input_classes()) ?> min-h-24"><?= e($valueFrom($momento, 'm3_retro_aprendiz_proceso')) ?></textarea>
                     </label>
                     <label class="<?= e(ui_label_classes()) ?>">Retroalimentación del aprendiz - Desempeño de competencias
-                        <textarea name="m3_retro_aprendiz_desempeno" class="<?= e(ui_input_classes()) ?> min-h-24"><?= e($valueFrom($momento, 'm3_retro_aprendiz_desempeno')) ?></textarea>
+                        <textarea name="m3_retro_aprendiz_desempeno" maxlength="<?= $maxRetroM3 ?>" class="<?= e(ui_input_classes()) ?> min-h-24"><?= e($valueFrom($momento, 'm3_retro_aprendiz_desempeno')) ?></textarea>
                     </label>
                 </div>
             </section>
@@ -249,7 +270,7 @@ partial('components/page_header', [
                     </span>
                 </label>
                 <label class="<?= e(ui_label_classes()) ?>">Ciudad diligenciamiento
-                    <input type="text" name="ciudad_diligenciamiento" value="<?= e($valueFrom($momento, 'ciudad_diligenciamiento')) ?>" class="<?= e(ui_input_classes()) ?>">
+                    <input type="text" name="ciudad_diligenciamiento" maxlength="<?= $maxShortText ?>" value="<?= e($valueFrom($momento, 'ciudad_diligenciamiento')) ?>" class="<?= e(ui_input_classes()) ?>">
                 </label>
                 <label class="<?= e(ui_label_classes()) ?>">Fecha diligenciamiento
                     <input type="date" name="fecha_diligenciamiento" value="<?= e($valueFrom($momento, 'fecha_diligenciamiento')) ?>" class="<?= e(ui_input_classes()) ?>">
@@ -260,7 +281,7 @@ partial('components/page_header', [
         <section class="mt-4 grid gap-4 md:grid-cols-3">
             <?php if ($tipo !== 'M3'): ?>
                 <label class="<?= e(ui_label_classes()) ?>">Ciudad diligenciamiento
-                    <input type="text" name="ciudad_diligenciamiento" value="<?= e($valueFrom($momento, 'ciudad_diligenciamiento')) ?>" class="<?= e(ui_input_classes()) ?>">
+                    <input type="text" name="ciudad_diligenciamiento" maxlength="<?= $maxShortText ?>" value="<?= e($valueFrom($momento, 'ciudad_diligenciamiento')) ?>" class="<?= e(ui_input_classes()) ?>">
                 </label>
                 <label class="<?= e(ui_label_classes()) ?>">Fecha diligenciamiento
                     <input type="date" name="fecha_diligenciamiento" value="<?= e($valueFrom($momento, 'fecha_diligenciamiento')) ?>" class="<?= e(ui_input_classes()) ?>">
@@ -281,8 +302,14 @@ partial('components/page_header', [
             </label>
         </section>
 
-        <button type="submit" class="mt-6 <?= e(ui_button_primary_classes()) ?>">
-            <?= $modoEdicion ? 'Actualizar momento' : 'Guardar momento' ?>
-        </button>
     </form>
+
+    <div class="pb-20" aria-hidden="true"></div>
+    <div class="fixed inset-x-0 bottom-0 z-40 border-t border-app-border bg-app-panel shadow-xsSoft">
+        <div class="mx-auto flex min-h-[70px] w-full items-center justify-end gap-3 px-4 py-3">
+            <button form="momento-form" type="submit" class="<?= e(ui_button_primary_classes()) ?> self-center justify-center text-white">
+                <?= $modoEdicion ? 'Actualizar momento' : 'Guardar momento' ?>
+            </button>
+        </div>
+    </div>
 <?php endif; ?>

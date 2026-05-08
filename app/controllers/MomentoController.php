@@ -51,7 +51,7 @@ class MomentoController
             redirect(APP_BASE_PATH . '/momentos/create?aprendiz_id=' . $aprendizId . '&tipo=M3');
         }
         $limites = require base_path('config/f023_limites.php');
-        $_POST['obs_instructor'] = mb_substr((string) ($_POST['obs_instructor'] ?? ''), 0, $limites['obs_instructor']);
+        $_POST = $this->applyTextLimits($_POST, $limites);
         if ($tipo === 'EX') {
             $_POST['numero_visita'] = Momento::nextExtraNumero($aprendizId);
         }
@@ -117,6 +117,8 @@ class MomentoController
     {
         $id = (int) ($_POST['id'] ?? 0);
         $aprendizId = (int) ($_POST['aprendiz_id'] ?? 0);
+        $limites = require base_path('config/f023_limites.php');
+        $_POST = $this->applyTextLimits($_POST, $limites);
         $_POST['tipo'] = $this->normalizeTipo((string) ($_POST['tipo'] ?? ''));
         $fechaVisita = trim((string) ($_POST['fecha_visita'] ?? ''));
         if ($fechaVisita === '') {
@@ -222,5 +224,53 @@ class MomentoController
             'm3_retro_aprendiz_proceso' => '',
             'm3_retro_aprendiz_desempeno' => '',
         ];
+    }
+
+    private function applyTextLimits(array $data, array $limites): array
+    {
+        $limitShortText = (int) ($limites['short_text'] ?? 160);
+        $limitUrl = (int) ($limites['url'] ?? 500);
+
+        $fieldLimits = [
+            'numero_poliza_arl' => $limitShortText,
+            'horario' => $limitShortText,
+            'enlace_grabacion' => $limitUrl,
+            'ciudad_diligenciamiento' => $limitShortText,
+            'obs_instructor' => (int) ($limites['obs_instructor'] ?? 500),
+            'obs_aprendiz' => (int) ($limites['obs_aprendiz'] ?? 500),
+            'obs_coformador' => (int) ($limites['obs_coformador'] ?? 500),
+            'm1_competencias' => (int) ($limites['m1_competencias'] ?? 1200),
+            'm1_resultados' => (int) ($limites['m1_resultados'] ?? 1200),
+            'm1_actividades' => (int) ($limites['m1_actividades'] ?? 1200),
+            'm1_evidencias' => (int) ($limites['m1_evidencias'] ?? 1200),
+            'm1_observaciones_adicionales' => (int) ($limites['m1_observaciones_adicionales'] ?? 1200),
+            'm3_retro_coformador_proceso' => (int) ($limites['retro_m3'] ?? 1200),
+            'm3_retro_coformador_desempeno' => (int) ($limites['retro_m3'] ?? 1200),
+            'm3_retro_instructor_proceso' => (int) ($limites['retro_m3'] ?? 1200),
+            'm3_retro_instructor_desempeno' => (int) ($limites['retro_m3'] ?? 1200),
+            'm3_retro_aprendiz_proceso' => (int) ($limites['retro_m3'] ?? 1200),
+            'm3_retro_aprendiz_desempeno' => (int) ($limites['retro_m3'] ?? 1200),
+        ];
+
+        foreach ($fieldLimits as $field => $limit) {
+            $value = trim((string) ($data[$field] ?? ''));
+            if ($value === '') {
+                $data[$field] = '';
+                continue;
+            }
+            $data[$field] = mb_substr($value, 0, $limit);
+        }
+
+        foreach ((array) ($data['factores'] ?? []) as $idx => $factor) {
+            if (!is_array($factor)) {
+                continue;
+            }
+            $obs = trim((string) ($factor['observacion'] ?? ''));
+            $data['factores'][$idx]['observacion'] = $obs === ''
+                ? ''
+                : mb_substr($obs, 0, (int) ($limites['compromisos'] ?? 450));
+        }
+
+        return $data;
     }
 }

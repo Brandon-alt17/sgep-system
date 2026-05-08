@@ -2,23 +2,18 @@
 <?php include __DIR__ . '/modal-agendar-visitas.php'; ?>
 <script src="<?= e(APP_BASE_PATH) ?>/js/edit-profile.js"></script>
 <?php $backToListUrl = (string) ($backToListUrl ?? (APP_BASE_PATH . '/aprendices')); ?>
+<?php $cardPaddedClass = str_replace('p-4', 'p-6', ui_card_classes()); ?>
 
-<?php partial('components/page_header', [
-    'title' => 'Perfil del aprendiz',
-    'subtitle' => '',
-]); ?>
-
-
-
-<div class="space-y-6 md:col-span-2 grid gap-4">
-    <div class="mb-1 flex items-end justify-between">
-        <!-- 🔙 VOLVER -->
-        <a href="<?= e($backToListUrl) ?>"
-        class="mt-6 text-sm text-app-link hover:underline">
-            ← Listado
-        </a>
-        
-        <div>
+<section class="bg-app-bg mb-4 flex flex-row items-start gap-2">
+    <a class="<?= e(ui_button_icon_classes()) ?> mt-1 self-start" href="<?= e($backToListUrl) ?>" aria-label="Volver al listado de aprendices">
+        <span class="inline-flex h-3.5 w-3.5 [&_svg]:h-3.5 [&_svg]:w-3.5"><?= ui_icon('arrow') ?></span>
+    </a>
+    <div class="flex w-full items-start justify-between gap-4 pl-4">
+        <div class="flex flex-col gap-1">
+            <h2 class="m-0 text-2xl font-semibold text-app-text">Perfil del aprendiz</h2>
+            <p class="m-0 text-sm text-app-muted">Consulta, actualiza datos del aprendiz y gestiona sus documentos de seguimiento.</p>
+        </div>
+        <div class="flex shrink-0 items-center gap-2">
             <button type="button" onclick="abrirModalVisitas()"
             class="items-center <?= e(ui_button_small_classes()) ?> gap-2">
                 <span class="w-4 h-4 [&_svg]:w-4 [&_svg]:h-4"><?= ui_icon('calendar') ?></span>
@@ -32,11 +27,15 @@
             </button>
         </div>
     </div>
+</section>
 
+
+
+<div class="md:col-span-2 grid gap-4">
     <!-- 🧩 GRID PRINCIPAL -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
         <!-- 🟢 PERFIL -->
-        <section class="<?= e(ui_card_classes()) ?>">
+        <section class="<?= e($cardPaddedClass) ?>">
             <div class="flex mb-4">
                 <h2 class="text-lg font-semibold flex items-center gap-2">
                     <span class="flex items-center justify-center text-app-link w-[30px] h-[30px] [&_svg]:w-5 [&_svg]:h-5">
@@ -99,7 +98,7 @@
         <!-- 🔵 DERECHA -->
         <div class="md:col-span-2 space-y-6">
             <!-- 🏢 EMPRESA -->
-            <section class="<?= e(ui_card_classes()) ?>">
+            <section class="<?= e($cardPaddedClass) ?>">
                 <div class="flex mb-6">
                     <h2 class="flex items-center gap-2 text-lg font-semibold text-gray-900">
                         <span class=" text-app-link [&_svg]:w-5 [&_svg]:h-5">
@@ -121,16 +120,24 @@
             </section>
 
             <!-- 🟨 MOMENTOS -->
-            <section class="mt-4 <?= e(ui_card_classes()) ?>">
+            <section class="<?= e($cardPaddedClass) ?>">
                 <div class="flex justify-between items-center mb-4">
-                    <h3 class="<?= e(ui_heading_sm_classes()) ?>">Momentos</h3>
+                    <h3 class="<?= e(ui_heading_sm_classes()) ?>">Documentos</h3>
                     <a href="<?= e(APP_BASE_PATH) ?>/momentos/create?aprendiz_id=<?= (int)$aprendiz['id'] ?>&tipo=EX"
                        class="<?= e(ui_button_small_classes()) ?>">
                         + Agregar Momento extraordinario
                     </a>
                 </div>
 
-                <div class="space-y-3 md:col-span-2 grid gap-4">
+                <div class="space-y-3 md:col-span-2 grid max-h-[320px] gap-4 overflow-y-auto pr-1">
+                    <div class="flex items-center justify-between rounded-lg border border-app-border p-4 gap-3">
+                        <span class="text-sm font-medium">Información</span>
+                        <a href="<?= e(APP_BASE_PATH) ?>/documentos/generar?aprendiz_id=<?= (int)$aprendiz['id'] ?>"
+                        class="<?= e(ui_button_small_classes()) ?> inline-flex items-center gap-2">
+                            <span class="w-5 h-5 [&_svg]:w-4 [&_svg]:h-4"><?= ui_icon('file-spreadsheet') ?></span>
+                            Abrir información
+                        </a>
+                    </div>
                     <?php foreach ($momentos as $m): ?>
                         <?php
                         $badge = ui_badge_error_classes();
