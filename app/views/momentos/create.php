@@ -305,7 +305,7 @@ $valueFrom = static function (array $source, string $key, string $fallback = '')
     </form>
 
     <div class="pb-20" aria-hidden="true"></div>
-    <div class="fixed inset-x-0 bottom-0 z-40 border-t border-app-border bg-app-panel shadow-xsSoft">
+    <div class="fixed inset-x-0 bottom-0 z-[60] border-t border-app-border bg-app-panel shadow-xsSoft">
         <div class="mx-auto flex min-h-[70px] w-full items-center justify-end gap-3 px-4 py-3">
             <button form="momento-form" type="submit" class="<?= e(ui_button_primary_classes()) ?> self-center justify-center text-white">
                 <?= $modoEdicion ? 'Actualizar momento' : 'Guardar momento' ?>

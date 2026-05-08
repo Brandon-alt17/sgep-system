@@ -132,7 +132,7 @@
                 <div class="space-y-3 md:col-span-2 grid max-h-[320px] gap-4 overflow-y-auto pr-1">
                     <div class="flex items-center justify-between rounded-lg border border-app-border p-4 gap-3">
                         <span class="text-sm font-medium">Información</span>
-                        <a href="<?= e(APP_BASE_PATH) ?>/documentos/generar?aprendiz_id=<?= (int)$aprendiz['id'] ?>"
+                        <a href="<?= e(APP_BASE_PATH) ?>/documentos/info?aprendiz_id=<?= (int)$aprendiz['id'] ?>"
                         class="<?= e(ui_button_small_classes()) ?> inline-flex items-center gap-2">
                             <span class="w-5 h-5 [&_svg]:w-4 [&_svg]:h-4"><?= ui_icon('file-spreadsheet') ?></span>
                             Abrir información
@@ -175,7 +175,7 @@
            
             <div class="grid mb:col-span-2 grid flex gap-3 mt-4">
 
-                <a href="<?= e(APP_BASE_PATH) ?>/documentos/generar?aprendiz_id=<?= (int)$aprendiz['id'] ?>"
+                <a href="<?= e(APP_BASE_PATH) ?>/documentos/info?aprendiz_id=<?= (int)$aprendiz['id'] ?>"
                 class="<?= e(ui_button_small_classes()) ?> flex items-center justify-center text-center gap-2">
                 <span class="w-4 h-4 [&_svg]:w-4 [&_svg]:h-4"><?= ui_icon('file-spreadsheet') ?></span>
                     Generar documento GFPI-F-023

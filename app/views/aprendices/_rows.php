@@ -10,6 +10,7 @@ $query = array_filter([
     'estado' => trim((string) ($activeFilters['estado'] ?? '')),
     'empresa_id' => (int) ($activeFilters['empresa_id'] ?? 0) > 0 ? (string) (int) $activeFilters['empresa_id'] : '',
     'programa_id' => (int) ($activeFilters['programa_id'] ?? 0) > 0 ? (string) (int) $activeFilters['programa_id'] : '',
+    'page' => (int) ($activeFilters['page'] ?? 0) > 1 ? (string) (int) $activeFilters['page'] : '',
     'from' => trim((string) ($activeFilters['from'] ?? '')),
 ], static fn ($v): bool => (string) $v !== '');
 $profileFiltersQuery = $query === [] ? '' : '&' . http_build_query($query);

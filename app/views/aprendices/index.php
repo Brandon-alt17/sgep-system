@@ -7,6 +7,9 @@ $estadosOptions = (array) ($estadosOptions ?? []);
 $programasOptions = (array) ($programasOptions ?? []);
 $empresasOptions = (array) ($empresasOptions ?? []);
 $activeFilters = (array) ($activeFilters ?? []);
+$currentPage = max(1, (int) ($currentPage ?? ($activeFilters['page'] ?? 1)));
+$totalPages = max(1, (int) ($totalPages ?? 1));
+$totalItems = max(0, (int) ($totalItems ?? count($aprendices)));
 
 $initialFicha = trim((string) ($activeFilters['ficha'] ?? ($initialFicha ?? '')));
 $initialEstado = trim((string) ($activeFilters['estado'] ?? ($initialEstado ?? '')));
@@ -92,6 +95,7 @@ foreach ($estadosOptions as $st) {
 
 partial('components/page_header', [
     'title' => 'Aprendices',
+    'subtitle' => 'Administra los aprendices registrados y consulta su estado, empresa y documentos de seguimiento.',
     'actions' => '
         <a class="' . e(ui_button_primary_classes()) . ' inline-flex items-center gap-2 text-white" href="' . e(APP_BASE_PATH) . '/aprendices/create">
             <span class="inline-flex h-4 w-4 items-center justify-center [&_svg]:h-4 [&_svg]:w-4" aria-hidden="true">' . ui_icon('user-plus') . '</span>
@@ -200,7 +204,7 @@ partial('components/page_header', [
     </form>
 </section>
 
-<section class="<?= e(ui_card_classes()) ?> !p-0 overflow-hidden">
+<section class="<?= e(ui_card_classes()) ?> !p-4 overflow-hidden">
     <div class="overflow-x-auto">
         <table id="aprendices-table" class="<?= e(ui_table_classes()) ?>">
             <thead class="border-b bg-app-panelSubtle">
@@ -220,5 +224,22 @@ partial('components/page_header', [
         </table>
     </div>
 </section>
+
+<?php
+$paginationQuery = $activeQuery;
+unset($paginationQuery['page']);
+$paginationBase = APP_BASE_PATH . '/aprendices';
+$paginationUrlPattern = $paginationBase . '?page=%d';
+if ($paginationQuery !== []) {
+    $paginationUrlPattern = $paginationBase . '?' . http_build_query($paginationQuery) . '&page=%d';
+}
+ui_render_pagination(
+    $currentPage,
+    $totalPages,
+    $paginationUrlPattern,
+    'Paginación de aprendices',
+    'aprendices-table'
+);
+?>
 
 <?php partial('components/filter_popover_script'); ?>

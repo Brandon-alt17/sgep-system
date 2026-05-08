@@ -22,6 +22,58 @@ class Aprendiz
     public static function paginated(array $filters, int $limit = 25, int $offset = 0): array
     {
         $pdo = Database::connection();
+        ['where' => $where, 'params' => $params] = self::buildFiltersWhere($filters);
+
+        $sql = '
+            SELECT 
+                a.*,
+                e.nombre AS empresa_nombre,
+                e.nit
+            FROM aprendices a
+            LEFT JOIN empresas e ON a.empresa_id = e.id
+        ';
+
+        if ($where !== []) {
+            $sql .= ' WHERE ' . implode(' AND ', $where);
+        }
+
+        $sql .= ' ORDER BY a.created_at DESC LIMIT :limit OFFSET :offset';
+
+        $stmt = $pdo->prepare($sql);
+
+        foreach ($params as $k => $v) {
+            $stmt->bindValue(':' . $k, $v);
+        }
+
+        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+        $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+
+        $stmt->execute();
+
+        return $stmt->fetchAll();
+    }
+
+    public static function countFiltered(array $filters): int
+    {
+        $pdo = Database::connection();
+        ['where' => $where, 'params' => $params] = self::buildFiltersWhere($filters);
+
+        $sql = 'SELECT COUNT(*) AS total FROM aprendices a';
+        if ($where !== []) {
+            $sql .= ' WHERE ' . implode(' AND ', $where);
+        }
+
+        $stmt = $pdo->prepare($sql);
+        foreach ($params as $k => $v) {
+            $stmt->bindValue(':' . $k, $v);
+        }
+        $stmt->execute();
+
+        return (int) ($stmt->fetchColumn() ?: 0);
+    }
+
+    private static function buildFiltersWhere(array $filters): array
+    {
         $where = [];
         $params = [];
 
@@ -54,33 +106,7 @@ class Aprendiz
             $params['q_documento'] = $likeQ;
         }
 
-        $sql = '
-            SELECT 
-                a.*,
-                e.nombre AS empresa_nombre,
-                e.nit
-            FROM aprendices a
-            LEFT JOIN empresas e ON a.empresa_id = e.id
-        ';
-
-        if ($where !== []) {
-            $sql .= ' WHERE ' . implode(' AND ', $where);
-        }
-
-        $sql .= ' ORDER BY a.created_at DESC LIMIT :limit OFFSET :offset';
-
-        $stmt = $pdo->prepare($sql);
-
-        foreach ($params as $k => $v) {
-            $stmt->bindValue(':' . $k, $v);
-        }
-
-        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
-        $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
-
-        $stmt->execute();
-
-        return $stmt->fetchAll();
+        return ['where' => $where, 'params' => $params];
     }
 
     // Agregar método para obtener valores únicos de fichas

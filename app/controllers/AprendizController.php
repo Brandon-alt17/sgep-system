@@ -14,7 +14,19 @@ class AprendizController
     public function index(): void
     {
         $activeFilters = $this->sanitizeAprendicesFilters($_GET);
-        $aprendices = Aprendiz::paginated($activeFilters, 500, 0);
+        $perPage = 10;
+        $currentPage = (int) ($_GET['page'] ?? 1);
+        if ($currentPage < 1) {
+            $currentPage = 1;
+        }
+        $totalItems = Aprendiz::countFiltered($activeFilters);
+        $totalPages = max(1, (int) ceil($totalItems / $perPage));
+        if ($currentPage > $totalPages) {
+            $currentPage = $totalPages;
+        }
+        $activeFilters['page'] = $currentPage;
+        $offset = ($currentPage - 1) * $perPage;
+        $aprendices = Aprendiz::paginated($activeFilters, $perPage, $offset);
 
         if ($this->isAjaxFilterRequest()) {
             partial('components/ui');
@@ -29,7 +41,7 @@ class AprendizController
             echo json_encode([
                 'ok' => true,
                 'rowsHtml' => $rowsHtml,
-                'total' => count($aprendices),
+                'total' => $totalItems,
             ], JSON_UNESCAPED_UNICODE);
             return;
         }
@@ -44,6 +56,10 @@ class AprendizController
             'initialFicha' => $activeFilters['ficha'],
             'initialEstado' => $activeFilters['estado'],
             'initialQ' => $activeFilters['q'],
+            'currentPage' => $currentPage,
+            'totalPages' => $totalPages,
+            'perPage' => $perPage,
+            'totalItems' => $totalItems,
         ]);
     }
 
@@ -120,8 +136,12 @@ class AprendizController
         $empresaId = (int) ($input['empresa_id'] ?? 0);
         $programaId = (int) ($input['programa_id'] ?? 0);
         $from = trim((string) ($input['from'] ?? ''));
+        $page = (int) ($input['page'] ?? 1);
         if (!in_array($from, ['grupos', 'empresas'], true)) {
             $from = '';
+        }
+        if ($page < 1) {
+            $page = 1;
         }
 
         return [
@@ -131,6 +151,7 @@ class AprendizController
             'empresa_id' => $empresaId > 0 ? $empresaId : 0,
             'programa_id' => $programaId > 0 ? $programaId : 0,
             'from' => $from,
+            'page' => $page,
         ];
     }
 
@@ -144,6 +165,7 @@ class AprendizController
             'estado' => $filters['estado'],
             'empresa_id' => $filters['empresa_id'] > 0 ? (string) $filters['empresa_id'] : '',
             'programa_id' => $filters['programa_id'] > 0 ? (string) $filters['programa_id'] : '',
+            'page' => $filters['page'] > 1 ? (string) $filters['page'] : '',
             'from' => $filters['from'],
         ], static fn ($v): bool => (string) $v !== '');
 

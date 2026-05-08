@@ -17,6 +17,9 @@ $currentPath = $currentPath === '' ? '/' : $currentPath;
 if (str_starts_with($currentPath, '/momentos/')) {
     $currentPath = '/aprendices';
 }
+if (str_starts_with($currentPath, '/documentos/info')) {
+    $currentPath = '/aprendices';
+}
 
 $titles = [
     '/dashboard' => 'Dashboard',
