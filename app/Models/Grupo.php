@@ -22,8 +22,10 @@ class Grupo
         $params = [];
 
         if ($q !== '') {
-            $where[] = '(TRIM(a.ficha) LIKE :q OR COALESCE(p.nombre, \'\') LIKE :q)';
-            $params['q'] = '%' . $q . '%';
+            $where[] = '(TRIM(a.ficha) LIKE :q_ficha OR COALESCE(p.nombre, \'\') LIKE :q_programa)';
+            $likeQ = '%' . $q . '%';
+            $params['q_ficha'] = $likeQ;
+            $params['q_programa'] = $likeQ;
         }
         if ($programaId > 0) {
             $where[] = 'a.programa_id = :programa_id';

@@ -4,65 +4,200 @@ declare(strict_types=1);
 $aprendices = (array) ($aprendices ?? []);
 $fichasOptions = (array) ($fichasOptions ?? []);
 $estadosOptions = (array) ($estadosOptions ?? []);
-$initialFicha = trim((string) ($initialFicha ?? ''));
-$initialEstado = trim((string) ($initialEstado ?? ''));
-$initialQ = trim((string) ($initialQ ?? ''));
+$programasOptions = (array) ($programasOptions ?? []);
+$empresasOptions = (array) ($empresasOptions ?? []);
+$activeFilters = (array) ($activeFilters ?? []);
+
+$initialFicha = trim((string) ($activeFilters['ficha'] ?? ($initialFicha ?? '')));
+$initialEstado = trim((string) ($activeFilters['estado'] ?? ($initialEstado ?? '')));
+$initialQ = trim((string) ($activeFilters['q'] ?? ($initialQ ?? '')));
+$initialEmpresaId = (int) ($activeFilters['empresa_id'] ?? 0);
+$initialProgramaId = (int) ($activeFilters['programa_id'] ?? 0);
+$source = trim((string) ($activeFilters['from'] ?? ''));
+
+$activeQuery = array_filter([
+    'q' => $initialQ,
+    'ficha' => $initialFicha,
+    'estado' => $initialEstado,
+    'empresa_id' => $initialEmpresaId > 0 ? (string) $initialEmpresaId : '',
+    'programa_id' => $initialProgramaId > 0 ? (string) $initialProgramaId : '',
+    'from' => in_array($source, ['grupos', 'empresas'], true) ? $source : '',
+], static fn ($v): bool => (string) $v !== '');
+
+$profileFiltersQuery = $activeQuery === [] ? '' : '&' . http_build_query($activeQuery);
+$clearFiltersUrl = APP_BASE_PATH . '/aprendices';
+$returnToEmpresaUrl = '';
+if ($source === 'empresas' && $initialEmpresaId > 0) {
+    $returnToEmpresaUrl = APP_BASE_PATH . '/catalogo/empresas/ver?id=' . $initialEmpresaId;
+}
+$returnToCatalogUrl = match ($source) {
+    'grupos' => APP_BASE_PATH . '/catalogo/grupos',
+    'empresas' => ($returnToEmpresaUrl !== '' ? $returnToEmpresaUrl : APP_BASE_PATH . '/catalogo/empresas'),
+    default => '',
+};
+
+$fichaComboboxOptions = [];
+foreach ($fichasOptions as $f) {
+    if ($f === null || $f === '') {
+        continue;
+    }
+    $fichaValue = (string) $f;
+    $fichaComboboxOptions[] = [
+        'value' => $fichaValue,
+        'label' => $fichaValue,
+        'search' => $fichaValue,
+    ];
+}
+
+$empresaComboboxOptions = [];
+foreach ($empresasOptions as $empresa) {
+    $eid = (int) ($empresa['id'] ?? 0);
+    if ($eid <= 0) {
+        continue;
+    }
+    $empresaNombre = trim((string) ($empresa['nombre'] ?? 'Empresa #' . $eid));
+    $empresaComboboxOptions[] = [
+        'value' => (string) $eid,
+        'label' => $empresaNombre,
+        'search' => $empresaNombre,
+    ];
+}
+
+$programaComboboxOptions = [];
+foreach ($programasOptions as $programa) {
+    $pid = (int) ($programa['id'] ?? 0);
+    if ($pid <= 0) {
+        continue;
+    }
+    $programaNombre = trim((string) ($programa['nombre'] ?? 'Programa #' . $pid));
+    $programaComboboxOptions[] = [
+        'value' => (string) $pid,
+        'label' => $programaNombre,
+        'search' => $programaNombre,
+    ];
+}
+
+$estadoComboboxOptions = [];
+foreach ($estadosOptions as $st) {
+    if ($st === null || $st === '') {
+        continue;
+    }
+    $estadoValue = (string) $st;
+    $estadoComboboxOptions[] = [
+        'value' => $estadoValue,
+        'label' => $estadoValue,
+        'search' => $estadoValue,
+    ];
+}
 
 partial('components/page_header', [
     'title' => 'Aprendices',
     'actions' => '
-        <a class="' . e(ui_button_small_primary_classes()) . '" href="' . e(APP_BASE_PATH) . '/aprendices/create">
+        <a class="' . e(ui_button_primary_classes()) . ' inline-flex items-center gap-2 text-white" href="' . e(APP_BASE_PATH) . '/aprendices/create">
+            <span class="inline-flex h-4 w-4 items-center justify-center [&_svg]:h-4 [&_svg]:w-4" aria-hidden="true">' . ui_icon('user-plus') . '</span>
             Nuevo aprendiz
         </a>
     ',
 ]);
 ?>
 
+<?php if ($source === 'grupos' || $source === 'empresas'): ?>
+    <?php if ($returnToCatalogUrl !== ''): ?>
+        <a href="<?= e($returnToCatalogUrl) ?>" class="mb-4 inline-block text-sm text-app-link hover:underline">
+            ← <?= $source === 'grupos'
+                ? 'Volver a grupos'
+                : ($initialEmpresaId > 0 ? 'Volver a la empresa' : 'Volver a empresas') ?>
+        </a>
+    <?php endif; ?>
+<?php endif; ?>
+
 <section class="<?= e(ui_card_classes()) ?> mb-4">
-    <div class="flex w-full flex-wrap items-center gap-3">
-        <input
-            type="text"
-            id="search-input"
-            value="<?= e($initialQ) ?>"
-            placeholder="Buscar por nombre o documento"
-            class="<?= e(ui_input_classes()) ?> min-w-0 flex-1"
-            autocomplete="off"
-        >
+    <form method="get" action="<?= e(APP_BASE_PATH) ?>/aprendices" class="flex w-full flex-wrap items-center gap-3" data-auto-filter-form data-auto-filter-ajax="true" data-auto-filter-target="#aprendices-table tbody">
+        <?php if ($source !== ''): ?>
+            <input type="hidden" name="from" value="<?= e($source) ?>">
+        <?php endif; ?>
 
-        <div class="<?= e(ui_select_wrapper_classes()) ?> w-full shrink-0 md:w-64">
-            <select id="ficha-filter" class="<?= e(ui_select_classes()) ?>">
-                <option value="">Todas las fichas</option>
-                <?php foreach ($fichasOptions as $f): ?>
-                    <?php if ($f === null || $f === '') {
-                        continue;
-                    } ?>
-                    <option value="<?= e((string) $f) ?>" <?= (string) $f === $initialFicha ? 'selected' : '' ?>><?= e((string) $f) ?></option>
-                <?php endforeach; ?>
-            </select>
-            <span class="<?= e(ui_select_chevron_classes()) ?>" data-select-chevron aria-hidden="true">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-4 w-4">
-                    <path d="m6 9 6 6 6-6"></path>
-                </svg>
+        <div class="relative w-full min-w-0 md:flex-1">
+            <span class="pointer-events-none absolute inset-y-0 left-3 flex items-center text-app-muted [&_svg]:h-4 [&_svg]:w-4">
+                <?= ui_icon('search') ?>
             </span>
+            <input
+                type="text"
+                name="q"
+                value="<?= e($initialQ) ?>"
+                placeholder="Buscar por nombre o documento"
+                class="<?= e(ui_input_classes()) ?> mt-0 block w-full min-w-0 pl-10 pr-10"
+                autocomplete="off"
+                data-auto-filter-input
+                data-auto-filter-main-input
+            >
+            <button type="button" class="<?= $initialQ !== '' ? '' : 'hidden' ?> absolute right-2 top-1/2 -translate-y-1/2 rounded-md px-2 py-1 text-sm text-app-muted hover:bg-app-panelSubtle hover:text-app-text" aria-label="Limpiar búsqueda" data-auto-filter-clear>&times;</button>
         </div>
+        <div class="relative w-full min-w-[220px] md:w-72 md:flex-none">
+                <button type="button" id="open-filters-popover" class="<?= e(ui_button_small_classes()) ?> inline-flex w-full items-center justify-center gap-2 bg-white border-app-borderControlStrong text-app-muted hover:bg-white hover:text-app-text" aria-expanded="false" aria-controls="aprendices-filters-popover" data-filter-popover-trigger>
+                    <span class="inline-flex h-4 w-4 items-center justify-center text-app-muted" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-4 w-4">
+                            <path d="M3 5h18l-7 8v6l-4-2v-4L3 5z"></path>
+                        </svg>
+                    </span>
+                    Filtros
+                </button>
 
-        <div class="<?= e(ui_select_wrapper_classes()) ?> w-full shrink-0 md:w-64">
-            <select id="estado-filter" class="<?= e(ui_select_classes()) ?>">
+                <div id="aprendices-filters-popover" class="absolute right-0 top-full z-40 mt-2 hidden w-full rounded-[10px] border border-app-border bg-app-panel p-4 shadow-xsSoft">
+                    <div class="space-y-3">
+                        <div class="<?= e(ui_label_classes()) ?>">
+                            <span>Ficha</span>
+                            <?php partial('components/combobox', [
+                                'name' => 'ficha',
+                                'value' => $initialFicha,
+                                'placeholder' => 'Todas las fichas',
+                                'options' => $fichaComboboxOptions,
+                            ]); ?>
+                        </div>
+
+                        <div class="<?= e(ui_label_classes()) ?>">
+                            <span>Empresa</span>
+                            <?php partial('components/combobox', [
+                                'name' => 'empresa_id',
+                                'value' => $initialEmpresaId > 0 ? (string) $initialEmpresaId : '',
+                                'placeholder' => 'Todas las empresas',
+                                'options' => $empresaComboboxOptions,
+                            ]); ?>
+                        </div>
+
+                        <div class="<?= e(ui_label_classes()) ?>">
+                            <span>Programa</span>
+                            <?php partial('components/combobox', [
+                                'name' => 'programa_id',
+                                'value' => $initialProgramaId > 0 ? (string) $initialProgramaId : '',
+                                'placeholder' => 'Todos los programas',
+                                'options' => $programaComboboxOptions,
+                            ]); ?>
+                        </div>
+
+                        <div class="flex items-center justify-end gap-2 pt-1">
+                            <button type="submit" class="<?= e(ui_button_primary_classes()) ?> text-white">Aplicar</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        <div class="<?= e(ui_select_wrapper_classes()) ?> w-full min-w-[220px] shrink-0 md:w-64">
+            <select name="estado" class="<?= e(ui_select_classes()) ?>">
                 <option value="">Todos los estados</option>
                 <?php foreach ($estadosOptions as $st): ?>
-                    <?php if ($st === null || $st === '') {
-                        continue;
-                    } ?>
+                    <?php if ($st === null || $st === '') { continue; } ?>
                     <option value="<?= e((string) $st) ?>" <?= (string) $st === $initialEstado ? 'selected' : '' ?>><?= e((string) $st) ?></option>
                 <?php endforeach; ?>
             </select>
             <span class="<?= e(ui_select_chevron_classes()) ?>" data-select-chevron aria-hidden="true">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-4 w-4">
-                    <path d="m6 9 6 6 6-6"></path>
-                </svg>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-4 w-4"><path d="m6 9 6 6 6-6"></path></svg>
             </span>
         </div>
-    </div>
+        <a class="<?= e(ui_button_primary_classes()) ?> inline-flex items-center gap-2 text-white" href="<?= e($clearFiltersUrl) ?>">
+                <span class="inline-flex h-4 w-4 items-center justify-center [&_svg]:h-4 [&_svg]:w-4" aria-hidden="true"><?= ui_icon('brush-cleaning') ?></span>
+                Limpiar filtros
+        </a>
+    </form>
 </section>
 
 <section class="<?= e(ui_card_classes()) ?> !p-0 overflow-hidden">
@@ -80,265 +215,10 @@ partial('components/page_header', [
                 </tr>
             </thead>
             <tbody id="table-body">
-            <?php if ($aprendices === []): ?>
-                <tr id="empty-server-row">
-                    <td class="<?= e(ui_td_classes()) ?> text-app-muted align-middle py-8 text-center" colspan="7">Sin aprendices que coincidan con los filtros.</td>
-                </tr>
-            <?php else: ?>
-                <?php foreach ($aprendices as $aprendiz): ?>
-                    <tr class="border-b transition hover:bg-gray-50">
-                        <td class="<?= e(ui_td_classes()) ?> font-medium" data-field="nombre">
-                            <?= e((string) ($aprendiz['nombre_completo'] ?? '')) ?>
-                        </td>
-                        <td class="<?= e(ui_td_classes()) ?> text-gray-600" data-field="documento">
-                            <?= e((string) ($aprendiz['numero_documento'] ?? '')) ?>
-                        </td>
-                        <td class="<?= e(ui_td_classes()) ?>" data-field="empresa">
-                            <?= e((string) ($aprendiz['empresa_nombre'] ?? '-')) ?>
-                        </td>
-                        <td class="<?= e(ui_td_classes()) ?> text-gray-600" data-field="ficha">
-                            <?= e((string) ($aprendiz['ficha'] ?? '-')) ?>
-                        </td>
-                        <td class="<?= e(ui_td_classes()) ?>" data-field="estado">
-                            <?php
-                            $estado = (string) ($aprendiz['estado'] ?? '');
-                            $badgeClass = match ($estado) {
-                                'En ejecución',
-                                'Aplazada',
-                                'Finalizada',
-                                'Certificado',
-                                'Pendiente por comité' => ui_badge_success_classes(),
-                                'Pendiente por iniciar' => ui_badge_warning_classes(),
-                                default => ui_badge_error_classes(),
-                            };
-                            ?>
-                            <span class="<?= e($badgeClass) ?>"><?= e($estado) ?></span>
-                        </td>
-                        <td class="<?= e(ui_td_classes()) ?> text-gray-500" data-field="ultima_visita">
-                            <?= e((string) ($aprendiz['ultima_visita'] ?? '—')) ?>
-                        </td>
-                        <td class="<?= e(ui_td_classes()) ?>">
-                            <a class="<?= e(ui_button_small_classes()) ?>"
-                               href="<?= e(APP_BASE_PATH) ?>/aprendices/show?id=<?= (int) ($aprendiz['id'] ?? 0) ?>">
-                                Ver perfil
-                            </a>
-                        </td>
-                    </tr>
-                <?php endforeach; ?>
-            <?php endif; ?>
-            <tr id="no-client-results-row" class="hidden">
-                <td class="<?= e(ui_td_classes()) ?> text-app-muted align-middle py-8 text-center" colspan="7">Ningún resultado con los filtros actuales.</td>
-            </tr>
+            <?php partial('aprendices/_rows', ['aprendices' => $aprendices, 'activeFilters' => $activeFilters]); ?>
             </tbody>
         </table>
     </div>
 </section>
 
-<script>
-// Función para actualizar los filtros
-function actualizarFiltros() {
-    console.log('=== ACTUALIZANDO FILTROS ===');
-    
-    // Obtener el cuerpo de la tabla
-    const tbody = document.getElementById('table-body');
-    if (!tbody) {
-        console.error('No se encontró el tbody');
-        return;
-    }
-    
-    // Obtener todas las filas
-    const filas = tbody.querySelectorAll('tr');
-    console.log('Filas encontradas:', filas.length);
-    
-    // Colecciones para valores únicos
-    const fichasUnicas = new Set();
-    const estadosUnicos = new Set();
-    
-    // Recorrer cada fila
-    filas.forEach((fila, index) => {
-        // Obtener todas las celdas
-        const celdas = fila.querySelectorAll('td');
-        
-        if (celdas.length >= 5) {
-            // La ficha está en la celda 4 (índice 3)
-            const ficha = celdas[3].textContent.trim();
-            console.log(`Fila ${index} - Ficha: "${ficha}"`);
-            if (ficha && ficha !== '-' && ficha !== '—') {
-                fichasUnicas.add(ficha);
-            }
-            
-            // El estado está en la celda 5 (índice 4)
-            const spanEstado = celdas[4].querySelector('span');
-            let estado = spanEstado ? spanEstado.textContent.trim() : celdas[4].textContent.trim();
-            console.log(`Fila ${index} - Estado: "${estado}"`);
-            if (estado && estado !== '') {
-                estadosUnicos.add(estado);
-            }
-        }
-    });
-    
-    console.log('Fichas únicas:', Array.from(fichasUnicas));
-    
-    // Actualizar select de fichas
-    const selectFicha = document.getElementById('ficha-filter');
-    if (selectFicha) {
-        // Guardar el valor seleccionado actual
-        const valorActual = selectFicha.value;
-        
-        // Limpiar opciones (dejar solo la primera)
-        while (selectFicha.options.length > 1) {
-            selectFicha.remove(1);
-        }
-        
-        // Agregar nuevas opciones
-        const fichasArray = Array.from(fichasUnicas).sort();
-        fichasArray.forEach(ficha => {
-            const option = document.createElement('option');
-            option.value = ficha;
-            option.textContent = ficha;
-            selectFicha.appendChild(option);
-        });
-        
-        // Restaurar valor si aún existe
-        if (valorActual && fichasArray.includes(valorActual)) {
-            selectFicha.value = valorActual;
-        }
-        
-        console.log('Select de fichas actualizado, opciones:', selectFicha.options.length);
-    } else {
-        console.error('No se encontró el select con id "ficha-filter"');
-    }
-    
-    // Actualizar select de estados
-    const selectEstado = document.getElementById('estado-filter');
-    if (selectEstado) {
-        // Guardar el valor seleccionado actual
-        const valorActual = selectEstado.value;
-        
-        // Limpiar opciones (dejar solo la primera)
-        while (selectEstado.options.length > 1) {
-            selectEstado.remove(1);
-        }
-        
-        // Agregar nuevas opciones
-        const estadosArray = Array.from(estadosUnicos).sort();
-        estadosArray.forEach(estado => {
-            const option = document.createElement('option');
-            option.value = estado;
-            option.textContent = estado;
-            selectEstado.appendChild(option);
-        });
-        
-        // Restaurar valor si aún existe
-        if (valorActual && estadosArray.includes(valorActual)) {
-            selectEstado.value = valorActual;
-        }
-        
-        console.log('Select de estados actualizado, opciones:', selectEstado.options.length);
-    } else {
-        console.error('No se encontró el select con id "estado-filter"');
-    }
-}
-
-// Función para filtrar la tabla
-function filtrarTabla() {
-    const busqueda = document.getElementById('search-input')?.value.toLowerCase().trim() || '';
-    const fichaSeleccionada = document.getElementById('ficha-filter')?.value || '';
-    const estadoSeleccionado = document.getElementById('estado-filter')?.value || '';
-    
-    const tbody = document.getElementById('table-body');
-    if (!tbody) return;
-
-    var noClient = document.getElementById("no-client-results-row");
-    if (noClient) noClient.classList.add("hidden");
-
-    var filas = tbody.querySelectorAll("tr");
-    var visibles = 0;
-    var hayFilasDatos = false;
-
-    filas.forEach(function (fila) {
-      if (fila.id === "no-client-results-row" || fila.id === "empty-server-row") return;
-
-      var celdas = fila.querySelectorAll("td");
-      if (celdas.length < 7) return;
-
-      hayFilasDatos = true;
-
-      var nombre = (celdas[0].textContent || "").toLowerCase();
-      var documento = celdas[1].textContent || "";
-      var ficha = (celdas[3].textContent || "").trim();
-      var spanEstado = celdas[4].querySelector("span");
-      var estado = spanEstado ? (spanEstado.textContent || "").trim() : (celdas[4].textContent || "").trim();
-
-      var okBusq = busqueda === "" || nombre.indexOf(busqueda) !== -1 || documento.toLowerCase().indexOf(busqueda) !== -1;
-      var okFicha = fichaSel === "" || ficha === fichaSel;
-      var okEst = estadoSel === "" || estado === estadoSel;
-
-      if (okBusq && okFicha && okEst) {
-        fila.style.display = "";
-        visibles++;
-      } else {
-        fila.style.display = "none";
-      }
-    });
-    
-    // Mostrar mensaje si no hay resultados
-    mostrarMensaje(filasVisibles === 0);
-}
-
-// Función para mostrar/ocultar mensaje de sin resultados
-function mostrarMensaje(mostrar) {
-    const tbody = document.getElementById('table-body');
-    if (!tbody) return;
-    
-    let mensajeRow = document.getElementById('no-results-message');
-    
-    if (mostrar && !mensajeRow) {
-        mensajeRow = document.createElement('tr');
-        mensajeRow.id = 'no-results-message';
-        const thead = document.querySelector('#aprendices-table thead');
-        const numColumnas = thead ? thead.querySelectorAll('th').length : 7;
-        mensajeRow.innerHTML = `
-            <td colspan="${numColumnas}" class="text-center py-8 text-gray-500">
-                No se encontraron resultados que coincidan con los filtros seleccionados.
-            </td>
-        `;
-        tbody.appendChild(mensajeRow);
-    } else if (!mostrar && mensajeRow) {
-        mensajeRow.remove();
-    }
-}
-
-// Inicializar cuando el DOM esté listo
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('DOM cargado, inicializando...');
-    
-    // Esperar un momento para asegurar que la tabla esté cargada
-    setTimeout(function() {
-        actualizarFiltros();
-        
-        // Agregar event listeners
-        const searchInput = document.getElementById('search-input');
-        const fichaFilter = document.getElementById('ficha-filter');
-        const estadoFilter = document.getElementById('estado-filter');
-        
-        if (searchInput) {
-            searchInput.addEventListener('input', filtrarTabla);
-            console.log('Event listener agregado al buscador');
-        }
-        
-        if (fichaFilter) {
-            fichaFilter.addEventListener('change', filtrarTabla);
-            console.log('Event listener agregado al filtro de fichas');
-        }
-        
-        if (estadoFilter) {
-            estadoFilter.addEventListener('change', filtrarTabla);
-            console.log('Event listener agregado al filtro de estados');
-        }
-        
-        // Forzar una actualización adicional después de cargar todo
-        setTimeout(actualizarFiltros, 100);
-    }, 100);
-});
-</script>
+<?php partial('components/filter_popover_script'); ?>

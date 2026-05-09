@@ -47,7 +47,7 @@ partial('components/page_header', [
 ]); ?>
 
 <!-- Búsqueda y nivel: solo se actualiza el tbody por fetch (sin recargar la página). -->
-<section class="<?= e(ui_card_classes()) ?> mb-4 p-6">
+<section class="<?= e(ui_card_classes()) ?> mb-4">
     <form
         method="get"
         action="<?= e(APP_BASE_PATH) ?>/catalogo/programas"

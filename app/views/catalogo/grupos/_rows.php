@@ -16,7 +16,7 @@ $tdClasses = (string) ($tdClasses ?? $defaultTdClasses);
         <?php
         $ficha = (string) ($grupo['ficha'] ?? '');
         $pid = $grupo['programa_id'] ?? null;
-        $qAprendices = ['ficha' => $ficha];
+        $qAprendices = ['ficha' => $ficha, 'from' => 'grupos'];
         if ($pid !== null && (int) $pid > 0) {
             $qAprendices['programa_id'] = (string) (int) $pid;
         }

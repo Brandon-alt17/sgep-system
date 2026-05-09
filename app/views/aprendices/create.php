@@ -108,10 +108,6 @@
     <!-- ===================== -->
     <div id="contenido-empresa" class="space-y-5 hidden">
 
-        <h3 class="text-sm font-semibold text-gray-700">
-            Información de la empresa
-        </h3>
-
         <div class="grid gap-3 md:grid-cols-2">
 
             <div class="md:col-span-2">

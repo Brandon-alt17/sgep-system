@@ -6,6 +6,7 @@ namespace App\Imports;
 
 use App\Helpers\Database;
 use App\Helpers\Normalizer;
+use App\Models\EmpresaJefe;
 use App\Models\ProgramaEnlacePendiente;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Shared\Date as ExcelDate;
@@ -74,7 +75,19 @@ class AprendicesImport
                 $programaId = $programaResolution['id'];
                 $empresaId = $this->findOrCreateEmpresa($assoc);
 
-                $payload = $this->buildAprendizPayload($assoc, $doc, $programaId, $empresaId);
+                $jefeId = null;
+                if ($empresaId !== null && $empresaId > 0) {
+                    $jefeId = EmpresaJefe::findOrCreate($empresaId, [
+                        'nombre' => $assoc['nombre_jefe'] ?? '',
+                        'cargo' => $assoc['cargo_jefe'] ?? '',
+                        'correo' => $assoc['correo_jefe'] ?? '',
+                        'telefono' => $assoc['telefono_jefe'] ?? '',
+                        'nombre_contacto2' => $assoc['nombre_contacto_2'] ?? '',
+                        'correo_contacto2' => $assoc['correo_contacto_2'] ?? '',
+                    ]);
+                }
+
+                $payload = $this->buildAprendizPayload($assoc, $doc, $programaId, $empresaId, $jefeId);
                 $rowSummary = $this->rowSummary($assoc, $doc);
 
                 if (($programaResolution['ambiguous'] ?? false) === true) {
@@ -215,6 +228,7 @@ class AprendicesImport
             'ficha',
             'programa_id',
             'empresa_id',
+            'jefe_id',
             'fecha_hora_formulario',
             'direccion_domicilio',
             'ciudad_domicilio',
@@ -232,11 +246,36 @@ class AprendicesImport
 
         foreach ($fields as $field) {
             $incoming = $payload[$field] ?? null;
-            if ($this->isEmptyValue($incoming)) {
+            if ($field === 'jefe_id') {
+                if ($incoming === null || $incoming === '') {
+                    continue;
+                }
+                $incoming = (int) $incoming;
+                if ($incoming <= 0) {
+                    continue;
+                }
+            } elseif ($this->isEmptyValue($incoming)) {
                 continue;
             }
 
             $current = $existing[$field] ?? null;
+            if ($field === 'jefe_id') {
+                $currentInt = ($current === null || $current === '') ? 0 : (int) $current;
+                if ($currentInt <= 0) {
+                    $fillable[$field] = $incoming;
+                    continue;
+                }
+                if ($currentInt === $incoming) {
+                    continue;
+                }
+                $conflicts[] = [
+                    'field' => $field,
+                    'actual' => $this->stringifyValue($current),
+                    'nuevo' => $this->stringifyValue($incoming),
+                ];
+                continue;
+            }
+
             if ($this->isEmptyValue($current)) {
                 $fillable[$field] = $incoming;
                 continue;
@@ -354,7 +393,7 @@ class AprendicesImport
         return $nombreLimpio . ' (documento ' . $docLimpio . ')';
     }
 
-    private function buildAprendizPayload(array $assoc, string $doc, ?int $programaId, ?int $empresaId): array
+    private function buildAprendizPayload(array $assoc, string $doc, ?int $programaId, ?int $empresaId, ?int $jefeId = null): array
     {
         $ficha = $this->stringOrNull($assoc['numero_grupo'] ?? $assoc['numero_ficha'] ?? null);
 
@@ -368,6 +407,7 @@ class AprendicesImport
             'ficha' => $ficha,
             'programa_id' => $programaId,
             'empresa_id' => $empresaId,
+            'jefe_id' => $jefeId,
             'estado' => 'Pendiente por iniciar',
             'fecha_hora_formulario' => $this->toMysqlDateTime($assoc['fecha_hora_formulario'] ?? null),
             'direccion_domicilio' => $this->stringOrNull($assoc['direccion_domicilio_aprendiz'] ?? null),
@@ -559,8 +599,8 @@ class AprendicesImport
             return (int) $row['id'];
         }
 
-        $sql = 'INSERT INTO empresas (nombre, nit, direccion, correo_org, nombre_jefe, cargo_jefe, correo_jefe, telefono_jefe, nombre_contacto2, correo_contacto2, direccion_practica, created_at, updated_at)
-                VALUES (:nombre, :nit, :direccion, :correo_org, :nombre_jefe, :cargo_jefe, :correo_jefe, :telefono_jefe, :nombre_contacto2, :correo_contacto2, :direccion_practica, NOW(), NOW())';
+        $sql = 'INSERT INTO empresas (nombre, nit, direccion, correo_org, nombre_contacto2, correo_contacto2, direccion_practica, created_at, updated_at)
+                VALUES (:nombre, :nit, :direccion, :correo_org, :nombre_contacto2, :correo_contacto2, :direccion_practica, NOW(), NOW())';
         $params = $this->empresaParams($assoc);
         $pdo->prepare($sql)->execute($params);
 
@@ -575,10 +615,6 @@ class AprendicesImport
             'nit' => $this->stringOrNull($assoc['nit_empresa'] ?? null),
             'direccion' => $this->stringOrNull($assoc['direccion_empresa'] ?? null),
             'correo_org' => $this->stringOrNull($assoc['correo_organizacional'] ?? null),
-            'nombre_jefe' => $this->stringOrNull($assoc['nombre_jefe'] ?? null),
-            'cargo_jefe' => $this->stringOrNull($assoc['cargo_jefe'] ?? null),
-            'correo_jefe' => $this->stringOrNull($assoc['correo_jefe'] ?? null),
-            'telefono_jefe' => $this->stringOrNull($assoc['telefono_jefe'] ?? null),
             'nombre_contacto2' => $this->stringOrNull($assoc['nombre_contacto_2'] ?? null),
             'correo_contacto2' => $this->stringOrNull($assoc['correo_contacto_2'] ?? null),
             'direccion_practica' => $this->stringOrNull($assoc['direccion_realiza_practica'] ?? null),
@@ -591,10 +627,6 @@ class AprendicesImport
                     nit = COALESCE(NULLIF(:nit, ""), nit),
                     direccion = COALESCE(NULLIF(:direccion, ""), direccion),
                     correo_org = COALESCE(NULLIF(:correo_org, ""), correo_org),
-                    nombre_jefe = COALESCE(NULLIF(:nombre_jefe, ""), nombre_jefe),
-                    cargo_jefe = COALESCE(NULLIF(:cargo_jefe, ""), cargo_jefe),
-                    correo_jefe = COALESCE(NULLIF(:correo_jefe, ""), correo_jefe),
-                    telefono_jefe = COALESCE(NULLIF(:telefono_jefe, ""), telefono_jefe),
                     nombre_contacto2 = COALESCE(NULLIF(:nombre_contacto2, ""), nombre_contacto2),
                     correo_contacto2 = COALESCE(NULLIF(:correo_contacto2, ""), correo_contacto2),
                     direccion_practica = COALESCE(NULLIF(:direccion_practica, ""), direccion_practica),
@@ -619,14 +651,14 @@ class AprendicesImport
     {
         $sql = 'INSERT INTO aprendices (
                     nombre_completo, tipo_documento, numero_documento, telefono, correo_personal, correo_institucional,
-                    ficha, programa_id, empresa_id, estado,
+                    ficha, programa_id, empresa_id, jefe_id, estado,
                     fecha_hora_formulario, direccion_domicilio, ciudad_domicilio, alternativa_ep,
                     nombre_instructor_seguimiento, telefono_instructor_seguimiento, tipo_asistencia, sugerencias_comentarios,
                     jefe_grupo, coordinacion,
                     created_at, updated_at
                 ) VALUES (
                     :nombre_completo, :tipo_documento, :numero_documento, :telefono, :correo_personal, :correo_institucional,
-                    :ficha, :programa_id, :empresa_id, :estado,
+                    :ficha, :programa_id, :empresa_id, :jefe_id, :estado,
                     :fecha_hora_formulario, :direccion_domicilio, :ciudad_domicilio, :alternativa_ep,
                     :nombre_instructor_seguimiento, :telefono_instructor_seguimiento, :tipo_asistencia, :sugerencias_comentarios,
                     :jefe_grupo, :coordinacion,
@@ -644,6 +676,7 @@ class AprendicesImport
             'ficha' => $data['ficha'],
             'programa_id' => $data['programa_id'],
             'empresa_id' => $data['empresa_id'],
+            'jefe_id' => $data['jefe_id'] ?? null,
             'estado' => $data['estado'],
             'fecha_hora_formulario' => $data['fecha_hora_formulario'],
             'direccion_domicilio' => $data['direccion_domicilio'],
@@ -672,6 +705,7 @@ class AprendicesImport
             ficha = COALESCE(NULLIF(:ficha, ""), ficha),
             programa_id = COALESCE(:programa_id, programa_id),
             empresa_id = COALESCE(:empresa_id, empresa_id),
+            jefe_id = COALESCE(:jefe_id, jefe_id),
             fecha_hora_formulario = COALESCE(:fecha_hora_formulario, fecha_hora_formulario),
             direccion_domicilio = COALESCE(NULLIF(:direccion_domicilio, ""), direccion_domicilio),
             ciudad_domicilio = COALESCE(NULLIF(:ciudad_domicilio, ""), ciudad_domicilio),
@@ -695,6 +729,7 @@ class AprendicesImport
             'ficha' => $data['ficha'] ?? '',
             'programa_id' => $data['programa_id'] ?? null,
             'empresa_id' => $data['empresa_id'] ?? null,
+            'jefe_id' => $data['jefe_id'] ?? null,
             'fecha_hora_formulario' => $data['fecha_hora_formulario'] ?? null,
             'direccion_domicilio' => $data['direccion_domicilio'] ?? '',
             'ciudad_domicilio' => $data['ciudad_domicilio'] ?? '',
@@ -725,6 +760,7 @@ class AprendicesImport
             'ficha',
             'programa_id',
             'empresa_id',
+            'jefe_id',
             'fecha_hora_formulario',
             'direccion_domicilio',
             'ciudad_domicilio',
@@ -744,7 +780,7 @@ class AprendicesImport
                 continue;
             }
             $setParts[] = $field . ' = :' . $field;
-            $params[$field] = $value;
+            $params[$field] = $field === 'jefe_id' ? (int) $value : $value;
         }
 
         if ($setParts === []) {

@@ -48,8 +48,10 @@ class Aprendiz
         }
 
         if (!empty($filters['q'])) {
-            $where[] = '(a.nombre_completo LIKE :q OR a.numero_documento LIKE :q)';
-            $params['q'] = '%' . $filters['q'] . '%';
+            $where[] = '(a.nombre_completo LIKE :q_nombre OR a.numero_documento LIKE :q_documento)';
+            $likeQ = '%' . $filters['q'] . '%';
+            $params['q_nombre'] = $likeQ;
+            $params['q_documento'] = $likeQ;
         }
 
         $sql = '
@@ -126,7 +128,17 @@ class Aprendiz
 
     public static function update(int $id, array $data): void
     {
-        $sql = 'UPDATE aprendices SET nombre_completo=:nombre_completo, telefono=:telefono, correo_personal=:correo_personal, correo_institucional=:correo_institucional, estado=:estado, updated_at=NOW() WHERE id=:id';
+        $empresaId = (int) ($data['empresa_id'] ?? 0);
+        if ($empresaId <= 0) {
+            $stmt = Database::connection()->prepare('SELECT empresa_id FROM aprendices WHERE id = :id LIMIT 1');
+            $stmt->execute(['id' => $id]);
+            $row = $stmt->fetch();
+            $empresaId = (int) ($row['empresa_id'] ?? 0);
+        }
+
+        $jefeIdResolved = self::resolveJefeIdFromUpdatePayload($empresaId, $data);
+
+        $sql = 'UPDATE aprendices SET nombre_completo=:nombre_completo, telefono=:telefono, correo_personal=:correo_personal, correo_institucional=:correo_institucional, estado=:estado, jefe_id=:jefe_id, updated_at=NOW() WHERE id=:id';
         Database::connection()->prepare($sql)->execute([
             'id' => $id,
             'nombre_completo' => $data['nombre_completo'],
@@ -134,7 +146,50 @@ class Aprendiz
             'correo_personal' => $data['correo_personal'] ?? null,
             'correo_institucional' => $data['correo_institucional'] ?? null,
             'estado' => $data['estado'] ?? 'Pendiente por iniciar',
+            'jefe_id' => $jefeIdResolved,
         ]);
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     */
+    private static function resolveJefeIdFromUpdatePayload(int $empresaId, array $data): ?int
+    {
+        $jefeIdRaw = trim((string) ($data['jefe_id'] ?? ''));
+
+        if ($jefeIdRaw === '' || $jefeIdRaw === '0') {
+            return null;
+        }
+
+        if ($jefeIdRaw === '__new__') {
+            if ($empresaId <= 0) {
+                return null;
+            }
+
+            return EmpresaJefe::findOrCreate($empresaId, [
+                'nombre' => $data['nombre_jefe'] ?? '',
+                'cargo' => $data['cargo_jefe'] ?? '',
+                'correo' => $data['correo_jefe'] ?? '',
+                'telefono' => $data['telefono_jefe'] ?? '',
+                'nombre_contacto2' => $data['nombre_contacto2_jefe'] ?? '',
+                'correo_contacto2' => $data['correo_contacto2_jefe'] ?? '',
+            ]);
+        }
+
+        $jefeId = (int) $jefeIdRaw;
+        if ($jefeId <= 0) {
+            return null;
+        }
+
+        $jefe = EmpresaJefe::findById($jefeId);
+        if ($jefe === null) {
+            return null;
+        }
+        if ($empresaId > 0 && (int) ($jefe['empresa_id'] ?? 0) !== $empresaId) {
+            return null;
+        }
+
+        return $jefeId;
     }
 
     public static function findById(int $id): ?array
@@ -145,11 +200,15 @@ class Aprendiz
                 e.nombre AS empresa_nombre,
                 e.nit,
                 e.direccion,
-                e.nombre_jefe,
-                e.cargo_jefe,
-                e.telefono_jefe
+                j.nombre AS nombre_jefe,
+                j.cargo AS cargo_jefe,
+                j.telefono AS telefono_jefe,
+                j.correo AS correo_jefe,
+                j.nombre_contacto2 AS nombre_contacto2_jefe,
+                j.correo_contacto2 AS correo_contacto2_jefe
             FROM aprendices a
             LEFT JOIN empresas e ON a.empresa_id = e.id
+            LEFT JOIN empresa_jefes j ON a.jefe_id = j.id
             WHERE a.id = :id
         ";
 

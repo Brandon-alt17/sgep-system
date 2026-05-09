@@ -6,6 +6,7 @@ $placeholder = (string) ($placeholder ?? 'Buscar...');
 $required = (bool) ($required ?? false);
 $value = trim((string) ($value ?? ''));
 $options = is_array($options ?? null) ? (array) $options : [];
+$valueInputAttrs = is_array($valueInputAttrs ?? null) ? (array) $valueInputAttrs : [];
 // Misma apariencia que el select del catálogo (ui_select_classes: altura, texto, borde).
 $fieldClasses = trim(ui_select_classes() . ' cursor-text');
 
@@ -21,9 +22,24 @@ foreach ($options as $option) {
     }
 }
 $hasDisplayText = $selectedLabel !== '';
+
+$valueInputAttrHtml = '';
+foreach ($valueInputAttrs as $attrName => $attrValue) {
+    $inputAttrName = trim((string) $attrName);
+    if ($inputAttrName === '') {
+        continue;
+    }
+    if (is_bool($attrValue)) {
+        if ($attrValue) {
+            $valueInputAttrHtml .= ' ' . e($inputAttrName);
+        }
+        continue;
+    }
+    $valueInputAttrHtml .= ' ' . e($inputAttrName) . '="' . e((string) $attrValue) . '"';
+}
 ?>
 <div class="relative min-w-0 block" data-combobox-root>
-    <input type="hidden" name="<?= e($name) ?>" value="<?= e($value) ?>" data-combobox-value <?= $required ? 'data-combobox-required="1"' : '' ?>>
+    <input type="hidden" name="<?= e($name) ?>" value="<?= e($value) ?>" data-combobox-value <?= $required ? 'data-combobox-required="1"' : '' ?><?= $valueInputAttrHtml ?>>
     <div class="relative">
         <input
             type="text"

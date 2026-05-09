@@ -79,7 +79,26 @@ document.addEventListener('DOMContentLoaded', function() {
             event.stopPropagation();
         });
     }
+    const selJefe = document.getElementById('select-jefe-id');
+    if (selJefe) {
+        toggleJefeNuevoFields(selJefe);
+    }
+
 });
+
+/** Muestra u oculta los campos para crear un supervisor nuevo (modal aprendiz). */
+function toggleJefeNuevoFields(selectEl) {
+    const box = document.getElementById('jefe-nuevo-fields');
+    if (!box) {
+        return;
+    }
+    const v = selectEl && selectEl.value === '__new__';
+    if (v) {
+        box.classList.remove('hidden');
+    } else {
+        box.classList.add('hidden');
+    }
+}
 
 function abrirModalVisitas() {
     const modal = document.getElementById('modal-visitas');
