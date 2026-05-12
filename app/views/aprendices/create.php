@@ -95,7 +95,7 @@
 
             <div>
                 <label class="text-xs text-gray-500">Fecha registro Sofía Plus</label>
-                <input type="date" name="fecha_registro"
+                <input type="text" name="fecha_registro" value="" placeholder="dd/mm/aaaa" title="Formato día/mes/año (dd/mm/aaaa)" inputmode="numeric" maxlength="10" spellcheck="false" autocomplete="off"
                     class="<?= e(ui_input_classes()) ?> h-10 text-sm">
             </div>
 

@@ -39,6 +39,48 @@ function e(string $value): string
     return htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
 }
 
+/** Convierte YYYY-MM-DD (desde BD) a dd/mm/aaaa para mostrar en inputs de texto. */
+function date_iso_to_dmY(?string $iso): string
+{
+    $iso = trim((string) $iso);
+    if ($iso === '' || preg_match('/^(\d{4})-(\d{2})-(\d{2})/', $iso, $m) !== 1) {
+        return '';
+    }
+
+    return $m[3] . '/' . $m[2] . '/' . $m[1];
+}
+
+/**
+ * Normaliza fecha enviada por formulario: dd/mm/aaaa o yyyy-mm-dd → YYYY-MM-DD.
+ * Cadena vacía o inválida → ''.
+ */
+function date_post_to_iso(mixed $value): string
+{
+    $s = trim((string) $value);
+    if ($s === '') {
+        return '';
+    }
+    if (preg_match('/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/', $s, $m) === 1) {
+        $d = (int) $m[1];
+        $month = (int) $m[2];
+        $y = (int) $m[3];
+        if (!checkdate($month, $d, $y)) {
+            return '';
+        }
+
+        return sprintf('%04d-%02d-%02d', $y, $month, $d);
+    }
+    if (preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $s, $m) === 1) {
+        if (!checkdate((int) $m[2], (int) $m[3], (int) $m[1])) {
+            return '';
+        }
+
+        return $m[1] . '-' . $m[2] . '-' . $m[3];
+    }
+
+    return '';
+}
+
 function redirect(string $url): void
 {
     header('Location: ' . $url);

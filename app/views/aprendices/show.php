@@ -128,6 +128,11 @@
                         + Agregar Momento extraordinario
                     </a>
                 </div>
+                <p class="mb-3 mt-0 text-xs text-app-muted">
+                    La información general del F-023 reutiliza datos del perfil y de la empresa.
+                    <button type="button" onclick="abrirModalEditar()" class="inline cursor-pointer border-0 bg-transparent p-0 text-app-link underline hover:text-app-accent">Editar datos del aprendiz</button>
+                    para actualizarlos.
+                </p>
 
                 <div class="space-y-3 md:col-span-2 grid max-h-[320px] gap-4 overflow-y-auto pr-1">
                     <div class="flex items-center justify-between rounded-lg border border-app-border p-4 gap-3">
@@ -191,3 +196,13 @@
     </div>
 </div>
 
+<?php
+$pageToast = $pageToast ?? null;
+if (is_array($pageToast) && trim((string) ($pageToast['message'] ?? '')) !== ''):
+    partial('components/toast', [
+        'message' => (string) $pageToast['message'],
+        'variant' => (string) ($pageToast['variant'] ?? 'success'),
+        'positionClass' => 'bottom-6 left-4 right-4 z-[65] max-w-none sm:bottom-6 sm:left-auto sm:right-6 sm:max-w-sm',
+    ]);
+endif;
+?>

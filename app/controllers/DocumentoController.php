@@ -75,7 +75,7 @@ class DocumentoController
         }
 
         AprendizInfoGeneral::upsertByAprendizId($aprendizId, $_POST);
-        redirect(APP_BASE_PATH . '/documentos/info?aprendiz_id=' . $aprendizId . '&saved=1');
+        redirect(APP_BASE_PATH . '/aprendices/show?id=' . $aprendizId . '&toast=info_f023_guardada');
     }
 
     private function buildInfoData(array $aprendiz, ?array $programa, ?array $empresa, array $guardada): array

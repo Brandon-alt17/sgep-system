@@ -117,7 +117,18 @@ class AprendizController
             'jefes' => $jefes,
             'momentos' => $momentos,
             'backToListUrl' => $this->aprendicesBackUrl($_GET),
+            'pageToast' => $this->toastFromQuery((string) ($_GET['toast'] ?? '')),
         ]);
+    }
+
+    /** @return array{message: string, variant: string}|null */
+    private function toastFromQuery(string $key): ?array
+    {
+        $map = [
+            'info_f023_guardada' => ['message' => 'Información general F-023 guardada correctamente.', 'variant' => 'success'],
+        ];
+
+        return $map[$key] ?? null;
     }
 
     public function update(): void
