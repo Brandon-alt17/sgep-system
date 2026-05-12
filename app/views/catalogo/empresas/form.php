@@ -103,7 +103,7 @@ $viewLabelCls = 'm-0 text-xs font-medium uppercase tracking-wide text-app-muted'
 
 <?php elseif ($editing): ?>
 <?php partial('components/ui'); ?>
-<?php partial('components/toast', ['message' => $toastMessage, 'variant' => $toastVariant, 'positionClass' => 'bottom-24 right-6']); ?>
+<?php partial('components/toast', ['message' => $toastMessage, 'variant' => $toastVariant, 'positionClass' => 'bottom-24 right-6 z-[65]']); ?>
 
 <?php if ($errors !== []): ?>
     <section class="mb-4 rounded-md border border-rose-200 bg-rose-50 p-4 text-sm text-rose-900" role="alert">

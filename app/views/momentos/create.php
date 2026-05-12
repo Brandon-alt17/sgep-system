@@ -29,6 +29,7 @@ partial('components/page_header', [
     <?php endif; ?>
 
     <form id="momento-form" method="post" action="<?= e($accion) ?>" class="<?= e(ui_card_classes()) ?>">
+        <p class="sr-only">Las fechas usan formato día, mes y año con barras (dd/mm/aaaa).</p>
         <?php if ($modoEdicion): ?>
             <input type="hidden" name="id" value="<?= (int) ($momentoExistente['id'] ?? 0) ?>">
         <?php endif; ?>
@@ -38,13 +39,13 @@ partial('components/page_header', [
         <?php if ($tipo === 'M1'): ?>
             <div class="grid gap-4 md:grid-cols-3">
                 <label class="<?= e(ui_label_classes()) ?>">Fecha inicio etapa productiva
-                    <input type="date" name="fecha_inicio_etapa" value="<?= e($valueFrom($momento, 'fecha_inicio_etapa')) ?>" class="<?= e(ui_input_classes()) ?>">
+                    <input type="text" name="fecha_inicio_etapa" value="<?= e(date_iso_to_dmY($valueFrom($momento, 'fecha_inicio_etapa'))) ?>" data-date-input="dmy" placeholder="dd/mm/aaaa" title="Formato día/mes/año (dd/mm/aaaa)" inputmode="numeric" maxlength="10" spellcheck="false" autocomplete="off" class="<?= e(ui_input_classes()) ?>">
                 </label>
                 <label class="<?= e(ui_label_classes()) ?>">Fecha fin etapa productiva
-                    <input type="date" name="fecha_fin_etapa" value="<?= e($valueFrom($momento, 'fecha_fin_etapa')) ?>" class="<?= e(ui_input_classes()) ?>">
+                    <input type="text" name="fecha_fin_etapa" value="<?= e(date_iso_to_dmY($valueFrom($momento, 'fecha_fin_etapa'))) ?>" data-date-input="dmy" placeholder="dd/mm/aaaa" title="Formato día/mes/año (dd/mm/aaaa)" inputmode="numeric" maxlength="10" spellcheck="false" autocomplete="off" class="<?= e(ui_input_classes()) ?>">
                 </label>
                 <label class="<?= e(ui_label_classes()) ?>">Fecha afiliación ARL
-                    <input type="date" name="fecha_arl" value="<?= e($valueFrom($momento, 'fecha_arl')) ?>" class="<?= e(ui_input_classes()) ?>">
+                    <input type="text" name="fecha_arl" value="<?= e(date_iso_to_dmY($valueFrom($momento, 'fecha_arl'))) ?>" data-date-input="dmy" placeholder="dd/mm/aaaa" title="Formato día/mes/año (dd/mm/aaaa)" inputmode="numeric" maxlength="10" spellcheck="false" autocomplete="off" class="<?= e(ui_input_classes()) ?>">
                 </label>
                 <label class="<?= e(ui_label_classes()) ?>">Número póliza ARL
                     <input type="text" name="numero_poliza_arl" maxlength="<?= $maxShortText ?>" value="<?= e($valueFrom($momento, 'numero_poliza_arl')) ?>" class="<?= e(ui_input_classes()) ?>">
@@ -78,11 +79,11 @@ partial('components/page_header', [
         <?php else: ?>
             <div class="grid gap-4 md:grid-cols-3">
                 <label class="<?= e(ui_label_classes()) ?>">Fecha inicio etapa productiva
-                    <input type="date" name="fecha_inicio_etapa" value="<?= e($valueFrom($momento, 'fecha_inicio_etapa')) ?>" class="<?= e(ui_input_classes()) ?>">
+                    <input type="text" name="fecha_inicio_etapa" value="<?= e(date_iso_to_dmY($valueFrom($momento, 'fecha_inicio_etapa'))) ?>" data-date-input="dmy" placeholder="dd/mm/aaaa" title="Formato día/mes/año (dd/mm/aaaa)" inputmode="numeric" maxlength="10" spellcheck="false" autocomplete="off" class="<?= e(ui_input_classes()) ?>">
                 </label>
                 <label class="<?= e(ui_label_classes()) ?>">
                     <?= $tipo === 'M2' ? 'Fecha momento de seguimiento' : 'Fecha fin etapa de ejecución' ?>
-                    <input type="date" name="fecha_visita" value="<?= e($valueFrom($momento, 'fecha_visita')) ?>" class="<?= e(ui_input_classes()) ?>">
+                    <input type="text" name="fecha_visita" value="<?= e(date_iso_to_dmY($valueFrom($momento, 'fecha_visita'))) ?>" data-date-input="dmy" placeholder="dd/mm/aaaa" title="Formato día/mes/año (dd/mm/aaaa)" inputmode="numeric" maxlength="10" spellcheck="false" autocomplete="off" class="<?= e(ui_input_classes()) ?>">
                 </label>
                 <?php if ($tipo === 'M3'): ?>
                     <label class="<?= e(ui_label_classes()) ?>">Número de visitas realizadas
@@ -112,7 +113,7 @@ partial('components/page_header', [
 
         <?php if ($tipo !== 'M3'): ?>
             <label class="mt-4 <?= e(ui_label_classes()) ?> md:max-w-sm">Próxima visita
-                <input type="date" name="proxima_visita" value="<?= e($valueFrom($momento, 'proxima_visita', (string) ($aprendiz['proxima_visita'] ?? ''))) ?>" class="<?= e(ui_input_classes()) ?>">
+                <input type="text" name="proxima_visita" value="<?= e(date_iso_to_dmY($valueFrom($momento, 'proxima_visita', (string) ($aprendiz['proxima_visita'] ?? '')))) ?>" data-date-input="dmy" placeholder="dd/mm/aaaa" title="Formato día/mes/año (dd/mm/aaaa)" inputmode="numeric" maxlength="10" spellcheck="false" autocomplete="off" class="<?= e(ui_input_classes()) ?>">
             </label>
         <?php endif; ?>
 
@@ -215,7 +216,7 @@ partial('components/page_header', [
                     <input type="text" name="ciudad_diligenciamiento" maxlength="<?= $maxShortText ?>" value="<?= e($valueFrom($momento, 'ciudad_diligenciamiento')) ?>" class="<?= e(ui_input_classes()) ?>">
                 </label>
                 <label class="<?= e(ui_label_classes()) ?>">Fecha diligenciamiento
-                    <input type="date" name="fecha_diligenciamiento" value="<?= e($valueFrom($momento, 'fecha_diligenciamiento')) ?>" class="<?= e(ui_input_classes()) ?>">
+                    <input type="text" name="fecha_diligenciamiento" value="<?= e(date_iso_to_dmY($valueFrom($momento, 'fecha_diligenciamiento'))) ?>" data-date-input="dmy" placeholder="dd/mm/aaaa" title="Formato día/mes/año (dd/mm/aaaa)" inputmode="numeric" maxlength="10" spellcheck="false" autocomplete="off" class="<?= e(ui_input_classes()) ?>">
                 </label>
             </section>
         <?php endif; ?>
@@ -226,7 +227,7 @@ partial('components/page_header', [
                     <input type="text" name="ciudad_diligenciamiento" maxlength="<?= $maxShortText ?>" value="<?= e($valueFrom($momento, 'ciudad_diligenciamiento')) ?>" class="<?= e(ui_input_classes()) ?>">
                 </label>
                 <label class="<?= e(ui_label_classes()) ?>">Fecha diligenciamiento
-                    <input type="date" name="fecha_diligenciamiento" value="<?= e($valueFrom($momento, 'fecha_diligenciamiento')) ?>" class="<?= e(ui_input_classes()) ?>">
+                    <input type="text" name="fecha_diligenciamiento" value="<?= e(date_iso_to_dmY($valueFrom($momento, 'fecha_diligenciamiento'))) ?>" data-date-input="dmy" placeholder="dd/mm/aaaa" title="Formato día/mes/año (dd/mm/aaaa)" inputmode="numeric" maxlength="10" spellcheck="false" autocomplete="off" class="<?= e(ui_input_classes()) ?>">
                 </label>
             <?php endif; ?>
             <label class="<?= e(ui_label_classes()) ?>">Modalidad diligenciamiento
@@ -246,12 +247,20 @@ partial('components/page_header', [
 
     </form>
 
-    <div class="pb-20" aria-hidden="true"></div>
-    <div class="fixed inset-x-0 bottom-0 z-[60] border-t border-app-border bg-app-panel shadow-xsSoft">
+    <div class="pb-28 sm:pb-32" aria-hidden="true"></div>
+    <div class="fixed inset-x-0 bottom-0 z-[60] border-t border-app-border bg-app-panel pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] shadow-xsSoft">
         <div class="mx-auto flex min-h-[70px] w-full items-center justify-end gap-3 px-4 py-3">
             <button form="momento-form" type="submit" class="<?= e(ui_button_primary_classes()) ?> self-center justify-center text-white">
                 <?= $modoEdicion ? 'Actualizar momento' : 'Guardar momento' ?>
             </button>
         </div>
     </div>
+    <?php partial('components/toast', [
+        'message' => '',
+        'variant' => 'warning',
+        'positionClass' => 'bottom-28 left-4 right-4 z-[70] max-w-none sm:left-auto sm:right-6 sm:max-w-sm',
+        'toastRootId' => 'f023-flow-toast',
+    ]); ?>
+    <script src="<?= e(APP_BASE_PATH) ?>/js/ui-toast.js"></script>
+    <script src="<?= e(APP_BASE_PATH) ?>/js/date-input-dmy.js"></script>
 <?php endif; ?>

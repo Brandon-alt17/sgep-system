@@ -146,7 +146,7 @@
 
                         <div>
                             <label class="form-label">Fecha</label>
-                            <input type="date" class="form-input">
+                            <input type="text" class="form-input" placeholder="dd/mm/aaaa" title="Formato día/mes/año (dd/mm/aaaa)" inputmode="numeric" maxlength="10" spellcheck="false" autocomplete="off">
                         </div>
 
                         <div>
@@ -180,7 +180,7 @@
 
                         <div>
                             <label class="form-label">Fecha</label>
-                            <input type="date" class="form-input">
+                            <input type="text" class="form-input" placeholder="dd/mm/aaaa" title="Formato día/mes/año (dd/mm/aaaa)" inputmode="numeric" maxlength="10" spellcheck="false" autocomplete="off">
                         </div>
 
                         <div>
@@ -214,7 +214,7 @@
 
                         <div>
                             <label class="form-label">Fecha</label>
-                            <input type="date" class="form-input">
+                            <input type="text" class="form-input" placeholder="dd/mm/aaaa" title="Formato día/mes/año (dd/mm/aaaa)" inputmode="numeric" maxlength="10" spellcheck="false" autocomplete="off">
                         </div>
 
                         <div>

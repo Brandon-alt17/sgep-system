@@ -89,11 +89,9 @@ class AprendizInfoGeneral
         };
 
         $nullableDate = static function (mixed $value): ?string {
-            $value = trim((string) $value);
-            if ($value === '') {
-                return null;
-            }
-            return preg_match('/^\d{4}-\d{2}-\d{2}$/', $value) === 1 ? $value : null;
+            $iso = date_post_to_iso($value);
+
+            return $iso === '' ? null : $iso;
         };
 
         return [
