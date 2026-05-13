@@ -99,6 +99,10 @@ class Empresa
             nombre_contacto2 = :nombre_contacto2,
             correo_contacto2 = :correo_contacto2,
             direccion_practica = :direccion_practica,
+            nombre_jefe = :nombre_jefe,
+            cargo_jefe = :cargo_jefe,
+            telefono_jefe = :telefono_jefe,
+            correo_jefe = :correo_jefe,
             updated_at = NOW()
             WHERE id = :id';
         $row = self::bindableRow($data);

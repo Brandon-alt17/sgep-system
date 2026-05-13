@@ -115,8 +115,8 @@
                     <?php infoRow('Dirección', $aprendiz['direccion'] ?? 'Dato no registrado'); ?>
                     <?php infoRow('Supervisor', $aprendiz['nombre_jefe'] ?? 'Dato no registrado'); ?>
                     <?php infoRow('Cargo', $aprendiz['cargo_jefe'] ?? 'Dato no registrado'); ?>
-                    <?php infoRow('Correo supervisor', $aprendiz['correo_jefe'] ?? 'Dato no registrado', 'mail'); ?>
                     <?php infoRow('Teléfono contacto', $aprendiz['telefono_jefe'] ?? 'Dato no registrado'); ?>
+                    <?php infoRow('Correo supervisor', $aprendiz['correo_jefe'] ?? 'Dato no registrado', 'mail'); ?>
                 </div>
             </section>
 

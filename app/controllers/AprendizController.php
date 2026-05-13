@@ -1,13 +1,10 @@
 <?php
-
 declare(strict_types=1);
-
 namespace App\Controllers;
-
 use App\Helpers\Validator;
 use App\Models\Aprendiz;
-use App\Models\EmpresaJefe;
 use App\Models\Programa;
+use App\Models\Empresa;
 
 class AprendizController
 {
@@ -24,7 +21,6 @@ class AprendizController
                 'activeFilters' => $activeFilters,
             ]);
             $rowsHtml = (string) ob_get_clean();
-
             header('Content-Type: application/json; charset=utf-8');
             echo json_encode([
                 'ok' => true,
@@ -72,30 +68,12 @@ class AprendizController
             view('errors/404', ['uri' => '/aprendices/show?id=' . $id]);
             return;
         }
-        
         $momentos = [
-            [
-                'id' => 'm1',
-                'label' => 'Momento 1 — Planeación',
-                'estado' => 'Completado',
-                'fecha' => '15/03/2025'
-            ],
-            [
-                'id' => 'm2',
-                'label' => 'Momento 2 — Seguimiento',
-                'estado' => 'Incompleto',
-                'fecha' => '10/04/2025'
-            ],
-            [
-                'id' => 'm3',
-                'label' => 'Momento 3 — Evaluación final',
-                'estado' => 'No iniciado'
-            ]
+            ['id' => 'm1', 'label' => 'Momento 1 — Planeación', 'estado' => 'Completado', 'fecha' => '15/03/2025'],
+            ['id' => 'm2', 'label' => 'Momento 2 — Seguimiento', 'estado' => 'Incompleto', 'fecha' => '10/04/2025'],
+            ['id' => 'm3', 'label' => 'Momento 3 — Evaluación final', 'estado' => 'No iniciado']
         ];
-
-        $empresaId = (int) ($aprendiz['empresa_id'] ?? 0);
-        $jefes = $empresaId > 0 ? EmpresaJefe::listByEmpresa($empresaId) : [];
-
+        $jefes = [];
         view('aprendices/show', [
             'aprendiz' => $aprendiz,
             'jefes' => $jefes,
@@ -107,11 +85,59 @@ class AprendizController
     public function update(): void
     {
         $id = (int) ($_POST['id'] ?? 0);
+
+        // Actualizar aprendiz
         Aprendiz::update($id, $_POST);
+
+        // Actualizar empresa
+        $empresaId = (int) ($_POST['empresa_id'] ?? 0);
+
+        if ($empresaId > 0) {
+            Empresa::update($empresaId, [
+                'nombre' => $_POST['empresa_nombre'] ?? null,
+                'nit' => $_POST['nit'] ?? null,
+                'direccion' => $_POST['direccion'] ?? null,
+                'ciudad' => $_POST['ciudad'] ?? null,
+                'correo_org' => $_POST['correo_org'] ?? null,
+                'nombre_contacto2' => $_POST['nombre_contacto2'] ?? null,
+                'correo_contacto2' => $_POST['correo_contacto2'] ?? null,
+                'direccion_practica' => $_POST['direccion_practica'] ?? null,
+                'nombre_jefe' => $_POST['nombre_jefe'] ?? null,
+                'cargo_jefe' => $_POST['cargo_jefe'] ?? null,
+                'telefono_jefe' => $_POST['telefono_jefe'] ?? null,
+                'correo_jefe' => $_POST['correo_jefe'] ?? null,
+            ]);
+        }
+
         redirect(APP_BASE_PATH . '/aprendices/show?id=' . $id);
     }
 
-    /** @param array<string,mixed> $input */
+    /**
+     * Método actualizado para usar el modelo Aprendiz::saveVisitas
+     */
+    public function updateVisitas(): void
+    {
+        header('Content-Type: application/json; charset=utf-8');
+        try {
+            $id = (int) ($_POST['aprendiz_id'] ?? 0);
+            if ($id <= 0) {
+                echo json_encode(['ok' => false, 'error' => 'ID de aprendiz inválido']);
+                return;
+            }
+
+            // Llamamos al modelo que ya contiene la lógica de validación y cálculo de fecha
+            $success = Aprendiz::saveVisitas($id, $_POST);
+            
+            if ($success) {
+                echo json_encode(['ok' => true]);
+            } else {
+                echo json_encode(['ok' => false, 'error' => 'No se pudo actualizar la base de datos']);
+            }
+        } catch (\Throwable $e) {
+            echo json_encode(['ok' => false, 'error' => $e->getMessage()]);
+        }
+    }
+
     private function sanitizeAprendicesFilters(array $input): array
     {
         $q = trim((string) ($input['q'] ?? ''));
@@ -123,7 +149,6 @@ class AprendizController
         if (!in_array($from, ['grupos', 'empresas'], true)) {
             $from = '';
         }
-
         return [
             'q' => $q,
             'ficha' => $ficha,
@@ -134,7 +159,6 @@ class AprendizController
         ];
     }
 
-    /** @param array<string,mixed> $input */
     private function aprendicesBackUrl(array $input): string
     {
         $filters = $this->sanitizeAprendicesFilters($input);

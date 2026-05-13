@@ -296,7 +296,7 @@
                         <label class="form-label">Estado</label>
                         <select name="estado" class="form-input">
                             <option value="Pendiente por iniciar" <?= ($aprendiz['estado'] ?? '') === 'Pendiente por iniciar' ? 'selected' : '' ?>>Pendiente por iniciar</option>
-                            <option value="En ejecución" <?= ($aprendiz['estado'] ?? '') === 'En ejecución' ? 'selected' : 'En ejecución' ?>>En ejecución</option>
+                            <option value="En ejecución" <?= ($aprendiz['estado'] ?? '') === 'En ejecución' ? 'selected' : '' ?>>En ejecución</option>
                             <option value="Certificado" <?= ($aprendiz['estado'] ?? '') === 'Certificado' ? 'selected' : 'Certificado' ?>>Certificado</option>
                             <option value="Aplazada" <?= ($aprendiz['estado'] ?? '') === 'Aplazada' ? 'selected' : 'Aplazada' ?>>Aplazada</option>
                             <option value="Finalizada" <?= ($aprendiz['estado'] ?? '') === 'Finalizada' ? 'selected' : 'Finalizada' ?>>Finalizada</option>
@@ -311,70 +311,75 @@
             <!-- DATOS EMPRESA (Menos campos, más compacto) -->
             <!-- ===================== -->
             <div id="contenido-empresa" class="hidden">
+
+                <!-- DATOS EMPRESA -->
                 <div class="form-grid">
                     <div class="form-field">
                         <label class="form-label">Razón social</label>
-                        <input type="text" name="empresa_nombre" value="<?= e($aprendiz['empresa_nombre'] ?? '') ?>" class="form-input">
+                        <input type="text" 
+                            name="empresa_nombre" 
+                            value="<?= e($aprendiz['empresa_nombre'] ?? '') ?>" 
+                            class="form-input">
                     </div>
+
                     <div class="form-field">
                         <label class="form-label">NIT</label>
-                        <input type="text" name="nit" value="<?= e($aprendiz['nit'] ?? '') ?>" class="form-input">
+                        <input type="text" 
+                            name="nit" 
+                            value="<?= e($aprendiz['nit'] ?? '') ?>" 
+                            class="form-input">
                     </div>
+
                     <div class="form-field">
                         <label class="form-label">Dirección</label>
-                        <input type="text" name="direccion" value="<?= e($aprendiz['direccion'] ?? '') ?>" class="form-input">
-                    </div>
-                    <div class="form-field md:col-span-2">
-                        <label class="form-label" for="select-jefe-id">Supervisor</label>
-                        <select name="jefe_id" id="select-jefe-id" class="form-input" onchange="toggleJefeNuevoFields(this)">
-                            <option value="">Sin supervisor asignado</option>
-                            <?php foreach ($jefes as $jefeRow): ?>
-                                <?php $jid = (int) ($jefeRow['id'] ?? 0); ?>
-                                <option value="<?= $jid ?>" <?= $currentJefeId === $jid ? 'selected' : '' ?>>
-                                    <?= e(trim((string) ($jefeRow['nombre'] ?? ''))) ?><?php
-                                    $cj = trim((string) ($jefeRow['cargo'] ?? ''));
-                                    echo $cj !== '' ? ' — ' . e($cj) : '';
-                                    ?>
-                                </option>
-                            <?php endforeach; ?>
-                            <?php if ($currentJefeId > 0 && !in_array($currentJefeId, $jefeIdsInList, true)): ?>
-                                <option value="<?= $currentJefeId ?>" selected>
-                                    <?= e(trim((string) ($aprendiz['nombre_jefe'] ?? 'Supervisor #' . $currentJefeId))) ?> (actual)
-                                </option>
-                            <?php endif; ?>
-                            <option value="__new__">+ Crear nuevo supervisor</option>
-                        </select>
-                    </div>
-                    <div id="jefe-nuevo-fields" class="form-grid hidden md:col-span-2" style="grid-column: 1 / -1;">
-                        <div class="form-field md:col-span-2">
-                            <p class="text-xs text-gray-500 m-0 mb-2">Complete los datos del nuevo supervisor; se guardará vinculado a esta empresa.</p>
-                        </div>
-                        <div class="form-field">
-                            <label class="form-label">Nombre del supervisor</label>
-                            <input type="text" name="nombre_jefe" value="" class="form-input" autocomplete="off">
-                        </div>
-                        <div class="form-field">
-                            <label class="form-label">Cargo</label>
-                            <input type="text" name="cargo_jefe" value="" class="form-input" autocomplete="off">
-                        </div>
-                        <div class="form-field">
-                            <label class="form-label">Correo</label>
-                            <input type="email" name="correo_jefe" value="" class="form-input" autocomplete="off">
-                        </div>
-                        <div class="form-field">
-                            <label class="form-label">Teléfono</label>
-                            <input type="text" name="telefono_jefe" value="" class="form-input" autocomplete="off">
-                        </div>
-                        <div class="form-field">
-                            <label class="form-label">Contacto alternativo (nombre)</label>
-                            <input type="text" name="nombre_contacto2_jefe" value="" class="form-input" autocomplete="off">
-                        </div>
-                        <div class="form-field">
-                            <label class="form-label">Contacto alternativo (correo)</label>
-                            <input type="email" name="correo_contacto2_jefe" value="" class="form-input" autocomplete="off">
-                        </div>
+                        <input type="text" 
+                            name="direccion" 
+                            value="<?= e($aprendiz['direccion'] ?? '') ?>" 
+                            class="form-input">
                     </div>
                 </div>
+
+                <!-- SUPERVISOR -->
+                <div class="mt-6">
+                    <label class="form-label block">Supervisor</label>
+
+                    <div class="form-grid">
+
+                        <div class="form-field">
+                            <label class="form-label mt-2">Nombre del supervisor</label>
+                            <input type="text"
+                                name="nombre_jefe"
+                                value="<?= e($aprendiz['nombre_jefe'] ?? '') ?>"
+                                class="form-input">
+                        </div>
+
+                        <div class="form-field">
+                            <label class="form-label">Cargo</label>
+                            <input type="text"
+                                name="cargo_jefe"
+                                value="<?= e($aprendiz['cargo_jefe'] ?? '') ?>"
+                                class="form-input">
+                        </div>
+
+                        <div class="form-field">
+                            <label class="form-label">Correo</label>
+                            <input type="email"
+                                name="correo_jefe"
+                                value="<?= e($aprendiz['correo_jefe'] ?? '') ?>"
+                                class="form-input">
+                        </div>
+
+                        <div class="form-field">
+                            <label class="form-label">Teléfono</label>
+                            <input type="text"
+                                name="telefono_jefe"
+                                value="<?= e($aprendiz['telefono_jefe'] ?? '') ?>"
+                                class="form-input">
+                        </div>
+
+                    </div>
+                </div>
+
             </div>
 
             <!-- Footer -->

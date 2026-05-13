@@ -124,7 +124,7 @@ if (!function_exists('e')) {
             </span>
         </div>
     </div>
-    <div class="divide-y divide-gray-100 min-h-[300px]">
+    <div class="divide-y divide-gray-100">
         <?php if (empty($alerts)): ?>
         <!-- Mensaje bonito cuando no hay visitas -->
         <div class="mt-4 mb-4 flex flex-col items-center justify-center py-12 px-6 text-center h-full">

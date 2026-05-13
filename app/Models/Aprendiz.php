@@ -1,9 +1,6 @@
 <?php
-
 declare(strict_types=1);
-
 namespace App\Models;
-
 use App\Helpers\Database;
 use PDO;
 
@@ -29,24 +26,20 @@ class Aprendiz
             $where[] = 'a.estado = :estado';
             $params['estado'] = $filters['estado'];
         }
-
         if (!empty($filters['ficha'])) {
             $where[] = 'a.ficha = :ficha';
             $params['ficha'] = $filters['ficha'];
         }
-
         $empresaId = (int) ($filters['empresa_id'] ?? 0);
         if ($empresaId > 0) {
             $where[] = 'a.empresa_id = :empresa_id';
             $params['empresa_id'] = $empresaId;
         }
-
         $programaId = (int) ($filters['programa_id'] ?? 0);
         if ($programaId > 0) {
             $where[] = 'a.programa_id = :programa_id';
             $params['programa_id'] = $programaId;
         }
-
         if (!empty($filters['q'])) {
             $where[] = '(a.nombre_completo LIKE :q_nombre OR a.numero_documento LIKE :q_documento)';
             $likeQ = '%' . $filters['q'] . '%';
@@ -55,35 +48,29 @@ class Aprendiz
         }
 
         $sql = '
-            SELECT 
-                a.*,
-                e.nombre AS empresa_nombre,
-                e.nit
-            FROM aprendices a
-            LEFT JOIN empresas e ON a.empresa_id = e.id
+        SELECT
+        a.*,
+        e.nombre AS empresa_nombre,
+        e.nit
+        FROM aprendices a
+        LEFT JOIN empresas e ON a.empresa_id = e.id
         ';
-
         if ($where !== []) {
             $sql .= ' WHERE ' . implode(' AND ', $where);
         }
-
         $sql .= ' ORDER BY a.created_at DESC LIMIT :limit OFFSET :offset';
 
         $stmt = $pdo->prepare($sql);
-
         foreach ($params as $k => $v) {
             $stmt->bindValue(':' . $k, $v);
         }
-
         $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
         $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
-
         $stmt->execute();
 
         return $stmt->fetchAll();
     }
 
-    // Agregar método para obtener valores únicos de fichas
     public static function getUniqueFichas(): array
     {
         $stmt = Database::connection()->prepare('SELECT DISTINCT ficha FROM aprendices WHERE ficha IS NOT NULL AND ficha != "" ORDER BY ficha');
@@ -91,7 +78,6 @@ class Aprendiz
         return array_column($stmt->fetchAll(), 'ficha');
     }
 
-    // Agregar método para obtener valores únicos de estados
     public static function getUniqueEstados(): array
     {
         $stmt = Database::connection()->prepare('SELECT DISTINCT estado FROM aprendices WHERE estado IS NOT NULL ORDER BY estado');
@@ -109,7 +95,7 @@ class Aprendiz
     public static function create(array $data): int
     {
         $sql = 'INSERT INTO aprendices (nombre_completo, tipo_documento, numero_documento, telefono, correo_personal, correo_institucional, programa_id, ficha, estado, created_at, updated_at)
-                VALUES (:nombre_completo, :tipo_documento, :numero_documento, :telefono, :correo_personal, :correo_institucional, :programa_id, :ficha, :estado, NOW(), NOW())';
+        VALUES (:nombre_completo, :tipo_documento, :numero_documento, :telefono, :correo_personal, :correo_institucional, :programa_id, :ficha, :estado, NOW(), NOW())';
         $pdo = Database::connection();
         $stmt = $pdo->prepare($sql);
         $stmt->execute([
@@ -128,93 +114,61 @@ class Aprendiz
 
     public static function update(int $id, array $data): void
     {
-        $empresaId = (int) ($data['empresa_id'] ?? 0);
-        if ($empresaId <= 0) {
-            $stmt = Database::connection()->prepare('SELECT empresa_id FROM aprendices WHERE id = :id LIMIT 1');
-            $stmt->execute(['id' => $id]);
-            $row = $stmt->fetch();
-            $empresaId = (int) ($row['empresa_id'] ?? 0);
-        }
+        $sql = '
+            UPDATE aprendices SET
+                nombre_completo = :nombre_completo,
+                tipo_documento = :tipo_documento,
+                numero_documento = :numero_documento,
+                telefono = :telefono,
+                correo_personal = :correo_personal,
+                correo_institucional = :correo_institucional,
+                direccion_domicilio = :direccion_domicilio,
+                alternativa_ep = :alternativa_ep,
+                ficha = :ficha,
+                nombre_instructor_seguimiento = :nombre_instructor_seguimiento,
+                telefono_instructor_seguimiento = :telefono_instructor_seguimiento,
+                estado = :estado,
+                updated_at = NOW()
+            WHERE id = :id
+        ';
 
-        $jefeIdResolved = self::resolveJefeIdFromUpdatePayload($empresaId, $data);
-
-        $sql = 'UPDATE aprendices SET nombre_completo=:nombre_completo, telefono=:telefono, correo_personal=:correo_personal, correo_institucional=:correo_institucional, estado=:estado, jefe_id=:jefe_id, updated_at=NOW() WHERE id=:id';
         Database::connection()->prepare($sql)->execute([
             'id' => $id,
-            'nombre_completo' => $data['nombre_completo'],
+            'nombre_completo' => $data['nombre_completo'] ?? null,
+            'tipo_documento' => $data['tipo_documento'] ?? null,
+            'numero_documento' => $data['numero_documento'] ?? null,
             'telefono' => $data['telefono'] ?? null,
             'correo_personal' => $data['correo_personal'] ?? null,
             'correo_institucional' => $data['correo_institucional'] ?? null,
+            'direccion_domicilio' => $data['direccion_domicilio'] ?? null,
+            'alternativa_ep' => $data['alternativa_ep'] ?? null,
+            'ficha' => $data['ficha'] ?? null,
+            'nombre_instructor_seguimiento' => $data['nombre_instructor_seguimiento'] ?? null,
+            'telefono_instructor_seguimiento' => $data['telefono_instructor_seguimiento'] ?? null,
             'estado' => $data['estado'] ?? 'Pendiente por iniciar',
-            'jefe_id' => $jefeIdResolved,
         ]);
-    }
-
-    /**
-     * @param array<string, mixed> $data
-     */
-    private static function resolveJefeIdFromUpdatePayload(int $empresaId, array $data): ?int
-    {
-        $jefeIdRaw = trim((string) ($data['jefe_id'] ?? ''));
-
-        if ($jefeIdRaw === '' || $jefeIdRaw === '0') {
-            return null;
-        }
-
-        if ($jefeIdRaw === '__new__') {
-            if ($empresaId <= 0) {
-                return null;
-            }
-
-            return EmpresaJefe::findOrCreate($empresaId, [
-                'nombre' => $data['nombre_jefe'] ?? '',
-                'cargo' => $data['cargo_jefe'] ?? '',
-                'correo' => $data['correo_jefe'] ?? '',
-                'telefono' => $data['telefono_jefe'] ?? '',
-                'nombre_contacto2' => $data['nombre_contacto2_jefe'] ?? '',
-                'correo_contacto2' => $data['correo_contacto2_jefe'] ?? '',
-            ]);
-        }
-
-        $jefeId = (int) $jefeIdRaw;
-        if ($jefeId <= 0) {
-            return null;
-        }
-
-        $jefe = EmpresaJefe::findById($jefeId);
-        if ($jefe === null) {
-            return null;
-        }
-        if ($empresaId > 0 && (int) ($jefe['empresa_id'] ?? 0) !== $empresaId) {
-            return null;
-        }
-
-        return $jefeId;
     }
 
     public static function findById(int $id): ?array
     {
         $sql = "
-            SELECT 
-                a.*,
-                e.nombre AS empresa_nombre,
-                e.nit,
-                e.direccion,
-                j.nombre AS nombre_jefe,
-                j.cargo AS cargo_jefe,
-                j.telefono AS telefono_jefe,
-                j.correo AS correo_jefe,
-                j.nombre_contacto2 AS nombre_contacto2_jefe,
-                j.correo_contacto2 AS correo_contacto2_jefe
-            FROM aprendices a
-            LEFT JOIN empresas e ON a.empresa_id = e.id
-            LEFT JOIN empresa_jefes j ON a.jefe_id = j.id
-            WHERE a.id = :id
+        SELECT
+        a.*,
+        e.nombre AS empresa_nombre,
+        e.nit,
+        e.direccion,
+        e.nombre_jefe,
+        e.cargo_jefe,
+        e.telefono_jefe,
+        e.correo_jefe,
+        e.nombre_contacto2 AS nombre_contacto2_jefe,
+        e.correo_contacto2 AS correo_contacto2_jefe
+        FROM aprendices a
+        LEFT JOIN empresas e ON a.empresa_id = e.id
+        WHERE a.id = :id
         ";
-
         $stmt = Database::connection()->prepare($sql);
         $stmt->execute(['id' => $id]);
-
         return $stmt->fetch() ?: null;
     }
 
@@ -241,5 +195,31 @@ class Aprendiz
             $pdo->rollBack();
             throw $e;
         }
+    }
+
+    public static function saveVisitas(int $id, array $data): bool
+    {
+        $pdo = Database::connection();
+        
+        // Determinar estados
+        $m1Done = isset($data['completado_momento1']);
+        $m2Done = isset($data['completado_momento2']);
+        
+        // Calcular próxima visita según la lógica progresiva
+        $proximaVisita = null;
+
+        if (!$m1Done && !empty($data['fecha_momento1'])) {
+            $proximaVisita = $data['fecha_momento1'];
+        } elseif ($m1Done && !$m2Done && !empty($data['fecha_momento2'])) {
+            $proximaVisita = $data['fecha_momento2'];
+        } elseif ($m1Done && $m2Done && !empty($data['fecha_momento3'])) {
+            $proximaVisita = $data['fecha_momento3'];
+        }
+
+        $sql = 'UPDATE aprendices SET proxima_visita = :proxima_visita WHERE id = :id';
+        return $pdo->prepare($sql)->execute([
+            'proxima_visita' => $proximaVisita,
+            'id' => $id
+        ]);
     }
 }
