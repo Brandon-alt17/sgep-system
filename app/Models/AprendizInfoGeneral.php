@@ -101,7 +101,7 @@ class AprendizInfoGeneral
             'programa_formacion' => $nullableString($data['programa_formacion'] ?? null),
             'numero_grupo' => $nullableString($data['numero_grupo'] ?? null),
             'modalidad_formacion' => $nullableString($data['modalidad_formacion'] ?? null),
-            'estrategia_formativa' => $nullableString($data['estrategia_formativa'] ?? null),
+            'estrategia_formativa' => $nullableString(normalize_multiline_text((string) ($data['estrategia_formativa'] ?? ''))),
             'fecha_fin_etapa_lectiva' => $nullableDate($data['fecha_fin_etapa_lectiva'] ?? null),
             'fecha_registro_sofiaplus' => $nullableDate($data['fecha_registro_sofiaplus'] ?? null),
             'asistencia_nombre' => $nullableString($data['asistencia_nombre'] ?? null),

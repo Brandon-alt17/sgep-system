@@ -48,12 +48,15 @@ $fieldLabel = static function (
     string $type = 'text'
 ) use ($valueFrom, $info, $faltantesKeysLookup): void {
     $value = $valueFrom($info, $name);
+    if ($type === 'textarea') {
+        $value = normalize_multiline_text($value);
+    }
     $missing = $value === '';
     $baseInputClass = e(ui_input_classes());
     $missingBorderClass = $missing ? ' border-amber-300 focus:border-amber-400 focus:ring-amber-100' : '';
     $pendienteAttr = ($missing && isset($faltantesKeysLookup[$name])) ? ' data-f023-pendiente="1"' : '';
     ?>
-    <div class="min-w-0" id="f023-campo-<?= e($name) ?>"<?= $pendienteAttr ?>>
+    <div class="min-w-0 self-start" id="f023-campo-<?= e($name) ?>"<?= $pendienteAttr ?>>
     <label class="<?= e(ui_label_classes()) ?>">
         <span class="flex flex-wrap items-center gap-2">
             <?= e($label) ?>
@@ -64,28 +67,43 @@ $fieldLabel = static function (
                 <span class="inline-flex h-4 w-4 text-amber-600 [&_svg]:h-4 [&_svg]:w-4" aria-label="Falta completar"><?= ui_icon('circle-alert') ?></span>
             <?php endif; ?>
         </span>
+        <?php
+        $textareaClass = $baseInputClass . $missingBorderClass . ' min-h-10 min-w-0 max-w-full resize-none overflow-hidden py-2 leading-snug';
+        $readonlyTextareaFilled = 'mt-1.5 min-w-0 max-w-full rounded-lg border border-app-borderControlStrong bg-gray-50 px-3 py-2 text-sm leading-snug text-gray-500 whitespace-pre-wrap break-words';
+        $readonlyTextareaEmpty = $readonlyTextareaFilled . ' flex h-10 items-center';
+        ?>
         <?php if ($editable): ?>
             <?php if ($type === 'date'): ?>
                 <input type="text" name="<?= e($name) ?>" value="<?= e(date_iso_to_dmY($value)) ?>" data-date-input="dmy" placeholder="dd/mm/aaaa" title="Formato día/mes/año (dd/mm/aaaa)" inputmode="numeric" maxlength="10" spellcheck="false" autocomplete="off" aria-describedby="f023-date-format-hint" class="<?= $baseInputClass . $missingBorderClass ?>">
+            <?php elseif ($type === 'textarea'): ?>
+                <textarea name="<?= e($name) ?>" rows="1" spellcheck="true" data-auto-resize-textarea class="<?= $textareaClass ?>"><?= e($value) ?></textarea>
             <?php else: ?>
                 <input type="<?= e($type) ?>" name="<?= e($name) ?>" value="<?= e($value) ?>" class="<?= $baseInputClass . $missingBorderClass ?>">
             <?php endif; ?>
         <?php else: ?>
-            <div class="mt-1.5 flex h-10 w-full items-center rounded-lg border border-app-borderControlStrong bg-gray-50 px-3 text-sm text-gray-500">
-                <?php if ($type === 'date'): ?>
+            <?php if ($type === 'date'): ?>
+                <div class="mt-1.5 flex h-10 w-full items-center rounded-lg border border-app-borderControlStrong bg-gray-50 px-3 text-sm text-gray-500">
                     <?php if ($value !== ''): ?>
                         <?= e(date_iso_to_dmY($value)) ?>
                     <?php else: ?>
                         <span class="text-gray-400">Sin dato</span>
                     <?php endif; ?>
+                </div>
+            <?php elseif ($type === 'textarea'): ?>
+                <?php if ($value !== ''): ?>
+                    <div class="<?= $readonlyTextareaFilled ?>"><?= e($value) ?></div>
                 <?php else: ?>
+                    <div class="<?= $readonlyTextareaEmpty ?>"><span class="text-gray-400">Sin dato</span></div>
+                <?php endif; ?>
+            <?php else: ?>
+                <div class="mt-1.5 flex h-10 w-full items-center rounded-lg border border-app-borderControlStrong bg-gray-50 px-3 text-sm text-gray-500">
                     <?php if ($value !== ''): ?>
                         <?= e($value) ?>
                     <?php else: ?>
                         <span class="text-gray-400">Sin dato</span>
                     <?php endif; ?>
-                <?php endif; ?>
-            </div>
+                </div>
+            <?php endif; ?>
         <?php endif; ?>
     </label>
     </div>
@@ -143,7 +161,7 @@ $f023SectionHeading = static function (string $icon, string $title): void {
             <?php $fieldLabel('tipo_documento', 'Tipo de documento'); ?>
             <?php $fieldLabel('numero_documento', 'No. de identificación'); ?>
             <?php $fieldLabel('telefono', 'Contacto telefónico'); ?>
-            <?php $fieldLabel('direccion_domicilio', 'Dirección'); ?>
+            <?php $fieldLabel('direccion_domicilio', 'Dirección', false, 'textarea'); ?>
             <?php $fieldLabel('correo_personal', 'Correo personal'); ?>
             <?php $fieldLabel('correo_institucional', 'Correo institucional'); ?>
             <?php $fieldLabel('alternativa_ep', 'Alternativa etapa productiva'); ?>
@@ -159,7 +177,7 @@ $f023SectionHeading = static function (string $icon, string $title): void {
             <?php $fieldLabel('programa_formacion', 'Programa de formación'); ?>
             <?php $fieldLabel('numero_grupo', 'No. grupo'); ?>
             <?php $fieldLabel('modalidad_formacion', 'Modalidad de formación'); ?>
-            <?php $fieldLabel('estrategia_formativa', 'Estrategia formativa', true); ?>
+            <?php $fieldLabel('estrategia_formativa', 'Estrategia formativa', true, 'textarea'); ?>
             <?php $fieldLabel('fecha_fin_etapa_lectiva', 'Fecha fin etapa lectiva', true, 'date'); ?>
             <?php $fieldLabel('fecha_registro_sofiaplus', 'Fecha de registro en SofiaPlus', true, 'date'); ?>
         </div>
@@ -178,7 +196,7 @@ $f023SectionHeading = static function (string $icon, string $title): void {
         <?php $f023SectionHeading('building-2', 'Ente co-formador y jefe'); ?>
         <div class="grid gap-5 md:grid-cols-3 md:gap-x-6 md:gap-y-6">
             <?php $fieldLabel('empresa_nombre', 'Nombre empresa o entidad co-formadora'); ?>
-            <?php $fieldLabel('empresa_direccion', 'Dirección'); ?>
+            <?php $fieldLabel('empresa_direccion', 'Dirección', false, 'textarea'); ?>
             <?php $fieldLabel('empresa_nit', 'NIT'); ?>
             <?php $fieldLabel('empresa_correo', 'Correo electrónico'); ?>
             <?php $fieldLabel('jefe_nombre', 'Nombre del jefe inmediato / tutor'); ?>
