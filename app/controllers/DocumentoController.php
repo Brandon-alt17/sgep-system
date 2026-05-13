@@ -66,8 +66,8 @@ class DocumentoController
     public function generate(): void
     {
         $aprendizId = (int) ($_POST['aprendiz_id'] ?? 0);
-        $formato = (string) ($_POST['formato'] ?? 'docx');
-        if ($formato !== 'docx') {
+        $formato = strtolower(trim((string) ($_POST['formato'] ?? 'docx')));
+        if (!in_array($formato, ['docx', 'pdf'], true)) {
             $formato = 'docx';
         }
 
@@ -95,7 +95,14 @@ class DocumentoController
             return;
         }
 
-        $path = (new F023Generator())->generate($aprendizId, $partes, $formato);
+        try {
+            $path = (new F023Generator())->generate($aprendizId, $partes, $formato);
+        } catch (\Throwable $e) {
+            log_error('F023 export: ' . $e->getMessage());
+            redirect(APP_BASE_PATH . '/documentos/generar?aprendiz_id=' . $aprendizId . '&error=export_failed');
+
+            return;
+        }
 
         Database::connection()->prepare(
             'INSERT INTO documentos_generados (aprendiz_id, partes, formato, ruta_archivo, created_at) VALUES (:aprendiz_id, :partes, :formato, :ruta, NOW())'
@@ -106,7 +113,10 @@ class DocumentoController
             'ruta' => $path,
         ]);
 
-        header('Content-Type: application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+        $mime = $formato === 'pdf'
+            ? 'application/pdf'
+            : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+        header('Content-Type: ' . $mime);
         header('Content-Disposition: attachment; filename="' . basename($path) . '"');
         readfile($path);
         exit;

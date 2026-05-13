@@ -119,55 +119,47 @@
                 </div>
             </section>
 
-            <!-- 🟨 MOMENTOS -->
+            <!-- Documentos / momentos F-023 -->
             <section class="<?= e($cardPaddedClass) ?>">
-                <div class="flex justify-between items-center mb-4">
-                    <h3 class="<?= e(ui_heading_sm_classes()) ?>">Documentos</h3>
-                    <a href="<?= e(APP_BASE_PATH) ?>/momentos/create?aprendiz_id=<?= (int)$aprendiz['id'] ?>&tipo=EX"
-                       class="<?= e(ui_button_small_classes()) ?>">
+                <div class="mb-3 flex flex-wrap items-start justify-between gap-3">
+                    <h3 class="<?= e(ui_heading_sm_classes()) ?> m-0">Documentos</h3>
+                    <a href="<?= e(APP_BASE_PATH) ?>/momentos/create?aprendiz_id=<?= (int) $aprendiz['id'] ?>&tipo=EX"
+                       class="shrink-0 text-sm font-medium text-app-link no-underline hover:underline">
                         + Agregar Momento extraordinario
                     </a>
                 </div>
-                <p class="mb-3 mt-0 text-xs text-app-muted">
+                <p class="mb-4 mt-0 text-xs text-app-muted">
                     La información general del F-023 reutiliza datos del perfil y de la empresa.
-                    <button type="button" onclick="abrirModalEditar()" class="inline cursor-pointer border-0 bg-transparent p-0 text-app-link underline hover:text-app-accent">Editar datos del aprendiz</button>
+                    <button type="button" onclick="abrirModalEditar()" class="inline cursor-pointer border-0 bg-transparent p-0 text-xs text-app-link underline decoration-app-link/40 underline-offset-2 hover:text-app-accent hover:decoration-app-accent">Editar datos del aprendiz</button>
                     para actualizarlos.
                 </p>
 
-                <div class="space-y-3 md:col-span-2 grid max-h-[320px] gap-4 overflow-y-auto pr-1">
-                    <div class="flex items-center justify-between rounded-lg border border-app-border p-4 gap-3">
-                        <span class="text-sm font-medium">Información</span>
-                        <a href="<?= e(APP_BASE_PATH) ?>/documentos/info?aprendiz_id=<?= (int)$aprendiz['id'] ?>"
-                        class="<?= e(ui_button_small_classes()) ?> inline-flex items-center gap-2">
-                            <span class="w-5 h-5 [&_svg]:w-4 [&_svg]:h-4"><?= ui_icon('file-spreadsheet') ?></span>
+                <div class="grid max-h-[320px] gap-4 overflow-y-auto pr-1 md:col-span-2">
+                    <div class="flex flex-wrap items-center justify-between gap-3 border border-app-border p-4">
+                        <span class="text-sm font-medium text-app-text">Información</span>
+                        <a href="<?= e(APP_BASE_PATH) ?>/documentos/info?aprendiz_id=<?= (int) $aprendiz['id'] ?>"
+                           class="shrink-0 text-sm text-app-link no-underline hover:underline">
                             Abrir información
                         </a>
                     </div>
                     <?php foreach ($momentos as $m): ?>
                         <?php
                         $badge = ui_badge_error_classes();
-                        if ($m['estado'] === 'Completado') $badge = ui_badge_success_classes();
-                        elseif ($m['estado'] === 'Incompleto') $badge = ui_badge_warning_classes();
+                        if ($m['estado'] === 'Completado') {
+                            $badge = ui_badge_success_classes();
+                        } elseif ($m['estado'] === 'Incompleto') {
+                            $badge = ui_badge_warning_classes();
+                        }
                         ?>
-                        <div class="flex items-center justify-between rounded-lg border border-app-border p-4 gap-3">
-                            <span class="text-sm font-medium">
-                                <?= e($m['label']) ?>
-                            </span>
-                            <div class="flex items-center gap-3">
+                        <div class="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-app-border p-4">
+                            <span class="min-w-0 text-sm font-medium text-app-text"><?= e($m['label']) ?></span>
+                            <div class="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
                                 <?php if (!empty($m['fecha'])): ?>
-                                    <span class="text-xs text-app-muted">
-                                        <?= e($m['fecha']) ?>
-                                    </span>
+                                    <span class="text-xs text-app-muted"><?= e($m['fecha']) ?></span>
                                 <?php endif; ?>
-                                <span class="<?= e($badge) ?>">
-                                    <?= e($m['estado']) ?>
-                                </span>
-                                <a href="<?= e(APP_BASE_PATH) ?>/momentos/create?aprendiz_id=<?= (int)$aprendiz['id'] ?>&tipo=<?= e((string) $m['tipo']) ?>"
-                                class="<?= e(ui_button_small_classes()) ?> inline-flex items-center gap-2">
-                                    
-                                    <span class="w-5 h-5 [&_svg]:w-4 [&_svg]:h-4">
-                                        <?= ui_icon('pencil') ?>
-                                    </span>
+                                <span class="<?= e($badge) ?>"><?= e($m['estado']) ?></span>
+                                <a href="<?= e(APP_BASE_PATH) ?>/momentos/create?aprendiz_id=<?= (int) $aprendiz['id'] ?>&tipo=<?= e((string) $m['tipo']) ?>"
+                                   class="shrink-0 text-sm text-app-link no-underline hover:underline">
                                     Editar momento
                                 </a>
                             </div>
@@ -178,7 +170,7 @@
 
             <!-- 🟪 ACCIONES -->
            
-            <div class="grid mb:col-span-2 grid flex gap-3 mt-4">
+            <div class="mt-4 flex flex-wrap gap-3">
 
                 <a href="<?= e(APP_BASE_PATH) ?>/documentos/generar?aprendiz_id=<?= (int)$aprendiz['id'] ?>"
                 class="<?= e(ui_button_small_classes()) ?> flex items-center justify-center text-center gap-2">

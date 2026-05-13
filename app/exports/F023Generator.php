@@ -19,7 +19,8 @@ class F023Generator
      */
     public function generate(int $aprendizId, array $partes, string $formato): string
     {
-        if ($formato !== 'docx') {
+        $formato = strtolower(trim($formato));
+        if (!in_array($formato, ['docx', 'pdf'], true)) {
             $formato = 'docx';
         }
 
@@ -112,6 +113,22 @@ class F023Generator
             }
 
             F023DocxMerge::mergeInto($out, $mergeInputs);
+
+            if ($formato === 'pdf') {
+                try {
+                    $pdfPath = F023DocxToPdf::convert($out);
+                } catch (\Throwable $e) {
+                    if (is_file($out)) {
+                        @unlink($out);
+                    }
+                    throw $e;
+                }
+                if (is_file($out)) {
+                    @unlink($out);
+                }
+
+                return $pdfPath;
+            }
 
             return $out;
         } finally {
