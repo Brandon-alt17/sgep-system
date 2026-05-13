@@ -81,6 +81,17 @@ function date_post_to_iso(mixed $value): string
     return '';
 }
 
+/**
+ * Quita espacio en blanco al inicio de cada línea y recorta el texto completo.
+ * Evita direcciones u observaciones con sangría fantasma (import / copiar-pegar).
+ */
+function normalize_multiline_text(string $value): string
+{
+    $value = preg_replace('/^[ \h]+/m', '', $value) ?? '';
+
+    return trim($value);
+}
+
 function redirect(string $url): void
 {
     header('Location: ' . $url);

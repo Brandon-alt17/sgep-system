@@ -56,8 +56,7 @@ partial('components/page_header', [
                 <label class="<?= e(ui_label_classes()) ?> md:col-span-3">Enlace grabación momento 1
                     <input type="url" name="enlace_grabacion" maxlength="<?= $maxUrl ?>" value="<?= e($valueFrom($momento, 'enlace_grabacion')) ?>" class="<?= e(ui_input_classes()) ?>">
                 </label>
-            <?php endif; ?>
-        </div>
+            </div>
 
             <div class="mt-5 grid gap-4">
                 <label class="<?= e(ui_label_classes()) ?>">Competencias a desarrollar
@@ -92,23 +91,6 @@ partial('components/page_header', [
                 <?php endif; ?>
             </div>
 
-        <?php if ($tipo === 'M3'): ?>
-            <label class="mt-2 <?= e(ui_label_classes()) ?>">Juicio final
-                <span class="<?= e(ui_select_wrapper_classes()) ?> md:max-w-xs">
-                    <select name="juicio_final" class="<?= e(ui_select_classes()) ?>">
-                        <option value="Aprobado">Aprobado</option>
-                        <option value="No aprobado">No aprobado</option>
-                    </select>
-                    <span class="<?= e(ui_select_chevron_classes()) ?>" data-select-chevron aria-hidden="true">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-4 w-4">
-                            <path d="m6 9 6 6 6-6"></path>
-                        </svg>
-                    </span>
-                </label>
-                <label class="<?= e(ui_label_classes()) ?>">Enlace de grabación
-                    <input type="url" name="enlace_grabacion" maxlength="<?= $maxUrl ?>" value="<?= e($valueFrom($momento, 'enlace_grabacion')) ?>" class="<?= e(ui_input_classes()) ?>">
-                </label>
-            </div>
         <?php endif; ?>
 
         <?php if ($tipo !== 'M3'): ?>
@@ -131,10 +113,11 @@ partial('components/page_header', [
                             <input type="hidden" name="factores[<?= $idx ?>][nombre_factor]" value="<?= e($nombre) ?>">
                             <p class="m-0 text-sm font-semibold text-app-text"><?= e($nombre) ?></p>
                             <div class="mt-2 flex flex-wrap items-center gap-4 text-sm">
-                                <label class="inline-flex items-center gap-2"><input type="radio" name="factores[<?= $idx ?>][valoracion]" value="S" required class="h-4 w-4"> S</label>
-                                <label class="inline-flex items-center gap-2"><input type="radio" name="factores[<?= $idx ?>][valoracion]" value="PM" required class="h-4 w-4"> PM</label>
+                                <?php $valF = $factorValoracionPorIndice[$idx] ?? 'PM'; ?>
+                                <label class="inline-flex items-center gap-2"><input type="radio" name="factores[<?= $idx ?>][valoracion]" value="S" <?= $valF === 'S' ? 'checked' : '' ?> required class="h-4 w-4"> S</label>
+                                <label class="inline-flex items-center gap-2"><input type="radio" name="factores[<?= $idx ?>][valoracion]" value="PM" <?= $valF === 'PM' ? 'checked' : '' ?> required class="h-4 w-4"> PM</label>
                             </div>
-                            <input type="text" name="factores[<?= $idx ?>][observacion]" maxlength="<?= $maxCompromisos ?>" value="<?= e((string) ($factorActual['observacion'] ?? '')) ?>" placeholder="Observación / compromiso de mejora" class="<?= e(ui_input_classes()) ?> mt-2">
+                            <input type="text" name="factores[<?= $idx ?>][observacion]" maxlength="<?= $maxCompromisos ?>" value="<?= e((string) ($factorObsPorIndice[$idx] ?? '')) ?>" placeholder="Observación / compromiso de mejora" class="<?= e(ui_input_classes()) ?> mt-2">
                         </div>
                     <?php endforeach; ?>
                 </div>
@@ -150,10 +133,11 @@ partial('components/page_header', [
                             <input type="hidden" name="factores[<?= $i ?>][nombre_factor]" value="<?= e($nombre) ?>">
                             <p class="m-0 text-sm font-semibold text-app-text"><?= e($nombre) ?></p>
                             <div class="mt-2 flex flex-wrap items-center gap-4 text-sm">
-                                <label class="inline-flex items-center gap-2"><input type="radio" name="factores[<?= $i ?>][valoracion]" value="S" required class="h-4 w-4"> S</label>
-                                <label class="inline-flex items-center gap-2"><input type="radio" name="factores[<?= $i ?>][valoracion]" value="PM" required class="h-4 w-4"> PM</label>
+                                <?php $valA = $factorValoracionPorIndice[$i] ?? 'PM'; ?>
+                                <label class="inline-flex items-center gap-2"><input type="radio" name="factores[<?= $i ?>][valoracion]" value="S" <?= $valA === 'S' ? 'checked' : '' ?> required class="h-4 w-4"> S</label>
+                                <label class="inline-flex items-center gap-2"><input type="radio" name="factores[<?= $i ?>][valoracion]" value="PM" <?= $valA === 'PM' ? 'checked' : '' ?> required class="h-4 w-4"> PM</label>
                             </div>
-                            <input type="text" name="factores[<?= $i ?>][observacion]" maxlength="<?= $maxCompromisos ?>" value="<?= e((string) ($factorActual['observacion'] ?? '')) ?>" placeholder="Observación / compromiso de mejora" class="<?= e(ui_input_classes()) ?> mt-2">
+                            <input type="text" name="factores[<?= $i ?>][observacion]" maxlength="<?= $maxCompromisos ?>" value="<?= e((string) ($factorObsPorIndice[$i] ?? '')) ?>" placeholder="Observación / compromiso de mejora" class="<?= e(ui_input_classes()) ?> mt-2">
                         </div>
                     <?php endforeach; ?>
                 </div>
@@ -217,6 +201,9 @@ partial('components/page_header', [
                 </label>
                 <label class="<?= e(ui_label_classes()) ?>">Fecha diligenciamiento
                     <input type="text" name="fecha_diligenciamiento" value="<?= e(date_iso_to_dmY($valueFrom($momento, 'fecha_diligenciamiento'))) ?>" data-date-input="dmy" placeholder="dd/mm/aaaa" title="Formato día/mes/año (dd/mm/aaaa)" inputmode="numeric" maxlength="10" spellcheck="false" autocomplete="off" class="<?= e(ui_input_classes()) ?>">
+                </label>
+                <label class="<?= e(ui_label_classes()) ?> md:col-span-3">Enlace de grabación
+                    <input type="url" name="enlace_grabacion" maxlength="<?= $maxUrl ?>" value="<?= e($valueFrom($momento, 'enlace_grabacion')) ?>" class="<?= e(ui_input_classes()) ?>">
                 </label>
             </section>
         <?php endif; ?>

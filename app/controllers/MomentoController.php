@@ -29,6 +29,15 @@ class MomentoController
         }
 
         $defaultMomento = $this->buildDefaultMomentoData($aprendiz ?? [], $tipo, $momentoExistente, $programaContenido);
+        $limites = require base_path('config/f023_limites.php');
+        $modoEdicion = $momentoExistente !== null;
+        $accion = APP_BASE_PATH . ($modoEdicion ? '/momentos/update' : '/momentos/store');
+        $valueFrom = static function (array $row, string $key, string $default = ''): string {
+            return trim((string) ($row[$key] ?? $default));
+        };
+        $factorObsPorIndice = $this->factorObservacionesPorIndice($factoresExistentes);
+        $factorValoracionPorIndice = $this->factorValoracionesPorIndice($factoresExistentes);
+
         view('momentos/create', [
             'aprendiz' => $aprendiz,
             'tipo' => $tipo,
@@ -36,6 +45,23 @@ class MomentoController
             'momento' => $defaultMomento,
             'momentoExistente' => $momentoExistente,
             'factoresExistentes' => $factoresExistentes,
+            'accion' => $accion,
+            'modoEdicion' => $modoEdicion,
+            'valueFrom' => $valueFrom,
+            'maxShortText' => (int) ($limites['short_text'] ?? 160),
+            'maxUrl' => (int) ($limites['url'] ?? 500),
+            'maxM1Competencias' => (int) ($limites['m1_competencias'] ?? 1200),
+            'maxM1Resultados' => (int) ($limites['m1_resultados'] ?? 1200),
+            'maxM1Actividades' => (int) ($limites['m1_actividades'] ?? 1200),
+            'maxM1Evidencias' => (int) ($limites['m1_evidencias'] ?? 1200),
+            'maxM1ObsAdicionales' => (int) ($limites['m1_observaciones_adicionales'] ?? 1200),
+            'maxCompromisos' => (int) ($limites['compromisos'] ?? 450),
+            'maxObsInstructor' => (int) ($limites['obs_instructor'] ?? 500),
+            'maxObsAprendiz' => (int) ($limites['obs_aprendiz'] ?? 500),
+            'maxObsCoformador' => (int) ($limites['obs_coformador'] ?? 500),
+            'maxRetroM3' => (int) ($limites['retro_m3'] ?? 1200),
+            'factorObsPorIndice' => $factorObsPorIndice,
+            'factorValoracionPorIndice' => $factorValoracionPorIndice,
         ]);
     }
 
@@ -297,5 +323,52 @@ class MomentoController
         }
 
         return $data;
+    }
+
+    /** @param list<array<string,mixed>> $factoresExistentes @return array<int,string> índices 0–12 alineados con config/factores.php */
+    private function factorObservacionesPorIndice(array $factoresExistentes): array
+    {
+        $cfg = require base_path('config/factores.php');
+        $obs = array_fill(0, 13, '');
+        $byNombre = [];
+        foreach ($factoresExistentes as $row) {
+            $nombre = trim((string) ($row['nombre_factor'] ?? ''));
+            if ($nombre !== '') {
+                $byNombre[$nombre] = (string) ($row['observacion'] ?? '');
+            }
+        }
+        foreach ($cfg['tecnicos'] as $idx => $nombre) {
+            $obs[$idx] = $byNombre[$nombre] ?? '';
+        }
+        foreach ($cfg['actitudinales'] as $offset => $nombre) {
+            $i = $offset + 8;
+            $obs[$i] = $byNombre[$nombre] ?? '';
+        }
+
+        return $obs;
+    }
+
+    /** @param list<array<string,mixed>> $factoresExistentes @return array<int,string> 'S' o 'PM' por índice */
+    private function factorValoracionesPorIndice(array $factoresExistentes): array
+    {
+        $cfg = require base_path('config/factores.php');
+        $val = array_fill(0, 13, 'PM');
+        $byNombre = [];
+        foreach ($factoresExistentes as $row) {
+            $nombre = trim((string) ($row['nombre_factor'] ?? ''));
+            if ($nombre !== '') {
+                $v = trim((string) ($row['valoracion'] ?? ''));
+                $byNombre[$nombre] = $v === 'S' ? 'S' : 'PM';
+            }
+        }
+        foreach ($cfg['tecnicos'] as $idx => $nombre) {
+            $val[$idx] = $byNombre[$nombre] ?? 'PM';
+        }
+        foreach ($cfg['actitudinales'] as $offset => $nombre) {
+            $i = $offset + 8;
+            $val[$i] = $byNombre[$nombre] ?? 'PM';
+        }
+
+        return $val;
     }
 }

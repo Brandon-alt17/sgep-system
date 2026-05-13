@@ -164,16 +164,74 @@ class Aprendiz
 
         $jefeIdResolved = self::resolveJefeIdFromUpdatePayload($empresaId, $data);
 
-        $sql = 'UPDATE aprendices SET nombre_completo=:nombre_completo, telefono=:telefono, correo_personal=:correo_personal, correo_institucional=:correo_institucional, estado=:estado, jefe_id=:jefe_id, updated_at=NOW() WHERE id=:id';
+        $direccionDom = normalize_multiline_text((string) ($data['direccion_domicilio'] ?? ''));
+        if (mb_strlen($direccionDom) > 255) {
+            $direccionDom = mb_substr($direccionDom, 0, 255);
+        }
+
+        $sql = 'UPDATE aprendices SET
+            nombre_completo=:nombre_completo,
+            tipo_documento=:tipo_documento,
+            numero_documento=:numero_documento,
+            telefono=:telefono,
+            correo_personal=:correo_personal,
+            correo_institucional=:correo_institucional,
+            direccion_domicilio=:direccion_domicilio,
+            alternativa_ep=:alternativa_ep,
+            ficha=:ficha,
+            nombre_instructor_seguimiento=:nombre_instructor_seguimiento,
+            telefono_instructor_seguimiento=:telefono_instructor_seguimiento,
+            estado=:estado,
+            jefe_id=:jefe_id,
+            updated_at=NOW()
+            WHERE id=:id';
         Database::connection()->prepare($sql)->execute([
             'id' => $id,
-            'nombre_completo' => $data['nombre_completo'],
-            'telefono' => $data['telefono'] ?? null,
-            'correo_personal' => $data['correo_personal'] ?? null,
-            'correo_institucional' => $data['correo_institucional'] ?? null,
-            'estado' => $data['estado'] ?? 'Pendiente por iniciar',
+            'nombre_completo' => trim((string) ($data['nombre_completo'] ?? '')),
+            'tipo_documento' => trim((string) ($data['tipo_documento'] ?? '')),
+            'numero_documento' => trim((string) ($data['numero_documento'] ?? '')),
+            'telefono' => self::nullableTrim($data['telefono'] ?? null),
+            'correo_personal' => self::nullableTrim($data['correo_personal'] ?? null),
+            'correo_institucional' => self::nullableTrim($data['correo_institucional'] ?? null),
+            'direccion_domicilio' => $direccionDom === '' ? null : $direccionDom,
+            'alternativa_ep' => self::nullableTrim($data['alternativa_ep'] ?? null),
+            'ficha' => self::nullableTrim($data['ficha'] ?? null),
+            'nombre_instructor_seguimiento' => self::nullableTrim($data['nombre_instructor_seguimiento'] ?? null),
+            'telefono_instructor_seguimiento' => self::nullableTrim($data['telefono_instructor_seguimiento'] ?? null),
+            'estado' => trim((string) ($data['estado'] ?? 'Pendiente por iniciar')),
             'jefe_id' => $jefeIdResolved,
         ]);
+
+        if ($empresaId > 0) {
+            $emp = Empresa::findById($empresaId);
+            if ($emp !== null) {
+                $nombreEmp = trim((string) ($data['empresa_nombre'] ?? ''));
+                if ($nombreEmp === '') {
+                    $nombreEmp = trim((string) ($emp['nombre'] ?? ''));
+                }
+                $direccionEmp = normalize_multiline_text((string) ($data['direccion'] ?? (string) ($emp['direccion'] ?? '')));
+                if (mb_strlen($direccionEmp) > 180) {
+                    $direccionEmp = mb_substr($direccionEmp, 0, 180);
+                }
+                Empresa::update($empresaId, [
+                    'nombre' => $nombreEmp !== '' ? $nombreEmp : (string) ($emp['nombre'] ?? 'Empresa'),
+                    'nit' => array_key_exists('nit', $data) ? $data['nit'] : ($emp['nit'] ?? ''),
+                    'direccion' => $direccionEmp === '' ? null : $direccionEmp,
+                    'ciudad' => $emp['ciudad'] ?? '',
+                    'correo_org' => $emp['correo_org'] ?? '',
+                    'nombre_contacto2' => $emp['nombre_contacto2'] ?? '',
+                    'correo_contacto2' => $emp['correo_contacto2'] ?? '',
+                    'direccion_practica' => $emp['direccion_practica'] ?? '',
+                ]);
+            }
+        }
+    }
+
+    private static function nullableTrim(mixed $value): ?string
+    {
+        $s = trim((string) ($value ?? ''));
+
+        return $s === '' ? null : $s;
     }
 
     /**

@@ -88,7 +88,7 @@ class DocumentoController
             return trim((string) $fallback);
         };
 
-        return [
+        $out = [
             'regional' => $valor($guardada, 'regional', 'Risaralda'),
             'centro_formacion' => $valor($guardada, 'centro_formacion', 'Diseño e Innovación Tecnológica Industrial'),
             'nivel_formativo' => $valor($guardada, 'nivel_formativo', (string) ($programa['nivel'] ?? '')),
@@ -124,5 +124,10 @@ class DocumentoController
             'contacto2_nombre' => trim((string) ($aprendiz['nombre_contacto2_jefe'] ?? ($empresa['nombre_contacto2'] ?? ''))),
             'contacto2_correo' => trim((string) ($aprendiz['correo_contacto2_jefe'] ?? ($empresa['correo_contacto2'] ?? ''))),
         ];
+        foreach (['estrategia_formativa', 'direccion_domicilio', 'empresa_direccion'] as $mk) {
+            $out[$mk] = normalize_multiline_text((string) ($out[$mk] ?? ''));
+        }
+
+        return $out;
     }
 }

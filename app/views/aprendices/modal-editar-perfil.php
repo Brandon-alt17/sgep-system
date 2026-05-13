@@ -273,7 +273,7 @@
                     </div>
                     <div class="form-field">
                         <label class="form-label">Dirección de domicilio</label>
-                        <input type="text" name="direccion_domicilio" value="<?= e($aprendiz['direccion_domicilio'] ?? '') ?>" class="form-input">
+                        <textarea name="direccion_domicilio" rows="1" data-auto-resize-textarea class="form-input min-h-10 resize-none overflow-hidden"><?= e($aprendiz['direccion_domicilio'] ?? '') ?></textarea>
                     </div>
                     <div class="form-field">
                         <label class="form-label">Alternativa etapa productiva</label>
@@ -322,7 +322,7 @@
                     </div>
                     <div class="form-field">
                         <label class="form-label">Dirección</label>
-                        <input type="text" name="direccion" value="<?= e($aprendiz['direccion'] ?? '') ?>" class="form-input">
+                        <textarea name="direccion" rows="1" data-auto-resize-textarea class="form-input min-h-10 resize-none overflow-hidden"><?= e($aprendiz['direccion'] ?? '') ?></textarea>
                     </div>
                     <div class="form-field md:col-span-2">
                         <label class="form-label" for="select-jefe-id">Supervisor</label>
