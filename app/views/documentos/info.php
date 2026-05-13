@@ -150,7 +150,7 @@ $f023SectionHeading = static function (string $icon, string $title): void {
     </section>
 <?php endif; ?>
 
-<form id="info-general-form" method="post" action="<?= e(APP_BASE_PATH) ?>/documentos/info" class="space-y-6 md:space-y-7">
+<form id="info-general-form" method="post" action="<?= e(APP_BASE_PATH) ?>/documentos/info" class="space-y-6 pb-28 md:space-y-7">
     <input type="hidden" name="aprendiz_id" value="<?= (int) ($aprendiz['id'] ?? 0) ?>">
     <p id="f023-date-format-hint" class="sr-only">Las fechas editables usan formato día, mes y año con barras, por ejemplo 01/12/2025.</p>
 
@@ -245,9 +245,8 @@ $f023SectionHeading = static function (string $icon, string $title): void {
     </div>
 </form>
 
-<div class="pb-24" aria-hidden="true"></div>
-<div class="fixed inset-x-0 bottom-0 z-[60] border-t border-app-border bg-app-panel shadow-xsSoft" style="padding-bottom: env(safe-area-inset-bottom, 0px);">
-    <div class="mx-auto flex min-h-[52px] w-full flex-wrap items-center justify-end gap-2 px-4 py-2">
+<div class="pointer-events-none fixed inset-x-0 bottom-0 z-[60] border-t border-app-border bg-app-panel/95 shadow-[0_-4px_24px_rgba(16,24,40,0.08)] backdrop-blur-sm" style="padding-bottom: env(safe-area-inset-bottom, 0px);">
+    <div class="pointer-events-auto mx-auto flex min-h-[68px] w-full flex-wrap items-center justify-end gap-2 px-4 py-2 md:px-6">
         <a id="f023-footer-leave" href="#" data-f023-leave-ok="1" class="hidden <?= e(ui_button_small_classes()) ?> no-underline decoration-transparent hover:no-underline border-rose-200 bg-rose-50 text-rose-900 hover:!border-rose-400 hover:!bg-rose-100 hover:!text-rose-950">
             Salir sin guardar
         </a>
@@ -260,7 +259,7 @@ $f023SectionHeading = static function (string $icon, string $title): void {
 <?php partial('components/toast', [
     'message' => '',
     'variant' => 'warning',
-    'positionClass' => 'bottom-24 left-4 right-4 z-[70] max-w-none sm:left-auto sm:right-6 sm:max-w-sm',
+    'positionClass' => 'bottom-28 left-4 right-4 z-[70] max-w-none sm:left-auto sm:right-6 sm:max-w-sm',
     'toastRootId' => 'f023-flow-toast',
 ]); ?>
 

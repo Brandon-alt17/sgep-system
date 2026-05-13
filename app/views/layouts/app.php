@@ -14,11 +14,19 @@ $uri = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
 $base = rtrim((string) APP_BASE_PATH, '/');
 $currentPath = ($base !== '' && str_starts_with($uri, $base)) ? (substr($uri, strlen($base)) ?: '/') : $uri;
 $currentPath = $currentPath === '' ? '/' : $currentPath;
+$pathForTitle = $currentPath;
 if (str_starts_with($currentPath, '/momentos/')) {
     $currentPath = '/aprendices';
 }
-if (str_starts_with($currentPath, '/documentos/info')) {
+if (str_starts_with($pathForTitle, '/documentos/info')) {
     $currentPath = '/aprendices';
+}
+$queryGenerar = [];
+if ($pathForTitle === '/documentos/generar') {
+    parse_str((string) (parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_QUERY) ?? ''), $queryGenerar);
+    if ((int) ($queryGenerar['aprendiz_id'] ?? 0) > 0) {
+        $currentPath = '/aprendices';
+    }
 }
 
 $titles = [
@@ -37,8 +45,9 @@ $titles = [
     '/catalogo/empresas/ver' => 'Catálogo',
     '/catalogo/empresas/editar' => 'Catálogo',
     '/documentos/generar' => 'Configuración',
+    '/momentos/create' => 'Momento F-023',
 ];
-$pageTitle = $titles[$currentPath] ?? 'SGEP';
+$pageTitle = $titles[$pathForTitle] ?? $titles[$currentPath] ?? 'SGEP';
 $currentUserName = (string) ($_SESSION['user_name'] ?? 'Usuario no registrado');
 ?>
 <?php partial('components/icons'); ?>

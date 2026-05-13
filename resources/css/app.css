@@ -17,6 +17,17 @@
   a:hover {
     @apply underline;
   }
+
+  /* @tailwindcss/forms añade anillo de foco a casillas; lo quitamos en toda la app */
+  input[type="checkbox"]:focus,
+  input[type="checkbox"]:focus-visible,
+  input[type="radio"]:focus,
+  input[type="radio"]:focus-visible {
+    outline: none;
+    --tw-ring-shadow: 0 0 #0000;
+    --tw-ring-offset-shadow: 0 0 #0000;
+    box-shadow: none;
+  }
 }
 
 @layer components {
