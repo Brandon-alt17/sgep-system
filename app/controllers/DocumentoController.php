@@ -9,22 +9,93 @@ use App\Helpers\Database;
 use App\Models\Aprendiz;
 use App\Models\AprendizInfoGeneral;
 use App\Models\Empresa;
+use App\Models\Momento;
 use App\Models\Programa;
+use App\Services\F023InfoData;
 
 class DocumentoController
 {
     public function create(): void
     {
         $aprendizId = (int) ($_GET['aprendiz_id'] ?? 0);
-        view('documents/generate', ['aprendiz_id' => $aprendizId]);
+        if ($aprendizId <= 0) {
+            view('documents/generate', [
+                'aprendiz' => null,
+                'aprendiz_id' => 0,
+                'info' => [],
+                'export_momentos' => [],
+                'info_faltantes_count' => 0,
+                'error' => (string) ($_GET['error'] ?? ''),
+            ]);
+
+            return;
+        }
+
+        $aprendiz = Aprendiz::findById($aprendizId);
+        if ($aprendiz === null) {
+            http_response_code(404);
+            view('errors/404', ['uri' => '/documentos/generar?aprendiz_id=' . $aprendizId]);
+
+            return;
+        }
+
+        $programa = Programa::findById((int) ($aprendiz['programa_id'] ?? 0));
+        $empresa = Empresa::findById((int) ($aprendiz['empresa_id'] ?? 0));
+        $guardada = AprendizInfoGeneral::findByAprendizId($aprendizId) ?? [];
+        $info = F023InfoData::build($aprendiz, $programa, $empresa, $guardada);
+
+        $faltantes = 0;
+        foreach (F023InfoData::requiredKeysForCompleteness() as $k) {
+            if (trim((string) ($info[$k] ?? '')) === '') {
+                $faltantes++;
+            }
+        }
+
+        $exportMomentos = Momento::buildExportWizardRows($aprendizId);
+
+        view('documents/generate', [
+            'aprendiz' => $aprendiz,
+            'aprendiz_id' => $aprendizId,
+            'info' => $info,
+            'export_momentos' => $exportMomentos,
+            'info_faltantes_count' => $faltantes,
+            'error' => (string) ($_GET['error'] ?? ''),
+        ]);
     }
 
     public function generate(): void
     {
         $aprendizId = (int) ($_POST['aprendiz_id'] ?? 0);
-        $partes = $_POST['partes'] ?? [];
         $formato = (string) ($_POST['formato'] ?? 'docx');
-        $path = (new F023Generator())->generate($aprendizId, (array) $partes, $formato);
+        if ($formato !== 'docx') {
+            $formato = 'docx';
+        }
+
+        if ($aprendizId <= 0) {
+            redirect(APP_BASE_PATH . '/documentos/generar?error=id_aprendiz');
+            return;
+        }
+
+        $aprendiz = Aprendiz::findById($aprendizId);
+        if ($aprendiz === null) {
+            http_response_code(404);
+            view('errors/404', ['uri' => '/documentos/generar?aprendiz_id=' . $aprendizId]);
+
+            return;
+        }
+
+        $rawPartes = $_POST['partes'] ?? [];
+        if (!is_array($rawPartes)) {
+            $rawPartes = [];
+        }
+        $partes = $this->validateExportPartes($aprendizId, $rawPartes);
+        if ($partes === []) {
+            redirect(APP_BASE_PATH . '/documentos/generar?aprendiz_id=' . $aprendizId . '&error=sin_partes');
+
+            return;
+        }
+
+        $path = (new F023Generator())->generate($aprendizId, $partes, $formato);
 
         Database::connection()->prepare(
             'INSERT INTO documentos_generados (aprendiz_id, partes, formato, ruta_archivo, created_at) VALUES (:aprendiz_id, :partes, :formato, :ruta, NOW())'
@@ -35,7 +106,7 @@ class DocumentoController
             'ruta' => $path,
         ]);
 
-        header('Content-Type: application/octet-stream');
+        header('Content-Type: application/vnd.openxmlformats-officedocument.wordprocessingml.document');
         header('Content-Disposition: attachment; filename="' . basename($path) . '"');
         readfile($path);
         exit;
@@ -49,13 +120,14 @@ class DocumentoController
         if ($aprendiz === null) {
             http_response_code(404);
             view('errors/404', ['uri' => '/documentos/info?aprendiz_id=' . $aprendizId]);
+
             return;
         }
 
         $programa = Programa::findById((int) ($aprendiz['programa_id'] ?? 0));
         $empresa = Empresa::findById((int) ($aprendiz['empresa_id'] ?? 0));
         $guardada = AprendizInfoGeneral::findByAprendizId($aprendizId) ?? [];
-        $info = $this->buildInfoData($aprendiz, $programa, $empresa, $guardada);
+        $info = F023InfoData::build($aprendiz, $programa, $empresa, $guardada);
 
         view('documentos/info', [
             'aprendiz' => $aprendiz,
@@ -71,6 +143,7 @@ class DocumentoController
         if ($aprendiz === null) {
             http_response_code(404);
             view('errors/404', ['uri' => '/documentos/info?aprendiz_id=' . $aprendizId]);
+
             return;
         }
 
@@ -78,54 +151,79 @@ class DocumentoController
         redirect(APP_BASE_PATH . '/aprendices/show?id=' . $aprendizId . '&toast=info_f023_guardada');
     }
 
-    private function buildInfoData(array $aprendiz, ?array $programa, ?array $empresa, array $guardada): array
+    /**
+     * @param list<mixed> $raw
+     * @return list<string>
+     */
+    private function validateExportPartes(int $aprendizId, array $raw): array
     {
-        $valor = static function (array $prioritario, string $k, mixed $fallback = ''): string {
-            $actual = trim((string) ($prioritario[$k] ?? ''));
-            if ($actual !== '') {
-                return $actual;
+        $ordered = [];
+        foreach ($raw as $token) {
+            $t = trim((string) $token);
+            if ($t !== '') {
+                $ordered[] = $t;
             }
-            return trim((string) $fallback);
-        };
+        }
 
-        $out = [
-            'regional' => $valor($guardada, 'regional', 'Risaralda'),
-            'centro_formacion' => $valor($guardada, 'centro_formacion', 'Diseño e Innovación Tecnológica Industrial'),
-            'nivel_formativo' => $valor($guardada, 'nivel_formativo', (string) ($programa['nivel'] ?? '')),
-            'programa_formacion' => $valor($guardada, 'programa_formacion', (string) ($programa['nombre'] ?? '')),
-            'numero_grupo' => $valor($guardada, 'numero_grupo', (string) ($aprendiz['ficha'] ?? '')),
-            'modalidad_formacion' => $valor($guardada, 'modalidad_formacion', (string) ($programa['modalidad'] ?? '')),
-            'estrategia_formativa' => $valor($guardada, 'estrategia_formativa', 'Dual'),
-            'fecha_fin_etapa_lectiva' => $valor($guardada, 'fecha_fin_etapa_lectiva', ''),
-            'fecha_registro_sofiaplus' => $valor($guardada, 'fecha_registro_sofiaplus', ''),
-            'asistencia_nombre' => $valor($guardada, 'asistencia_nombre', ''),
-            'asistencia_tipo' => $valor($guardada, 'asistencia_tipo', (string) ($aprendiz['tipo_asistencia'] ?? '')),
-            'asistencia_contacto' => $valor($guardada, 'asistencia_contacto', ''),
-            // Datos de solo lectura/autollenado para la vista
-            'nombre_completo' => trim((string) ($aprendiz['nombre_completo'] ?? '')),
-            'tipo_documento' => trim((string) ($aprendiz['tipo_documento'] ?? '')),
-            'numero_documento' => trim((string) ($aprendiz['numero_documento'] ?? '')),
-            'telefono' => trim((string) ($aprendiz['telefono'] ?? '')),
-            'direccion_domicilio' => trim((string) ($aprendiz['direccion_domicilio'] ?? '')),
-            'correo_personal' => trim((string) ($aprendiz['correo_personal'] ?? '')),
-            'correo_institucional' => trim((string) ($aprendiz['correo_institucional'] ?? '')),
-            'alternativa_ep' => trim((string) ($aprendiz['alternativa_ep'] ?? '')),
-            'nombre_instructor_seguimiento' => trim((string) ($aprendiz['nombre_instructor_seguimiento'] ?? '')),
-            'telefono_instructor_seguimiento' => trim((string) ($aprendiz['telefono_instructor_seguimiento'] ?? '')),
-            'correo_instructor_seguimiento' => trim((string) ($aprendiz['correo_instructor_seguimiento'] ?? '')),
-            'empresa_nombre' => trim((string) ($empresa['nombre'] ?? ($aprendiz['empresa_nombre'] ?? ''))),
-            'empresa_direccion' => trim((string) ($empresa['direccion'] ?? ($aprendiz['direccion'] ?? ''))),
-            'empresa_nit' => trim((string) ($empresa['nit'] ?? ($aprendiz['nit'] ?? ''))),
-            'empresa_correo' => trim((string) ($empresa['correo_org'] ?? '')),
-            'jefe_nombre' => trim((string) ($aprendiz['nombre_jefe'] ?? '')),
-            'jefe_cargo' => trim((string) ($aprendiz['cargo_jefe'] ?? '')),
-            'jefe_telefono' => trim((string) ($aprendiz['telefono_jefe'] ?? '')),
-            'jefe_correo' => trim((string) ($aprendiz['correo_jefe'] ?? '')),
-            'contacto2_nombre' => trim((string) ($aprendiz['nombre_contacto2_jefe'] ?? ($empresa['nombre_contacto2'] ?? ''))),
-            'contacto2_correo' => trim((string) ($aprendiz['correo_contacto2_jefe'] ?? ($empresa['correo_contacto2'] ?? ''))),
-        ];
-        foreach (['estrategia_formativa', 'direccion_domicilio', 'empresa_direccion'] as $mk) {
-            $out[$mk] = normalize_multiline_text((string) ($out[$mk] ?? ''));
+        $selectedIds = [];
+        foreach ($ordered as $token) {
+            if (!preg_match('/^momento:(\d+)$/', $token, $m)) {
+                continue;
+            }
+            $mid = (int) $m[1];
+            $row = Momento::findById($mid);
+            if ($row !== null && (int) ($row['aprendiz_id'] ?? 0) === $aprendizId) {
+                $selectedIds[$mid] = (string) ($row['tipo'] ?? '');
+            }
+        }
+
+        $tiposWithRealSelected = [];
+        foreach ($selectedIds as $tipo) {
+            if (in_array($tipo, ['M1', 'M2', 'M3', 'EX'], true)) {
+                $tiposWithRealSelected[$tipo] = true;
+            }
+        }
+
+        $seen = [];
+        $out = [];
+        foreach ($ordered as $token) {
+            if ($token === 'info') {
+                if (!isset($seen['info'])) {
+                    $seen['info'] = true;
+                    $out[] = 'info';
+                }
+
+                continue;
+            }
+            if (preg_match('/^momento:(\d+)$/', $token, $m)) {
+                $mid = (int) $m[1];
+                $key = 'momento:' . $mid;
+                if (isset($seen[$key])) {
+                    continue;
+                }
+                if (!isset($selectedIds[$mid])) {
+                    continue;
+                }
+                $seen[$key] = true;
+                $out[] = $key;
+
+                continue;
+            }
+            if (preg_match('/^momento_tipo:(M1|M2|M3)$/', $token, $m)) {
+                $tipo = (string) $m[1];
+                if (isset($tiposWithRealSelected[$tipo])) {
+                    continue;
+                }
+                if (Momento::existsTipo($aprendizId, $tipo)) {
+                    continue;
+                }
+                $key = 'momento_tipo:' . $tipo;
+                if (isset($seen[$key])) {
+                    continue;
+                }
+                $seen[$key] = true;
+                $out[] = $key;
+            }
         }
 
         return $out;

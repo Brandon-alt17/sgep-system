@@ -162,7 +162,7 @@
                                 <span class="<?= e($badge) ?>">
                                     <?= e($m['estado']) ?>
                                 </span>
-                                <a href="<?= e(APP_BASE_PATH) ?>/momentos/create?aprendiz_id=<?= (int)$aprendiz['id'] ?>&tipo=<?= e($m['id']) ?>"
+                                <a href="<?= e(APP_BASE_PATH) ?>/momentos/create?aprendiz_id=<?= (int)$aprendiz['id'] ?>&tipo=<?= e((string) $m['tipo']) ?>"
                                 class="<?= e(ui_button_small_classes()) ?> inline-flex items-center gap-2">
                                     
                                     <span class="w-5 h-5 [&_svg]:w-4 [&_svg]:h-4">
@@ -180,7 +180,7 @@
            
             <div class="grid mb:col-span-2 grid flex gap-3 mt-4">
 
-                <a href="<?= e(APP_BASE_PATH) ?>/documentos/info?aprendiz_id=<?= (int)$aprendiz['id'] ?>"
+                <a href="<?= e(APP_BASE_PATH) ?>/documentos/generar?aprendiz_id=<?= (int)$aprendiz['id'] ?>"
                 class="<?= e(ui_button_small_classes()) ?> flex items-center justify-center text-center gap-2">
                 <span class="w-4 h-4 [&_svg]:w-4 [&_svg]:h-4"><?= ui_icon('file-spreadsheet') ?></span>
                     Generar documento GFPI-F-023

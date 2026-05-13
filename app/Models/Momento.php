@@ -238,4 +238,140 @@ class Momento
             'm3_retro_aprendiz_desempeno' => $data['m3_retro_aprendiz_desempeno'] ?? null,
         ]);
     }
+
+    /** @return array<string,mixed>|null */
+    public static function findById(int $id): ?array
+    {
+        $stmt = Database::connection()->prepare('SELECT * FROM momentos WHERE id = :id LIMIT 1');
+        $stmt->execute(['id' => $id]);
+
+        return $stmt->fetch() ?: null;
+    }
+
+    /**
+     * Datos para la tarjeta «Documentos» en el perfil del aprendiz.
+     *
+     * @param array<string,mixed> $row
+     * @return array{tipo: string, label: string, fecha: string, estado: string}
+     */
+    public static function toPerfilCard(array $row): array
+    {
+        $tipo = (string) ($row['tipo'] ?? '');
+        $nv = $row['numero_visita'] ?? null;
+        $visit = ($nv !== null && $nv !== '' && (int) $nv > 0) ? (int) $nv : 0;
+
+        $label = match ($tipo) {
+            'M1' => 'Momento 1 — Planeación',
+            'M2' => 'Momento 2 — Seguimiento' . ($visit > 0 ? ' (visita ' . $visit . ')' : ''),
+            'M3' => 'Momento 3 — Evaluación final',
+            'EX' => 'Momento extraordinario' . ($visit > 0 ? ' ' . $visit : ''),
+            default => 'Momento ' . $tipo,
+        };
+
+        $iso = trim((string) ($row['fecha_diligenciamiento'] ?? ''));
+        if ($iso === '') {
+            $iso = trim((string) ($row['fecha_visita'] ?? ''));
+        }
+        $fecha = $iso !== '' ? date_iso_to_dmY($iso) : '';
+
+        return [
+            'tipo' => $tipo,
+            'label' => $label,
+            'fecha' => $fecha,
+            'estado' => 'Completado',
+        ];
+    }
+
+    /**
+     * Tarjeta «Documentos» para un momento aún no registrado (M1/M2/M3).
+     *
+     * @return array{tipo: string, label: string, fecha: string, estado: string}
+     */
+    public static function placeholderPerfilCard(string $tipo): array
+    {
+        $label = match ($tipo) {
+            'M1' => 'Momento 1 — Planeación',
+            'M2' => 'Momento 2 — Seguimiento',
+            'M3' => 'Momento 3 — Evaluación final',
+            default => 'Momento ' . $tipo,
+        };
+
+        return [
+            'tipo' => $tipo,
+            'label' => $label,
+            'fecha' => '',
+            'estado' => 'No iniciado',
+        ];
+    }
+
+    /**
+     * Fila del asistente de exportación (valor POST momento:{id}).
+     *
+     * @param array<string,mixed> $row
+     * @return array{id: int, checkbox_value: string, label: string, status_suffix: string, input_id: string}
+     */
+    public static function toExportWizardRow(array $row): array
+    {
+        $card = self::toPerfilCard($row);
+        $iso = trim((string) ($row['fecha_diligenciamiento'] ?? ''));
+        if ($iso === '') {
+            $iso = trim((string) ($row['fecha_visita'] ?? ''));
+        }
+        $suffix = $iso !== '' ? '(completado el ' . date_iso_to_dmY($iso) . ')' : '(registrado)';
+        $id = (int) ($row['id'] ?? 0);
+
+        return [
+            'id' => $id,
+            'checkbox_value' => 'momento:' . $id,
+            'label' => $card['label'],
+            'status_suffix' => $suffix,
+            'input_id' => 'm' . $id,
+        ];
+    }
+
+    /**
+     * Filas del asistente de exportación: M1/M2/M3 siempre (vacío como `momento_tipo:*` si no hay registro),
+     * más cada momento extraordinario existente en BD.
+     *
+     * @return list<array{id: int|null, checkbox_value: string, label: string, status_suffix: string, input_id: string}>
+     */
+    public static function buildExportWizardRows(int $aprendizId): array
+    {
+        $rows = self::findByAprendiz($aprendizId);
+        $realByTipo = [];
+        $extras = [];
+        foreach ($rows as $row) {
+            $tipo = (string) ($row['tipo'] ?? '');
+            if (in_array($tipo, ['M1', 'M2', 'M3'], true) && !isset($realByTipo[$tipo])) {
+                $realByTipo[$tipo] = $row;
+
+                continue;
+            }
+            if ($tipo === 'EX') {
+                $extras[] = $row;
+            }
+        }
+
+        $out = [];
+        foreach (['M1', 'M2', 'M3'] as $tipo) {
+            if (isset($realByTipo[$tipo])) {
+                $out[] = self::toExportWizardRow($realByTipo[$tipo]);
+
+                continue;
+            }
+            $card = self::placeholderPerfilCard($tipo);
+            $out[] = [
+                'id' => null,
+                'checkbox_value' => 'momento_tipo:' . $tipo,
+                'label' => $card['label'],
+                'status_suffix' => '(No iniciado — se exportará el bloque vacío)',
+                'input_id' => 'tipo-' . $tipo,
+            ];
+        }
+        foreach ($extras as $row) {
+            $out[] = self::toExportWizardRow($row);
+        }
+
+        return $out;
+    }
 }

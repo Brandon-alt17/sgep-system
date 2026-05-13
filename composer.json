@@ -17,7 +17,8 @@
             "App\\Models\\": "app/Models/",
             "App\\Helpers\\": "app/helpers/",
             "App\\Imports\\": "app/imports/",
-            "App\\Exports\\": "app/exports/"
+            "App\\Exports\\": "app/exports/",
+            "App\\Services\\": "app/Services/"
         },
         "files": [
             "app/helpers/helpers.php"

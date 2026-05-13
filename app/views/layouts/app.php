@@ -20,6 +20,13 @@ if (str_starts_with($currentPath, '/momentos/')) {
 if (str_starts_with($currentPath, '/documentos/info')) {
     $currentPath = '/aprendices';
 }
+$queryGenerar = [];
+if ($currentPath === '/documentos/generar') {
+    parse_str((string) (parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_QUERY) ?? ''), $queryGenerar);
+    if ((int) ($queryGenerar['aprendiz_id'] ?? 0) > 0) {
+        $currentPath = '/aprendices';
+    }
+}
 
 $titles = [
     '/dashboard' => 'Dashboard',

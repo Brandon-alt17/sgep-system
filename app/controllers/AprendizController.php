@@ -7,6 +7,7 @@ namespace App\Controllers;
 use App\Helpers\Validator;
 use App\Models\Aprendiz;
 use App\Models\EmpresaJefe;
+use App\Models\Momento;
 use App\Models\Programa;
 
 class AprendizController
@@ -89,25 +90,8 @@ class AprendizController
             return;
         }
         
-        $momentos = [
-            [
-                'id' => 'm1',
-                'label' => 'Momento 1 — Planeación',
-                'estado' => 'Completado',
-                'fecha' => '15/03/2025'
-            ],
-            [
-                'id' => 'm2',
-                'label' => 'Momento 2 — Seguimiento',
-                'estado' => 'Incompleto',
-                'fecha' => '10/04/2025'
-            ],
-            [
-                'id' => 'm3',
-                'label' => 'Momento 3 — Evaluación final',
-                'estado' => 'No iniciado'
-            ]
-        ];
+        $momentosRows = Momento::findByAprendiz($id);
+        $momentos = $this->buildMomentosCards($momentosRows);
 
         $empresaId = (int) ($aprendiz['empresa_id'] ?? 0);
         $jefes = $empresaId > 0 ? EmpresaJefe::listByEmpresa($empresaId) : [];
@@ -119,6 +103,42 @@ class AprendizController
             'backToListUrl' => $this->aprendicesBackUrl($_GET),
             'pageToast' => $this->toastFromQuery((string) ($_GET['toast'] ?? '')),
         ]);
+    }
+
+    /**
+     * Construye la lista de tarjetas «Documentos» garantizando que siempre
+     * aparezcan M1, M2 y M3 (como «No iniciado» si no existen en BD) y
+     * añadiendo al final cualquier momento extraordinario registrado.
+     *
+     * @param list<array<string,mixed>> $rows
+     * @return list<array{tipo: string, label: string, fecha: string, estado: string}>
+     */
+    private function buildMomentosCards(array $rows): array
+    {
+        $realByTipo = [];
+        $extras = [];
+        foreach ($rows as $row) {
+            $tipo = (string) ($row['tipo'] ?? '');
+            if (in_array($tipo, ['M1', 'M2', 'M3'], true) && !isset($realByTipo[$tipo])) {
+                $realByTipo[$tipo] = $row;
+                continue;
+            }
+            if ($tipo === 'EX') {
+                $extras[] = $row;
+            }
+        }
+
+        $cards = [];
+        foreach (['M1', 'M2', 'M3'] as $tipo) {
+            $cards[] = isset($realByTipo[$tipo])
+                ? Momento::toPerfilCard($realByTipo[$tipo])
+                : Momento::placeholderPerfilCard($tipo);
+        }
+        foreach ($extras as $row) {
+            $cards[] = Momento::toPerfilCard($row);
+        }
+
+        return $cards;
     }
 
     /** @return array{message: string, variant: string}|null */
