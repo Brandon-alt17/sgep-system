@@ -214,7 +214,7 @@ partial('components/page_header', [
                     <th class="<?= e(ui_th_classes()) ?>">Empresa</th>
                     <th class="<?= e(ui_th_classes()) ?>">Grupo</th>
                     <th class="<?= e(ui_th_classes()) ?>">Estado</th>
-                    <th class="<?= e(ui_th_classes()) ?>">Última visita</th>
+                    <th class="<?= e(ui_th_classes()) ?>">Proxima visita</th>
                     <th class="<?= e(ui_th_classes()) ?>"></th>
                 </tr>
             </thead>

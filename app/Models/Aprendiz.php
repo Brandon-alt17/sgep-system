@@ -326,4 +326,40 @@ class Aprendiz
             throw $e;
         }
     }
+
+    /**
+     * Guarda la próxima visita desde el modal de agendamiento (fechas en dd/mm/aaaa o ISO).
+     *
+     * @param array<string, mixed> $data
+     */
+    public static function saveVisitas(int $id, array $data): bool
+    {
+        if ($id <= 0) {
+            return false;
+        }
+        $pdo = Database::connection();
+
+        $m1Done = isset($data['completado_momento1']);
+        $m2Done = isset($data['completado_momento2']);
+
+        $d1 = date_post_to_iso($data['fecha_momento1'] ?? '');
+        $d2 = date_post_to_iso($data['fecha_momento2'] ?? '');
+        $d3 = date_post_to_iso($data['fecha_momento3'] ?? '');
+
+        $proximaVisita = null;
+        if (!$m1Done && $d1 !== '') {
+            $proximaVisita = $d1;
+        } elseif ($m1Done && !$m2Done && $d2 !== '') {
+            $proximaVisita = $d2;
+        } elseif ($m1Done && $m2Done && $d3 !== '') {
+            $proximaVisita = $d3;
+        }
+
+        $sql = 'UPDATE aprendices SET proxima_visita = :proxima_visita, updated_at = NOW() WHERE id = :id';
+
+        return $pdo->prepare($sql)->execute([
+            'proxima_visita' => $proximaVisita,
+            'id' => $id,
+        ]);
+    }
 }

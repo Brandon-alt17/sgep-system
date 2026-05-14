@@ -158,6 +158,28 @@ class AprendizController
         redirect(APP_BASE_PATH . '/aprendices/show?id=' . $id);
     }
 
+    public function updateVisitas(): void
+    {
+        header('Content-Type: application/json; charset=utf-8');
+        try {
+            $id = (int) ($_POST['aprendiz_id'] ?? 0);
+            if ($id <= 0) {
+                echo json_encode(['ok' => false, 'error' => 'ID de aprendiz inválido'], JSON_UNESCAPED_UNICODE);
+
+                return;
+            }
+
+            $success = Aprendiz::saveVisitas($id, $_POST);
+            if ($success) {
+                echo json_encode(['ok' => true], JSON_UNESCAPED_UNICODE);
+            } else {
+                echo json_encode(['ok' => false, 'error' => 'No se pudo actualizar la base de datos'], JSON_UNESCAPED_UNICODE);
+            }
+        } catch (\Throwable $e) {
+            echo json_encode(['ok' => false, 'error' => $e->getMessage()], JSON_UNESCAPED_UNICODE);
+        }
+    }
+
     /** @param array<string,mixed> $input */
     private function sanitizeAprendicesFilters(array $input): array
     {

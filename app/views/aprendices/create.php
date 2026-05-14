@@ -28,10 +28,6 @@
     <!-- ===================== -->
     <div id="contenido-aprendiz" class="space-y-5">
 
-        <h3 class="text-sm font-semibold text-gray-700">
-            Información personal
-        </h3>
-
         <div class="grid gap-3 md:grid-cols-2">
 
             <div class="md:col-span-2">
@@ -81,10 +77,6 @@
             </div>
         </div>
 
-        <h3 class="text-sm font-semibold text-gray-700 pt-2">
-            Información académica
-        </h3>
-
         <div class="grid gap-3 md:grid-cols-2">
 
             <div>
@@ -115,10 +107,6 @@
     <!-- 🏢 EMPRESA -->
     <!-- ===================== -->
     <div id="contenido-empresa" class="space-y-5 hidden">
-
-        <h3 class="text-sm font-semibold text-gray-700">
-            Información de la empresa
-        </h3>
 
         <div class="grid gap-3 md:grid-cols-2">
 

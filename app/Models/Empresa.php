@@ -90,6 +90,11 @@ class Empresa
         if ($id <= 0) {
             return;
         }
+        $existing = self::findById($id);
+        if ($existing === null) {
+            return;
+        }
+        $merged = array_replace($existing, $data);
         $sql = 'UPDATE empresas SET
             nombre = :nombre,
             nit = :nit,
@@ -101,7 +106,7 @@ class Empresa
             direccion_practica = :direccion_practica,
             updated_at = NOW()
             WHERE id = :id';
-        $row = self::bindableRow($data);
+        $row = self::bindableRow($merged);
         $row['id'] = $id;
         $stmt = Database::connection()->prepare($sql);
         $stmt->execute($row);
