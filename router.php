@@ -30,6 +30,7 @@ $routes = [
     ['POST', '/aprendices', [AprendizController::class, 'store']],
     ['GET', '/aprendices/show', [AprendizController::class, 'show']],
     ['POST', '/aprendices/update', [AprendizController::class, 'update']],
+    ['POST', '/aprendices/update-visitas', [AprendizController::class, 'updateVisitas']],
     ['GET', '/momentos/create', [MomentoController::class, 'create']],
     ['POST', '/momentos/store', [MomentoController::class, 'store']],
     ['POST', '/momentos/update', [MomentoController::class, 'update']],

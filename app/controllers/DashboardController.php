@@ -66,14 +66,13 @@ class DashboardController
                         a.id,
                         a.nombre_completo,
                         e.nombre AS empresa,
-                        m.proxima_visita,
-                        m.momento
+                        a.proxima_visita
                     FROM aprendices a
                     LEFT JOIN empresas e ON e.id = a.empresa_id
-                    JOIN momentos m ON m.aprendiz_id = a.id
-                    WHERE a.estado != 'Aplazada'
-                      AND m.proxima_visita BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY)
-                    ORDER BY m.proxima_visita ASC
+                    WHERE a.proxima_visita IS NOT NULL
+                    AND a.proxima_visita BETWEEN CURDATE() 
+                    AND DATE_ADD(CURDATE(), INTERVAL 30 DAY)
+                    ORDER BY a.proxima_visita ASC
                 ")->fetchAll();
             } catch (PDOException $e) {
                 error_log("Error en query de alertas: " . $e->getMessage());

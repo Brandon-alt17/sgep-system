@@ -49,8 +49,8 @@ $profileFiltersQuery = $query === [] ? '' : '&' . http_build_query($query);
                 ?>
                 <span class="<?= e($badgeClass) ?>"><?= e($estado) ?></span>
             </td>
-            <td class="<?= e(ui_td_classes()) ?> text-gray-500" data-field="ultima_visita">
-                <?= e((string) ($aprendiz['ultima_visita'] ?? '—')) ?>
+            <td class="<?= e(ui_td_classes()) ?> text-gray-500" data-field="proxima_visita">
+                <?= e((string) ($aprendiz['proxima_visita'] ?? '—')) ?>
             </td>
             <td class="<?= e(ui_td_classes()) ?>">
                 <a class="<?= e(ui_button_small_classes()) ?>"

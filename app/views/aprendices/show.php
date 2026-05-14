@@ -1,5 +1,6 @@
 <?php include __DIR__ . '/modal-editar-perfil.php'; ?>
 <?php include __DIR__ . '/modal-agendar-visitas.php'; ?>
+<script src="<?= e(APP_BASE_PATH) ?>/js/date-input-dmy.js"></script>
 <script src="<?= e(APP_BASE_PATH) ?>/js/edit-profile.js"></script>
 <?php $backToListUrl = (string) ($backToListUrl ?? (APP_BASE_PATH . '/aprendices')); ?>
 <?php $cardPaddedClass = str_replace('p-4', 'p-6', ui_card_classes()); ?>
@@ -114,8 +115,8 @@
                     <?php infoRow('Dirección', $aprendiz['direccion'] ?? 'Dato no registrado'); ?>
                     <?php infoRow('Supervisor', $aprendiz['nombre_jefe'] ?? 'Dato no registrado'); ?>
                     <?php infoRow('Cargo', $aprendiz['cargo_jefe'] ?? 'Dato no registrado'); ?>
-                    <?php infoRow('Correo supervisor', $aprendiz['correo_jefe'] ?? 'Dato no registrado', 'mail'); ?>
                     <?php infoRow('Teléfono contacto', $aprendiz['telefono_jefe'] ?? 'Dato no registrado'); ?>
+                    <?php infoRow('Correo supervisor', $aprendiz['correo_jefe'] ?? 'Dato no registrado', 'mail'); ?>
                 </div>
             </section>
 

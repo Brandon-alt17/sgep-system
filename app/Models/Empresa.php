@@ -90,6 +90,11 @@ class Empresa
         if ($id <= 0) {
             return;
         }
+        $existing = self::findById($id);
+        if ($existing === null) {
+            return;
+        }
+        $merged = array_replace($existing, $data);
         $sql = 'UPDATE empresas SET
             nombre = :nombre,
             nit = :nit,
@@ -99,9 +104,13 @@ class Empresa
             nombre_contacto2 = :nombre_contacto2,
             correo_contacto2 = :correo_contacto2,
             direccion_practica = :direccion_practica,
+            nombre_jefe = :nombre_jefe,
+            cargo_jefe = :cargo_jefe,
+            telefono_jefe = :telefono_jefe,
+            correo_jefe = :correo_jefe,
             updated_at = NOW()
             WHERE id = :id';
-        $row = self::bindableRow($data);
+        $row = self::bindableRow($merged);
         $row['id'] = $id;
         $stmt = Database::connection()->prepare($sql);
         $stmt->execute($row);
@@ -140,6 +149,10 @@ class Empresa
             'nombre_contacto2' => $nullIfEmpty($data['nombre_contacto2'] ?? null),
             'correo_contacto2' => $nullIfEmpty($data['correo_contacto2'] ?? null),
             'direccion_practica' => $nullIfEmpty($data['direccion_practica'] ?? null),
+            'nombre_jefe' => $nullIfEmpty($data['nombre_jefe'] ?? null),
+            'cargo_jefe' => $nullIfEmpty($data['cargo_jefe'] ?? null),
+            'telefono_jefe' => $nullIfEmpty($data['telefono_jefe'] ?? null),
+            'correo_jefe' => $nullIfEmpty($data['correo_jefe'] ?? null),
         ];
     }
 }
