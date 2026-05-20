@@ -7,6 +7,8 @@ namespace App\Controllers;
 use App\Helpers\ImportHistory;
 use App\Helpers\Database;
 use App\Imports\AprendicesImport;
+use App\Models\EmpresaJefe;
+use App\Models\ProgramaEnlacePendiente;
 
 class ImportacionController
 {
@@ -46,6 +48,7 @@ class ImportacionController
 
         $fileName = (string) ($_FILES['archivo']['name'] ?? 'archivo.xlsx');
         $resultado = (new AprendicesImport())->import($_FILES['archivo']['tmp_name']);
+        ProgramaEnlacePendiente::syncAprendicesSinVinculoValido();
         $processed = (int) ($resultado['inserted'] ?? 0) + (int) ($resultado['updated'] ?? 0);
         $errorCount = count($resultado['errors'] ?? []);
         $status = $errorCount > 0
@@ -126,6 +129,12 @@ class ImportacionController
             'sugerencias_comentarios',
             'jefe_grupo',
             'coordinacion',
+            'jefe_id',
+            'correo_organizacional',
+            'jefe_nombre',
+            'jefe_cargo',
+            'jefe_correo',
+            'jefe_telefono',
         ];
         if (!in_array($field, $allowedFields, true)) {
             $this->jsonResponse(['ok' => false, 'message' => 'Campo no permitido.'], 422);
@@ -137,7 +146,67 @@ class ImportacionController
             return;
         }
 
+        $incomingJefeId = (int) ($decoded['incoming_jefe_id'] ?? 0);
+        $updated = $this->applyConflictAcceptNew($aprendizId, $field, $newValue, $incomingJefeId);
+
+        $this->jsonResponse(['ok' => true, 'updated' => $updated]);
+    }
+
+    private function applyConflictAcceptNew(int $aprendizId, string $field, mixed $newValue, int $incomingJefeId = 0): bool
+    {
         $pdo = Database::connection();
+        $stmt = $pdo->prepare('SELECT id, empresa_id, jefe_id FROM aprendices WHERE id = :id LIMIT 1');
+        $stmt->execute(['id' => $aprendizId]);
+        $aprendiz = $stmt->fetch();
+        if (!$aprendiz) {
+            return false;
+        }
+
+        $empresaId = (int) ($aprendiz['empresa_id'] ?? 0);
+        $currentJefeId = (int) ($aprendiz['jefe_id'] ?? 0);
+
+        if ($field === 'correo_organizacional') {
+            if ($empresaId <= 0) {
+                return false;
+            }
+            $correo = trim((string) $this->normalizeConflictValue($field, $newValue));
+            $update = $pdo->prepare('UPDATE empresas SET correo_org = :correo, updated_at = NOW() WHERE id = :id');
+            $update->execute(['correo' => $correo !== '' ? $correo : null, 'id' => $empresaId]);
+
+            return $update->rowCount() > 0;
+        }
+
+        $jefeColumnMap = [
+            'jefe_nombre' => 'nombre',
+            'jefe_cargo' => 'cargo',
+            'jefe_correo' => 'correo',
+            'jefe_telefono' => 'telefono',
+        ];
+        if (isset($jefeColumnMap[$field])) {
+            if ($empresaId <= 0) {
+                return false;
+            }
+
+            $targetJefeId = $currentJefeId;
+            if ($incomingJefeId > 0 && $incomingJefeId !== $currentJefeId) {
+                $pdo->prepare('UPDATE aprendices SET jefe_id = :jefe_id, updated_at = NOW() WHERE id = :id')
+                    ->execute(['jefe_id' => $incomingJefeId, 'id' => $aprendizId]);
+                $targetJefeId = $incomingJefeId;
+            } elseif ($targetJefeId <= 0 && $incomingJefeId > 0) {
+                $pdo->prepare('UPDATE aprendices SET jefe_id = :jefe_id, updated_at = NOW() WHERE id = :id')
+                    ->execute(['jefe_id' => $incomingJefeId, 'id' => $aprendizId]);
+                $targetJefeId = $incomingJefeId;
+            }
+
+            if ($targetJefeId <= 0) {
+                return false;
+            }
+
+            $value = trim((string) $this->normalizeConflictValue($field, $newValue));
+
+            return EmpresaJefe::patchColumnForEmpresa($empresaId, $targetJefeId, $jefeColumnMap[$field], $value);
+        }
+
         $sql = 'UPDATE aprendices SET ' . $field . ' = :value, updated_at = NOW() WHERE id = :id';
         $stmt = $pdo->prepare($sql);
         $normalizedValue = $this->normalizeConflictValue($field, $newValue);
@@ -146,7 +215,7 @@ class ImportacionController
             'id' => $aprendizId,
         ]);
 
-        $this->jsonResponse(['ok' => true, 'updated' => $stmt->rowCount() > 0]);
+        return $stmt->rowCount() > 0;
     }
 
     private function templateUrl(): string
@@ -167,6 +236,14 @@ class ImportacionController
 
     private function normalizeConflictValue(string $field, mixed $value): mixed
     {
+        if (in_array($field, ['programa_id', 'empresa_id', 'jefe_id'], true)) {
+            if ($value === null || $value === '') {
+                return null;
+            }
+
+            return (int) $value;
+        }
+
         if (!is_string($value)) {
             return $value;
         }

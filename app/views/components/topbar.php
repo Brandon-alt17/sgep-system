@@ -12,7 +12,7 @@ if ($initials === '') {
     $initials = 'US';
 }
 ?>
-<header class="flex items-center border-b border-app-border bg-app-topbar px-[18px]">
+<header class="z-40 flex shrink-0 items-center border-b border-app-border bg-app-topbar px-[18px]">
     <div class="ml-auto flex items-center gap-2 text-xs text-app-textSubtle">
         <span class="inline-flex h-[22px] w-[22px] items-center justify-center rounded-full bg-app-accent text-[10px] text-app-textOnBrand"><?= e($initials) ?></span>
         <span><?= e($userName) ?></span>

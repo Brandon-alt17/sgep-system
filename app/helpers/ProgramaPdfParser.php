@@ -79,11 +79,10 @@ class ProgramaPdfParser
                 $expectNombreCompetencia = false;
                 $expectCodigoCompetencia = false;
                 $inResultados = false;
-                if (preg_match('/^4\.1\b.*?(?:norma|unidad)[^\n:]*[:\-]\s*(.+)$/iu', $line, $mUnidadInline)) {
+                if (preg_match('/^4\.1\b.*?norma\s*\/\s*unidad\s+de(?:\s+competencia)?\s*[:\-]?\s*(.+)$/iu', $line, $mUnidadInline)) {
                     $restUnidad = trim((string) ($mUnidadInline[1] ?? ''));
-                    if ($restUnidad !== '' && !preg_match('/^4\./', $restUnidad)) {
-                        $current['_unidad_norma'] = self::normalizeSentence($restUnidad);
-                        $expectUnidadCompetencia = false;
+                    if ($restUnidad !== '' && !preg_match('/^4\./', $restUnidad) && !self::isCompetenciaNombreLabelFragment($restUnidad)) {
+                        $current['_unidad_norma'] = self::cleanCompetenciaNombreCandidate($restUnidad);
                     }
                 }
                 continue;
@@ -106,9 +105,14 @@ class ProgramaPdfParser
                     }
                     continue;
                 } elseif ($line !== '' && !preg_match('/^4\./', $line)) {
-                    $piece = self::normalizeSentence($line);
-                    $prevUnidad = trim((string) ($current['_unidad_norma'] ?? ''));
-                    $current['_unidad_norma'] = $prevUnidad === '' ? $piece : trim($prevUnidad . ' ' . $piece);
+                    $piece = self::cleanCompetenciaNombreCandidate($line);
+                    if ($piece === '' || self::isCompetenciaNombreLabelFragment($piece) || self::isCompetenciaPageNoiseLine($piece)) {
+                        continue;
+                    }
+                    $current['_unidad_norma'] = self::mergeUnidadNormaText(
+                        (string) ($current['_unidad_norma'] ?? ''),
+                        $piece
+                    );
                     continue;
                 } else {
                     $expectUnidadCompetencia = false;
@@ -119,6 +123,10 @@ class ProgramaPdfParser
                 $expectNombreCompetencia = true;
                 $expectCodigoCompetencia = false;
                 $inResultados = false;
+                $inlineNombre = self::extractNombreCompetenciaFrom43Line($line);
+                if ($inlineNombre !== null) {
+                    self::assignCompetenciaNombre($current, $inlineNombre);
+                }
                 continue;
             }
 
@@ -203,27 +211,14 @@ class ProgramaPdfParser
 
             if ($expectNombreCompetencia) {
                 if ($line !== '' && !preg_match('/^4\./', $line)) {
-                    $candidateNombre = self::normalizeSentence($line);
-                    if (preg_match('/^competencia$/iu', $candidateNombre)) {
+                    $candidateNombre = self::cleanCompetenciaNombreCandidate($line);
+                    if (self::isCompetenciaNombreLabelFragment($candidateNombre) || self::isCompetenciaPageNoiseLine($candidateNombre)) {
                         continue;
                     }
                     if (self::isJunkCompetenciaNombre($candidateNombre)) {
                         continue;
                     }
-
-                    $existingNombre = trim((string) ($current['nombre'] ?? ''));
-                    if ($existingNombre === '' || preg_match('/^Competencia\s+\d+$/i', $existingNombre)) {
-                        $current['nombre'] = $candidateNombre;
-                    } else {
-                        if (self::isJunkCompetenciaNombre($existingNombre)) {
-                            $current['nombre'] = $candidateNombre;
-                        } else {
-                            $combined = trim($existingNombre . ' ' . $candidateNombre);
-                            if (mb_strlen($combined) <= 240 && !self::isJunkCompetenciaNombre($combined)) {
-                                $current['nombre'] = $combined;
-                            }
-                        }
-                    }
+                    self::assignCompetenciaNombre($current, $candidateNombre);
                 }
                 continue;
             }
@@ -330,6 +325,11 @@ class ProgramaPdfParser
         return self::parsePages([$text]);
     }
 
+    public static function sanitizeCompetenciaNombre(string $nombre): string
+    {
+        return self::cleanCompetenciaNombreCandidate($nombre);
+    }
+
     private static function cleanPageNoise(string $page): string
     {
         $page = preg_replace('/\r\n?/', "\n", $page) ?? $page;
@@ -362,6 +362,9 @@ class ProgramaPdfParser
                 continue;
             }
             if (preg_match('/^sena$/iu', $line)) {
+                continue;
+            }
+            if (self::isCompetenciaPageNoiseLine($line)) {
                 continue;
             }
             $filtered[] = $line;
@@ -525,6 +528,8 @@ class ProgramaPdfParser
     {
         $value = trim($value);
         $value = preg_replace('/\(\s*\d+\s*horas?\s*\)\.?$/iu', '', $value) ?? $value;
+        $value = preg_replace('/\s+gesti[oó]n\s+de\s+la\s+informaci[oó]n(?:\s+software(?:\s+de\s+software)?)?/iu', ' ', $value) ?? $value;
+        $value = preg_replace('/\s+software\s+de\s+software\b/iu', ' ', $value) ?? $value;
         $value = preg_replace('/\s+/', ' ', $value) ?? $value;
         return trim($value);
     }
@@ -580,12 +585,221 @@ class ProgramaPdfParser
         $junkNombre = self::isJunkCompetenciaNombre($nombre);
         $needsFallback = $isGenericPlaceholder || $junkNombre;
         $unidadTitulo = self::cleanUnidadNormaParaTitulo($unidad);
-        if ($needsFallback && $unidadTitulo !== '') {
-            $comp['nombre'] = self::normalizeSentence($unidadTitulo);
+        $preferUnidad = self::shouldPreferUnidadNormaOverNombre($nombre, $unidadTitulo);
+        if ($unidadTitulo !== '') {
+            if ($needsFallback || $preferUnidad) {
+                $comp['nombre'] = self::normalizeSentence($unidadTitulo);
+            }
         } elseif ($needsFallback && $codigo === '999999999') {
             $comp['nombre'] = 'RESULTADOS DE APRENDIZAJE ETAPA PRÁCTICA';
         }
         unset($comp['_unidad_norma']);
+    }
+
+    /**
+     * @param array<string,mixed> $current
+     */
+    private static function assignCompetenciaNombre(array &$current, string $candidateNombre): void
+    {
+        $candidateNombre = self::cleanCompetenciaNombreCandidate($candidateNombre);
+        if ($candidateNombre === '' || self::isCompetenciaNombreLabelFragment($candidateNombre)) {
+            return;
+        }
+        if (self::isJunkCompetenciaNombre($candidateNombre)) {
+            return;
+        }
+
+        $existingNombre = trim((string) ($current['nombre'] ?? ''));
+        if ($existingNombre === '' || preg_match('/^Competencia\s+\d+$/i', $existingNombre)) {
+            $current['nombre'] = $candidateNombre;
+
+            return;
+        }
+        if (self::isJunkCompetenciaNombre($existingNombre) || self::isCompetenciaNombreLabelFragment($existingNombre)) {
+            $current['nombre'] = $candidateNombre;
+
+            return;
+        }
+
+        $combined = trim($existingNombre . ' ' . $candidateNombre);
+        if (mb_strlen($combined) <= 240 && !self::isJunkCompetenciaNombre($combined) && !self::isCompetenciaNombreLabelFragment($combined)) {
+            $current['nombre'] = $combined;
+        }
+    }
+
+    private static function extractNombreCompetenciaFrom43Line(string $line): ?string
+    {
+        if (!preg_match('/^4\.3\b/i', $line)) {
+            return null;
+        }
+        if (!preg_match('/^4\.3\b.*?nombre\s+de\s+la(?:\s+competencia)?\s*[:\-]?\s*(.+)$/iu', $line, $mNombreInline)) {
+            return null;
+        }
+
+        $restNombre = self::cleanCompetenciaNombreCandidate(trim((string) ($mNombreInline[1] ?? '')));
+        if ($restNombre === '' || preg_match('/^4\./', $restNombre) || self::isCompetenciaNombreLabelFragment($restNombre)) {
+            return null;
+        }
+
+        return $restNombre;
+    }
+
+    private static function cleanCompetenciaNombreCandidate(string $value): string
+    {
+        $value = self::normalizeSentence($value);
+        $value = self::stripCompetenciaFieldLabelPrefixes($value);
+        $value = preg_replace('/^(nombre\s+de\s+la\s+competencia\s*)+/iu', '', $value) ?? $value;
+        $value = preg_replace('/^(de\s+la\s+competencia\s*)+/iu', '', $value) ?? $value;
+        $value = preg_replace('/^competencia\s+(?=\S)/iu', '', $value) ?? $value;
+        $value = self::stripCompetenciaNombreNoise($value);
+
+        return trim($value);
+    }
+
+    private static function stripCompetenciaNombreNoise(string $value): string
+    {
+        $value = preg_replace('/\s+gesti[oó]n\s+de\s+la\s+informaci[oó]n(?:\s+software(?:\s+de\s+software)?)?.*$/iu', '', $value) ?? $value;
+        $value = preg_replace('/\s+software\s+de\s+software.*$/iu', '', $value) ?? $value;
+
+        return trim($value);
+    }
+
+    private static function isCompetenciaPageNoiseLine(string $line): bool
+    {
+        $v = trim($line);
+        if ($v === '') {
+            return true;
+        }
+        if (preg_match('/\bsoftware\s+de\s+software\b/iu', $v)) {
+            return true;
+        }
+        if (preg_match('/^software$/iu', $v) || preg_match('/^de\s+software$/iu', $v)) {
+            return true;
+        }
+        if (preg_match('/\bgesti[oó]n\s+de\s+la\s+informaci[oó]n\b/iu', $v)) {
+            return true;
+        }
+        if (preg_match('/^l[ií]nea\s+tecnol[oó]gica\b/iu', $v)) {
+            return true;
+        }
+        if (preg_match('/^red\s+(?:tecnol[oó]gica|de\s+conocimiento)\b/iu', $v)) {
+            return true;
+        }
+
+        return false;
+    }
+
+    private static function stripCompetenciaFieldLabelPrefixes(string $value): string
+    {
+        $value = trim($value);
+        if ($value === '') {
+            return '';
+        }
+
+        $patterns = [
+            '/^(?:norma\s*)?(?:\s*\/\s*)?unidad\s+de\s+competencia\s+/iu',
+            '/^(?:norma\s*)?(?:\s*\/\s*)?unidad\s+de\s+/iu',
+            '/^\s*\/\s*unidad\s+de\s+(?:competencia\s+)?/iu',
+            '/^norma\s*\/\s*/iu',
+        ];
+        foreach ($patterns as $pattern) {
+            $next = preg_replace($pattern, '', $value);
+            if (is_string($next)) {
+                $value = trim($next);
+            }
+        }
+
+        return $value;
+    }
+
+    private static function isCompetenciaNombreLabelFragment(string $value): bool
+    {
+        $v = trim($value);
+        if ($v === '') {
+            return true;
+        }
+        if (preg_match('/^competencia$/iu', $v)) {
+            return true;
+        }
+        if (preg_match('/^(nombre\s+de\s+la\s+)?competencia\.?$/iu', $v)) {
+            return true;
+        }
+        if (preg_match('/^nombre\s+de\s+la$/iu', $v)) {
+            return true;
+        }
+        if (preg_match('/^de\s+la\s+competencia$/iu', $v)) {
+            return true;
+        }
+        if (preg_match('/^(norma|unidad|c[oó]digo|laboral)\b/iu', $v)) {
+            return true;
+        }
+        if (preg_match('/^(?:norma\s*)?(?:\s*\/\s*)?unidad(?:\s+de(?:\s+competencia)?)?\.?$/iu', $v)) {
+            return true;
+        }
+        if (preg_match('/^\/\s*unidad\b/iu', $v)) {
+            return true;
+        }
+
+        return false;
+    }
+
+    private static function shouldPreferUnidadNormaOverNombre(string $nombre, string $unidadTitulo): bool
+    {
+        $n = trim($nombre);
+        $u = trim($unidadTitulo);
+        if ($n === '' || $u === '') {
+            return false;
+        }
+        if (mb_strtolower($n) === mb_strtolower($u)) {
+            return false;
+        }
+
+        $lenN = mb_strlen($n);
+        $lenU = mb_strlen($u);
+        if ($lenU >= $lenN + 15 && mb_stripos($u, $n) !== false) {
+            return true;
+        }
+        if (preg_match('/^(nombre\s+de\s+la\s+)?competencia\b/iu', $n) && $lenU > $lenN) {
+            return true;
+        }
+        if ($lenU >= 50 && $lenN < (int) ($lenU * 0.55)) {
+            return true;
+        }
+        if (self::isCompetenciaPageNoiseLine($n) || preg_match('/\bsoftware\s+de\s+software\b/iu', $n)) {
+            return true;
+        }
+        $firstUnidad = mb_strtolower((string) preg_split('/\s+/u', $u, 2)[0]);
+        $firstNombre = mb_strtolower((string) preg_split('/\s+/u', $n, 2)[0]);
+        if ($firstUnidad !== '' && $firstNombre !== '' && $firstUnidad !== $firstNombre && mb_strlen($u) >= 40) {
+            return true;
+        }
+        $uNorm = mb_strtolower($u);
+        $nNorm = mb_strtolower($n);
+        if (mb_strlen($u) > mb_strlen($n) + 15 && str_ends_with($uNorm, $nNorm)) {
+            return true;
+        }
+
+        return false;
+    }
+
+    private static function mergeUnidadNormaText(string $prev, string $piece): string
+    {
+        $prev = trim($prev);
+        $piece = trim($piece);
+        if ($prev === '') {
+            return $piece;
+        }
+        if ($piece === '') {
+            return $prev;
+        }
+        if (mb_stripos($piece, $prev) !== false) {
+            return $piece;
+        }
+        if (mb_stripos($prev, $piece) !== false) {
+            return $prev;
+        }
+
+        return trim($prev . ' ' . $piece);
     }
 
     private static function isJunkCompetenciaNombre(string $nombre): bool
@@ -608,7 +822,7 @@ class ProgramaPdfParser
 
     private static function cleanUnidadNormaParaTitulo(string $raw): string
     {
-        $u = trim($raw);
+        $u = self::cleanCompetenciaNombreCandidate($raw);
         if ($u === '') {
             return '';
         }

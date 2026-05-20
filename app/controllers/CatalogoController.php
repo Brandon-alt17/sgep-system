@@ -354,6 +354,7 @@ class CatalogoController
 
     public function pendientesPrograma(): void
     {
+        ProgramaEnlacePendiente::syncAprendicesSinVinculoValido();
         $filters = ['q' => trim((string) ($_GET['q'] ?? ''))];
         $pendientes = ProgramaEnlacePendiente::pendingList($filters);
         $programas = Programa::all();

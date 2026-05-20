@@ -44,6 +44,28 @@ class EmpresaJefe
         ]);
     }
 
+    public static function patchColumnForEmpresa(int $empresaId, int $jefeId, string $column, ?string $value): bool
+    {
+        $allowed = ['nombre', 'cargo', 'correo', 'telefono'];
+        if ($empresaId <= 0 || $jefeId <= 0 || !in_array($column, $allowed, true)) {
+            return false;
+        }
+
+        $value = $value !== null ? trim($value) : null;
+        if ($column === 'nombre' && ($value === null || $value === '')) {
+            return false;
+        }
+
+        $sql = 'UPDATE empresa_jefes SET ' . $column . ' = :value, updated_at = NOW() WHERE id = :id AND empresa_id = :empresa_id';
+        $stmt = Database::connection()->prepare($sql);
+
+        return $stmt->execute([
+            'value' => $value === '' ? null : $value,
+            'id' => $jefeId,
+            'empresa_id' => $empresaId,
+        ]);
+    }
+
     public static function findById(int $id): ?array
     {
         if ($id <= 0) {
@@ -101,6 +123,21 @@ class EmpresaJefe
         $stmt = $pdo->prepare('SELECT id, nombre, correo FROM empresa_jefes WHERE empresa_id = :eid');
         $stmt->execute(['eid' => $empresaId]);
         $candidates = $stmt->fetchAll() ?: [];
+
+        if ($correo !== null) {
+            $correoKey = mb_strtolower(trim($correo));
+            foreach ($candidates as $row) {
+                $rowCorreo = self::nullIfEmptyString($row['correo'] ?? null);
+                if ($rowCorreo === null) {
+                    continue;
+                }
+                if (mb_strtolower(trim($rowCorreo)) === $correoKey) {
+                    self::patchAltContactIfMissing((int) $row['id'], $nombreContacto2, $correoContacto2);
+
+                    return (int) $row['id'];
+                }
+            }
+        }
 
         foreach ($candidates as $row) {
             $rowNombre = self::normalizeComparableName((string) ($row['nombre'] ?? ''));

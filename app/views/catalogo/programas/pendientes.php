@@ -32,7 +32,7 @@ $pendientesAlertBadge = $pendientesAlertUrgente
 
 <section class="<?= e($pendientesAlertSection) ?>">
     <p class="m-0 flex items-center gap-2 text-sm font-semibold <?= e($pendientesAlertFg) ?>">
-        <span class="inline-flex h-4 w-4 [&_svg]:h-4 [&_svg]:w-4 <?= e($pendientesAlertFg) ?>"><?= ui_icon('alert-circle') ?></span>
+        <span class="inline-flex h-4 w-4 [&_svg]:h-4 [&_svg]:w-4 <?= e($pendientesAlertFg) ?>"><?= ui_icon('circle-alert') ?></span>
         Hay <span class="<?= e($pendientesAlertBadge) ?>"><?= e((string) $pendientesCount) ?></span> aprendices pendientes por enlazar con un programa.
     </p>
 </section>

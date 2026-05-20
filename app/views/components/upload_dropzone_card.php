@@ -15,6 +15,7 @@ $emptyFilenameText = (string) ($emptyFilenameText ?? 'Sin archivo seleccionado')
 $submitText = (string) ($submitText ?? 'Enviar');
 $showSubmit = (bool) ($showSubmit ?? false);
 $showProgress = (bool) ($showProgress ?? false);
+$hiddenFields = (array) ($hiddenFields ?? []);
 ?>
 <article class="<?= e(ui_card_surface_classes()) ?>">
     <div class="<?= e(ui_card_header_classes()) ?>">
@@ -34,6 +35,9 @@ $showProgress = (bool) ($showProgress ?? false);
             data-import-autosend="<?= $autoSend ? 'true' : 'false' ?>"
             class="space-y-3"
         >
+            <?php foreach ($hiddenFields as $hiddenName => $hiddenValue): ?>
+                <input type="hidden" name="<?= e((string) $hiddenName) ?>" value="<?= e((string) $hiddenValue) ?>">
+            <?php endforeach; ?>
             <input class="sr-only" data-import-input type="file" name="<?= e($inputName) ?>"<?= $accept !== '' ? ' accept="' . e($accept) . '"' : '' ?><?= $required ? ' required' : '' ?>>
             <div class="upload-dropzone-dashed grid min-h-[122px] place-items-center rounded-lg bg-app-panel p-10 text-center transition-colors duration-150 cursor-pointer" data-import-dropzone>
                 <div>

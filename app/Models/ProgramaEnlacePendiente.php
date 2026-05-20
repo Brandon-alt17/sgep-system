@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Helpers\Database;
+use App\Services\ProgramaCatalogMatcher;
 
 class ProgramaEnlacePendiente
 {
@@ -42,6 +43,131 @@ class ProgramaEnlacePendiente
         ]);
     }
 
+    /**
+     * Reabre o crea pendientes para aprendices sin programa válido en catálogo
+     * (programa_id nulo, huérfano o resuelto sin destino).
+     */
+    public static function syncAprendicesSinVinculoValido(): int
+    {
+        $pdo = Database::connection();
+        $sql = 'SELECT a.id AS aprendiz_id,
+                       a.numero_documento,
+                       a.nombre_completo,
+                       a.programa_id,
+                       (
+                           SELECT pep.programa_fuente
+                           FROM programa_enlaces_pendientes pep
+                           WHERE pep.numero_documento = a.numero_documento
+                           ORDER BY pep.updated_at DESC, pep.id DESC
+                           LIMIT 1
+                       ) AS programa_fuente_hist,
+                       (
+                           SELECT pep.modalidad_fuente
+                           FROM programa_enlaces_pendientes pep
+                           WHERE pep.numero_documento = a.numero_documento
+                           ORDER BY pep.updated_at DESC, pep.id DESC
+                           LIMIT 1
+                       ) AS modalidad_fuente_hist
+                FROM aprendices a
+                LEFT JOIN programas p ON p.id = a.programa_id
+                WHERE a.programa_id IS NULL
+                   OR a.programa_id = 0
+                   OR p.id IS NULL';
+
+        $rows = $pdo->query($sql)->fetchAll();
+        $touched = 0;
+
+        foreach ($rows as $row) {
+            $doc = trim((string) ($row['numero_documento'] ?? ''));
+            if ($doc === '') {
+                continue;
+            }
+
+            $programaFuente = trim((string) ($row['programa_fuente_hist'] ?? ''));
+            if ($programaFuente === '') {
+                continue;
+            }
+
+            $modalidad = trim((string) ($row['modalidad_fuente_hist'] ?? ''));
+            $match = ProgramaCatalogMatcher::resolve($programaFuente, $modalidad !== '' ? $modalidad : null);
+            if ($match['id'] !== null && ($match['ambiguous'] ?? false) !== true) {
+                $programaId = (int) $match['id'];
+                $pdo->prepare('UPDATE aprendices SET programa_id = :programa_id, updated_at = NOW() WHERE id = :id')
+                    ->execute(['programa_id' => $programaId, 'id' => (int) ($row['aprendiz_id'] ?? 0)]);
+                $pdo->prepare(
+                    'UPDATE programa_enlaces_pendientes
+                     SET estado = "resuelto", programa_id_destino = :programa_id, resolved_at = NOW(), updated_at = NOW()
+                     WHERE numero_documento = :doc AND estado = "pendiente"'
+                )->execute(['programa_id' => $programaId, 'doc' => $doc]);
+                $touched++;
+
+                continue;
+            }
+
+            self::reopenOrCreatePending([
+                'numero_documento' => $doc,
+                'nombre_aprendiz' => trim((string) ($row['nombre_completo'] ?? '')),
+                'programa_fuente' => $programaFuente,
+                'nivel_fuente' => (string) ($match['detected_level'] ?? ''),
+                'modalidad_fuente' => $modalidad,
+                'candidatos_json' => json_encode((array) ($match['candidates'] ?? []), JSON_UNESCAPED_UNICODE),
+                'motivo' => ($match['ambiguous'] ?? false) ? 'ambiguous' : 'invalid_link',
+            ]);
+            $touched++;
+        }
+
+        return $touched;
+    }
+
+    /** @param array<string,mixed> $data */
+    private static function reopenOrCreatePending(array $data): void
+    {
+        $doc = trim((string) ($data['numero_documento'] ?? ''));
+        $programaFuente = trim((string) ($data['programa_fuente'] ?? ''));
+        if ($doc === '' || $programaFuente === '') {
+            return;
+        }
+
+        $pdo = Database::connection();
+        $stmt = $pdo->prepare(
+            'SELECT id, estado, programa_id_destino
+             FROM programa_enlaces_pendientes
+             WHERE numero_documento = :doc AND programa_fuente = :programa
+             ORDER BY id DESC
+             LIMIT 1'
+        );
+        $stmt->execute(['doc' => $doc, 'programa' => $programaFuente]);
+        $existing = $stmt->fetch();
+
+        if (is_array($existing) && (string) ($existing['estado'] ?? '') === 'pendiente') {
+            return;
+        }
+
+        if (is_array($existing) && (string) ($existing['estado'] ?? '') === 'resuelto') {
+            $destino = (int) ($existing['programa_id_destino'] ?? 0);
+            if ($destino <= 0) {
+                $pdo->prepare(
+                    'UPDATE programa_enlaces_pendientes
+                     SET estado = "pendiente",
+                         programa_id_destino = NULL,
+                         resolved_at = NULL,
+                         motivo = :motivo,
+                         candidatos_json = :candidatos_json,
+                         updated_at = NOW()
+                     WHERE id = :id'
+                )->execute([
+                    'motivo' => trim((string) ($data['motivo'] ?? 'invalid_link')),
+                    'candidatos_json' => (string) ($data['candidatos_json'] ?? '[]'),
+                    'id' => (int) ($existing['id'] ?? 0),
+                ]);
+
+                return;
+            }
+        }
+
+        self::createOrIgnorePending($data);
+    }
+
     /** @return array<int,array<string,mixed>> */
     public static function pendingList(array $filters = []): array
     {
@@ -64,12 +190,34 @@ class ProgramaEnlacePendiente
                 ORDER BY pep.created_at DESC';
         $stmt = Database::connection()->prepare($sql);
         $stmt->execute($params);
+
         return $stmt->fetchAll();
+    }
+
+    public static function countAbiertos(): int
+    {
+        try {
+            $stmt = Database::connection()->query('SELECT COUNT(*) FROM programa_enlaces_pendientes WHERE estado = "pendiente"');
+
+            return (int) $stmt->fetchColumn();
+        } catch (\Throwable) {
+            return 0;
+        }
     }
 
     public static function resolve(int $pendingId, int $programaId): bool
     {
+        if ($programaId <= 0) {
+            return false;
+        }
+
         $pdo = Database::connection();
+        $programaCheck = $pdo->prepare('SELECT id FROM programas WHERE id = :id LIMIT 1');
+        $programaCheck->execute(['id' => $programaId]);
+        if (!$programaCheck->fetch()) {
+            return false;
+        }
+
         $pdo->beginTransaction();
         try {
             $stmt = $pdo->prepare('SELECT * FROM programa_enlaces_pendientes WHERE id = :id AND estado = "pendiente" LIMIT 1');
@@ -77,6 +225,7 @@ class ProgramaEnlacePendiente
             $pending = $stmt->fetch();
             if (!$pending) {
                 $pdo->rollBack();
+
                 return false;
             }
 
@@ -92,6 +241,7 @@ class ProgramaEnlacePendiente
                 ->execute(['programa_id' => $programaId, 'id' => $pendingId]);
 
             $pdo->commit();
+
             return true;
         } catch (\Throwable $e) {
             $pdo->rollBack();

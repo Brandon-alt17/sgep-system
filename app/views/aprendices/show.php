@@ -16,13 +16,13 @@
         </div>
         <div class="flex shrink-0 items-center gap-2">
             <button type="button" onclick="abrirModalVisitas()"
-            class="items-center <?= e(ui_button_small_classes()) ?> gap-2">
+                class="<?= e(ui_button_small_classes()) ?> inline-flex items-center gap-2">
                 <span class="w-4 h-4 [&_svg]:w-4 [&_svg]:h-4"><?= ui_icon('calendar') ?></span>
                 Programar visitas
             </button>
 
             <button type="button" onclick="abrirModalEditar()"
-            class="items-center <?= e(ui_button_small_classes()) ?> gap-2">
+                class="<?= e(ui_button_small_classes()) ?> inline-flex items-center gap-2">
                 <span class="w-4 h-4 [&_svg]:w-4 [&_svg]:h-4"><?= ui_icon('user-round') ?></span>
                 Editar datos del aprendiz
             </button>
@@ -78,6 +78,8 @@
 
                 <?php infoRow('Alternativa etapa productiva', $aprendiz['alternativa_ep'] ?? 'Dato no registrado', 'briefcase'); ?>
 
+                <?php infoRow('Programa de formación', trim((string) ($aprendiz['programa_nombre'] ?? '')) !== '' ? (string) $aprendiz['programa_nombre'] : 'Dato no registrado', 'graduation-cap'); ?>
+
                 <?php infoRow('Grupo', $aprendiz['ficha'] ?? 'Dato no registrado', 'users'); ?>
 
                 <?php infoRow('Instructor seguimiento', $aprendiz['nombre_instructor_seguimiento'] ?? 'Dato no registrado', 'user'); ?>
@@ -122,24 +124,28 @@
 
             <!-- Documentos / momentos F-023 -->
             <section class="<?= e($cardPaddedClass) ?>">
-                <div class="mb-3 flex flex-wrap items-start justify-between gap-3">
+                <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
                     <h3 class="<?= e(ui_heading_sm_classes()) ?> m-0">Documentos</h3>
                     <a href="<?= e(APP_BASE_PATH) ?>/momentos/create?aprendiz_id=<?= (int) $aprendiz['id'] ?>&tipo=EX"
-                       class="shrink-0 text-sm font-medium text-app-link no-underline hover:underline">
+                       class="<?= e(ui_button_small_classes()) ?>">
                         + Agregar Momento extraordinario
                     </a>
                 </div>
-                <p class="mb-4 mt-0 text-xs text-app-muted">
-                    La información general del F-023 reutiliza datos del perfil y de la empresa.
-                    <button type="button" onclick="abrirModalEditar()" class="inline cursor-pointer border-0 bg-transparent p-0 text-xs text-app-link underline decoration-app-link/40 underline-offset-2 hover:text-app-accent hover:decoration-app-accent">Editar datos del aprendiz</button>
-                    para actualizarlos.
-                </p>
 
-                <div class="grid max-h-[320px] gap-4 overflow-y-auto pr-1 md:col-span-2">
-                    <div class="flex flex-wrap items-center justify-between gap-3 border border-app-border p-4">
+                <?php
+                $docMomentoRowClass = 'flex h-[70px] flex-wrap items-center justify-between gap-3 rounded-lg border border-app-border px-4';
+                $docListClass = 'grid gap-4 pr-1 md:col-span-2';
+                // Scroll solo si hay momento extraordinario (más de M1, M2 y M3).
+                if (count($momentos) > 3) {
+                    $docListClass .= ' max-h-[336px] overflow-y-auto';
+                }
+                ?>
+                <div class="<?= e($docListClass) ?>">
+                    <div class="<?= $docMomentoRowClass ?>">
                         <span class="text-sm font-medium text-app-text">Información</span>
                         <a href="<?= e(APP_BASE_PATH) ?>/documentos/info?aprendiz_id=<?= (int) $aprendiz['id'] ?>"
-                           class="shrink-0 text-sm text-app-link no-underline hover:underline">
+                           class="<?= e(ui_button_small_classes()) ?> inline-flex items-center gap-2">
+                            <span class="w-5 h-5 [&_svg]:w-4 [&_svg]:h-4"><?= ui_icon('file-spreadsheet') ?></span>
                             Abrir información
                         </a>
                     </div>
@@ -152,39 +158,37 @@
                             $badge = ui_badge_warning_classes();
                         }
                         ?>
-                        <div class="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-app-border p-4">
+                        <div class="<?= $docMomentoRowClass ?>">
                             <span class="min-w-0 text-sm font-medium text-app-text"><?= e($m['label']) ?></span>
-                            <div class="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
+                            <div class="flex flex-wrap items-center gap-3">
                                 <?php if (!empty($m['fecha'])): ?>
                                     <span class="text-xs text-app-muted"><?= e($m['fecha']) ?></span>
                                 <?php endif; ?>
                                 <span class="<?= e($badge) ?>"><?= e($m['estado']) ?></span>
                                 <a href="<?= e(APP_BASE_PATH) ?>/momentos/create?aprendiz_id=<?= (int) $aprendiz['id'] ?>&tipo=<?= e((string) $m['tipo']) ?>"
-                                   class="shrink-0 text-sm text-app-link no-underline hover:underline">
+                                   class="<?= e(ui_button_small_classes()) ?> inline-flex items-center gap-2">
+                                    <span class="w-5 h-5 [&_svg]:w-4 [&_svg]:h-4"><?= ui_icon('pencil') ?></span>
                                     Editar momento
                                 </a>
                             </div>
                         </div>
                     <?php endforeach; ?>
                 </div>
+
             </section>
 
-            <!-- 🟪 ACCIONES -->
-           
-             <div class="grid mb:col-span-2 grid flex gap-3 mt-4">
-
-                <a href="<?= e(APP_BASE_PATH) ?>/documentos/generar?aprendiz_id=<?= (int)$aprendiz['id'] ?>"
-                class="<?= e(ui_button_small_classes()) ?> flex items-center justify-center text-center gap-2">
-                <span class="w-4 h-4 [&_svg]:w-4 [&_svg]:h-4"><?= ui_icon('file-spreadsheet') ?></span>
+            <div class="mt-4 flex flex-col items-stretch gap-3">
+                <a href="<?= e(APP_BASE_PATH) ?>/documentos/generar?aprendiz_id=<?= (int) $aprendiz['id'] ?>"
+                   class="font-app flex w-full items-center justify-center gap-2 rounded-lg border border-app-accent bg-app-accent px-4 py-3 text-sm font-semibold text-app-textOnBrand shadow-sm transition-colors duration-200 hover:border-app-accentHover hover:bg-app-accentHover hover:no-underline">
+                    <span class="inline-flex h-4 w-4 [&_svg]:h-4 [&_svg]:w-4"><?= ui_icon('file-spreadsheet') ?></span>
                     Generar documento GFPI-F-023
                 </a>
-
-                <a href="<?= e(APP_BASE_PATH) ?>/reportes/maestro" 
-                class="text-sm text-app-accent hover:underline flex items-center justify-center text-center">
+                <a href="<?= e(APP_BASE_PATH) ?>/reportes/maestro"
+                   class="text-center text-sm font-medium text-app-link no-underline hover:text-app-accent hover:underline">
                     Ver en reporte general →
                 </a>
-
             </div>
+
         </div>
     </div>
 </div>

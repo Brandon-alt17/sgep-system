@@ -54,9 +54,9 @@ $currentUserName = (string) ($_SESSION['user_name'] ?? 'Usuario no registrado');
 <?php partial('components/ui'); ?>
 <div class="min-h-screen md:pl-[260px]">
     <?php partial('components/sidebar', ['currentPath' => $currentPath]); ?>
-    <div class="grid min-h-screen grid-rows-[56px_1fr]">
+    <div class="grid h-screen min-h-0 grid-rows-[56px_minmax(0,1fr)]">
         <?php partial('components/topbar', ['title' => $pageTitle, 'userName' => $currentUserName]); ?>
-        <main class="p-6">
+        <main class="min-h-0 overflow-y-auto p-6">
             <?php require $viewPath; ?>
         </main>
     </div>

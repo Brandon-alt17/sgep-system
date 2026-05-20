@@ -52,12 +52,37 @@ class Normalizer
         return null;
     }
 
+    /** Quita prefijos de nivel del nombre para comparar con el catálogo (ej. "Tecnólogo en …"). */
+    public static function stripProgramaNivelPrefix(string $value): string
+    {
+        $text = trim($value);
+        if ($text === '') {
+            return '';
+        }
+
+        $patterns = [
+            '/^(?:tec\.?|t[eé]cnico)\s+(?:en\s+)?/iu',
+            '/^(?:tgo|tecn[oó]logo)\s+(?:en\s+)?/iu',
+        ];
+        foreach ($patterns as $pattern) {
+            $stripped = preg_replace($pattern, '', $text);
+            if (is_string($stripped) && trim($stripped) !== '' && $stripped !== $text) {
+                return trim($stripped);
+            }
+        }
+
+        return $text;
+    }
+
     public static function normalizeProgramComparableKey(string $value): string
     {
         $v = trim($value);
         $v = mb_strtolower($v);
         $v = str_replace(['á', 'é', 'í', 'ó', 'ú', 'ü'], ['a', 'e', 'i', 'o', 'u', 'u'], $v);
         $v = preg_replace('/\s+/', ' ', $v) ?? $v;
+        $v = trim($v);
+        $v = rtrim($v, '.,;:-');
+
         return trim($v);
     }
 }

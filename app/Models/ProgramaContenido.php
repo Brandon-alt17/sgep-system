@@ -5,9 +5,15 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Helpers\Database;
+use App\Helpers\ProgramaPdfParser;
 
 class ProgramaContenido
 {
+    private static function sanitizeCompetenciaNombre(string $nombre): string
+    {
+        return ProgramaPdfParser::sanitizeCompetenciaNombre($nombre);
+    }
+
     public static function existeCodigoCompetenciaEnPrograma(int $programaId, string $codigo, int $excludeCompetenciaId = 0): bool
     {
         $codigo = trim($codigo);
@@ -49,7 +55,7 @@ class ProgramaContenido
                 $grouped[$compId] = [
                     'id' => $compId,
                     'codigo' => (string) ($row['competencia_codigo'] ?? ''),
-                    'nombre' => (string) ($row['competencia_nombre'] ?? ''),
+                    'nombre' => self::sanitizeCompetenciaNombre((string) ($row['competencia_nombre'] ?? '')),
                     'resultados' => [],
                 ];
             }
@@ -86,7 +92,7 @@ class ProgramaContenido
                 $compStmt->execute([
                     'programa_id' => $programaId,
                     'codigo' => trim((string) ($competencia['codigo'] ?? '')),
-                    'nombre' => trim((string) ($competencia['nombre'] ?? '')),
+                    'nombre' => self::sanitizeCompetenciaNombre((string) ($competencia['nombre'] ?? '')),
                     'orden' => $cIndex + 1,
                 ]);
                 $competenciaId = (int) $pdo->lastInsertId();
@@ -120,7 +126,7 @@ class ProgramaContenido
                  WHERE id = :id AND programa_id = :programa_id'
             )->execute([
                 'codigo' => trim($codigo),
-                'nombre' => trim($nombre),
+                'nombre' => self::sanitizeCompetenciaNombre($nombre),
                 'id' => $competenciaId,
                 'programa_id' => $programaId,
             ]);
@@ -206,7 +212,7 @@ class ProgramaContenido
             $insertCompetencia->execute([
                 'programa_id' => $programaId,
                 'codigo' => trim($codigo),
-                'nombre' => trim($nombre),
+                'nombre' => self::sanitizeCompetenciaNombre($nombre),
                 'orden' => 1,
             ]);
 

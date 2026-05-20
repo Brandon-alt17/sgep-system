@@ -140,6 +140,8 @@ var initComboboxes = function (scope) {
   rootScope.querySelectorAll("[data-combobox-root]").forEach(function (root) {
     if (!(root instanceof HTMLElement)) return;
     if (root.dataset.comboboxReady === "1") return;
+    var nestedComboboxRoot = root.querySelector("[data-combobox-root]");
+    if (nestedComboboxRoot && nestedComboboxRoot !== root) return;
     root.dataset.comboboxReady = "1";
 
     var hiddenInput = root.querySelector("[data-combobox-value]");
@@ -178,18 +180,29 @@ var initComboboxes = function (scope) {
     };
     var positionMenu = function () {
       if (menu.classList.contains("hidden")) return;
-      var rect = root.getBoundingClientRect();
+      var anchorRect = searchInput.getBoundingClientRect();
       var gap = 4;
-      var spaceBelow = window.innerHeight - rect.bottom - gap - 8;
-      var maxList = Math.min(210, Math.max(96, spaceBelow));
+      var spaceBelow = window.innerHeight - anchorRect.bottom - gap - 8;
+      var spaceAbove = anchorRect.top - gap - 8;
+      var forceDropUp = root.dataset.comboboxDropUp === "1";
+      var openUp = forceDropUp || (spaceBelow < 120 && spaceAbove > spaceBelow);
+      var maxList = Math.min(210, Math.max(96, openUp ? spaceAbove : spaceBelow));
       if (listEl) listEl.style.maxHeight = maxList + "px";
       menu.style.position = "fixed";
-      menu.style.left = Math.max(8, rect.left) + "px";
-      menu.style.top = rect.bottom + gap + "px";
-      menu.style.width = rect.width + "px";
-      menu.style.minWidth = rect.width + "px";
+      menu.style.left = Math.max(8, anchorRect.left) + "px";
+      menu.style.width = anchorRect.width + "px";
+      menu.style.minWidth = anchorRect.width + "px";
+      menu.style.maxWidth = anchorRect.width + "px";
       menu.style.right = "auto";
       menu.style.boxSizing = "border-box";
+      menu.style.bottom = "auto";
+      if (openUp) {
+        menu.style.top = "auto";
+        menu.style.bottom = Math.max(8, window.innerHeight - anchorRect.top + gap) + "px";
+      } else {
+        menu.style.bottom = "auto";
+        menu.style.top = anchorRect.bottom + gap + "px";
+      }
     };
     var attachMenuToBody = function () {
       if (menu.parentNode === document.body) return;
@@ -231,6 +244,7 @@ var initComboboxes = function (scope) {
       menu.style.top = "";
       menu.style.width = "";
       menu.style.minWidth = "";
+      menu.style.maxWidth = "";
       menu.style.right = "";
       menu.style.boxSizing = "";
       if (listEl) listEl.style.maxHeight = "";

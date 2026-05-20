@@ -6,8 +6,11 @@ namespace App\Imports;
 
 use App\Helpers\Database;
 use App\Helpers\Normalizer;
+use App\Models\Empresa;
 use App\Models\EmpresaJefe;
+use App\Models\Programa;
 use App\Models\ProgramaEnlacePendiente;
+use App\Services\ProgramaCatalogMatcher;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Shared\Date as ExcelDate;
 
@@ -68,7 +71,7 @@ class AprendicesImport
                     continue;
                 }
 
-                $programaResolution = $this->findProgramaStrict(
+                $programaResolution = ProgramaCatalogMatcher::resolve(
                     $assoc['programa_formacion'] ?? null,
                     $assoc['modalidad_formacion'] ?? null
                 );
@@ -92,34 +95,18 @@ class AprendicesImport
 
                 if (($programaResolution['ambiguous'] ?? false) === true) {
                     $results['warnings'][] = $usuarioLabel . ': programa ambiguo sin nivel (' . ($programaResolution['normalized_name'] ?? 'N/D') . ').';
-                    $results['programa_pending_rows'][] = [
-                        'nombre' => $rowSummary['nombre'],
-                        'identificacion' => $rowSummary['identificacion'],
-                        'programa' => (string) ($programaResolution['normalized_name'] ?? ''),
-                        'nivel_detectado' => (string) ($programaResolution['detected_level'] ?? ''),
-                        'candidatos' => (array) ($programaResolution['candidates'] ?? []),
-                        'motivo' => 'ambiguous',
-                    ];
-                    $this->registerProgramaPendingLink($assoc, $doc, $nombre, $programaResolution, 'ambiguous');
+                    $this->queueProgramaPending($results, $assoc, $doc, $nombre, $rowSummary, $programaResolution, 'ambiguous');
                 }
 
                 if ($programaId === null && ($programaResolution['ambiguous'] ?? false) !== true) {
                     $results['warnings'][] = $usuarioLabel . ': programa no encontrado en catálogo (' . ($programaResolution['normalized_name'] ?? 'N/D') . ').';
-                    $results['programa_pending_rows'][] = [
-                        'nombre' => $rowSummary['nombre'],
-                        'identificacion' => $rowSummary['identificacion'],
-                        'programa' => (string) ($programaResolution['normalized_name'] ?? ''),
-                        'nivel_detectado' => (string) ($programaResolution['detected_level'] ?? ''),
-                        'candidatos' => [],
-                        'motivo' => 'not_found',
-                    ];
-                    $this->registerProgramaPendingLink($assoc, $doc, $nombre, $programaResolution, 'not_found');
+                    $this->queueProgramaPending($results, $assoc, $doc, $nombre, $rowSummary, $programaResolution, 'not_found');
                 }
 
                 $existing = $this->findByDocumento($doc);
                 if ($existing) {
                     $aprendizId = (int) $existing['id'];
-                    $comparison = $this->compareExistingWithPayload($existing, $payload);
+                    $comparison = $this->compareExistingWithPayload($existing, $payload, $assoc, $jefeId, $empresaId);
                     $results['duplicates']++;
                     $results['duplicate_rows'][] = $rowSummary;
                     if ($comparison['conflicts'] !== []) {
@@ -128,6 +115,8 @@ class AprendicesImport
                             'aprendiz_id' => $aprendizId,
                             'nombre' => $rowSummary['nombre'],
                             'identificacion' => $rowSummary['identificacion'],
+                            'incoming_jefe_id' => $jefeId !== null && $jefeId > 0 ? $jefeId : null,
+                            'empresa_id' => $empresaId !== null && $empresaId > 0 ? $empresaId : null,
                             'conflicts' => $comparison['conflicts'],
                         ];
                     } elseif ($comparison['fillable_payload'] !== []) {
@@ -216,9 +205,17 @@ class AprendicesImport
         return $missing;
     }
 
-    /** @return array{fillable_payload: array<string, mixed>, conflicts: array<int, array<string, string>>} */
-    private function compareExistingWithPayload(array $existing, array $payload): array
-    {
+    /**
+     * @param array<string, mixed> $importAssoc Fila del archivo (para etiquetas legibles en conflictos).
+     * @return array{fillable_payload: array<string, mixed>, conflicts: array<int, array<string, string>>}
+     */
+    private function compareExistingWithPayload(
+        array $existing,
+        array $payload,
+        array $importAssoc = [],
+        ?int $incomingJefeId = null,
+        ?int $incomingEmpresaId = null,
+    ): array {
         $fields = [
             'nombre_completo',
             'tipo_documento',
@@ -260,19 +257,14 @@ class AprendicesImport
 
             $current = $existing[$field] ?? null;
             if ($field === 'jefe_id') {
+                $incomingJefe = (int) $incoming;
+                if ($incomingJefe <= 0) {
+                    continue;
+                }
                 $currentInt = ($current === null || $current === '') ? 0 : (int) $current;
                 if ($currentInt <= 0) {
-                    $fillable[$field] = $incoming;
-                    continue;
+                    $fillable[$field] = $incomingJefe;
                 }
-                if ($currentInt === $incoming) {
-                    continue;
-                }
-                $conflicts[] = [
-                    'field' => $field,
-                    'actual' => $this->stringifyValue($current),
-                    'nuevo' => $this->stringifyValue($incoming),
-                ];
                 continue;
             }
 
@@ -285,16 +277,94 @@ class AprendicesImport
                 continue;
             }
 
-            $conflicts[] = [
-                'field' => $field,
-                'actual' => $this->stringifyValue($current),
-                'nuevo' => $this->stringifyValue($incoming),
-            ];
+            $conflicts[] = $this->buildConflictEntry($field, $current, $incoming, $importAssoc);
         }
+
+        $empresaId = (int) ($incomingEmpresaId ?? 0);
+        if ($empresaId <= 0) {
+            $empresaId = (int) ($existing['empresa_id'] ?? 0);
+        }
+        $conflicts = array_merge(
+            $conflicts,
+            $this->expandSupervisorColumnConflicts($existing, $importAssoc, $incomingJefeId, $empresaId)
+        );
 
         return [
             'fillable_payload' => $fillable,
             'conflicts' => $conflicts,
+        ];
+    }
+
+    /**
+     * Conflictos por columna del Excel (R–U): correo org., nombre, cargo y correo del jefe.
+     *
+     * @return array<int, array<string, string>>
+     */
+    private function expandSupervisorColumnConflicts(
+        array $existing,
+        array $importAssoc,
+        ?int $incomingJefeId,
+        int $empresaId,
+    ): array {
+        $conflicts = [];
+        $incomingJefe = (int) ($incomingJefeId ?? 0);
+        $currentJefeId = (int) ($existing['jefe_id'] ?? 0);
+
+        if ($empresaId > 0) {
+            $empresa = Empresa::findById($empresaId);
+            $fileCorreoOrg = $this->stringOrNull($importAssoc['correo_organizacional'] ?? null);
+            if ($fileCorreoOrg !== null) {
+                $currentCorreoOrg = trim((string) ($empresa['correo_org'] ?? ''));
+                if (!$this->areEquivalentValues($currentCorreoOrg === '' ? null : $currentCorreoOrg, $fileCorreoOrg)) {
+                    $conflicts[] = $this->buildScalarConflictEntry(
+                        'correo_organizacional',
+                        $currentCorreoOrg !== '' ? $currentCorreoOrg : 'Sin dato',
+                        $fileCorreoOrg
+                    );
+                }
+            }
+        }
+
+        $currentJefe = $currentJefeId > 0 ? EmpresaJefe::findById($currentJefeId) : null;
+        $jefeColumns = [
+            'jefe_nombre' => ['column' => 'nombre', 'file_key' => 'nombre_jefe'],
+            'jefe_cargo' => ['column' => 'cargo', 'file_key' => 'cargo_jefe'],
+            'jefe_correo' => ['column' => 'correo', 'file_key' => 'correo_jefe'],
+            'jefe_telefono' => ['column' => 'telefono', 'file_key' => 'telefono_jefe'],
+        ];
+
+        foreach ($jefeColumns as $fieldKey => $meta) {
+            $fileValue = $this->stringOrNull($importAssoc[$meta['file_key']] ?? null);
+            if ($fileValue === null) {
+                continue;
+            }
+
+            $currentValue = $currentJefe !== null
+                ? trim((string) ($currentJefe[$meta['column']] ?? ''))
+                : '';
+            if ($this->areEquivalentValues($currentValue === '' ? null : $currentValue, $fileValue)) {
+                continue;
+            }
+
+            $conflicts[] = $this->buildScalarConflictEntry(
+                $fieldKey,
+                $currentValue !== '' ? $currentValue : 'Sin dato',
+                $fileValue
+            );
+        }
+
+        return $conflicts;
+    }
+
+    /** @return array{field: string, actual: string, nuevo: string, nuevo_sub: string, nuevo_raw: string} */
+    private function buildScalarConflictEntry(string $field, string $actual, string $nuevo): array
+    {
+        return [
+            'field' => $field,
+            'actual' => $actual,
+            'nuevo' => $nuevo,
+            'nuevo_sub' => '',
+            'nuevo_raw' => $nuevo,
         ];
     }
 
@@ -348,6 +418,205 @@ class AprendicesImport
         }
 
         return $normalized;
+    }
+
+    /**
+     * @return array{field: string, actual: string, nuevo: string, nuevo_sub: string, nuevo_raw: string}
+     */
+    private function buildConflictEntry(string $field, mixed $current, mixed $incoming, array $importAssoc): array
+    {
+        [$nuevo, $nuevoSub] = $this->formatConflictIncomingParts($field, $incoming, $importAssoc);
+
+        return [
+            'field' => $field,
+            'actual' => $this->formatConflictDisplayValue($field, $current, $importAssoc, false),
+            'nuevo' => $nuevo,
+            'nuevo_sub' => $nuevoSub ?? '',
+            'nuevo_raw' => $this->stringifyValue($incoming),
+        ];
+    }
+
+    /** @return array{0: string, 1: ?string} */
+    private function formatConflictIncomingParts(string $field, mixed $value, array $importAssoc): array
+    {
+        if ($field === 'jefe_id') {
+            return $this->formatJefeConflictParts($value, $importAssoc, true);
+        }
+        if ($field === 'empresa_id') {
+            return $this->formatEmpresaConflictParts($value, $importAssoc, true);
+        }
+        if ($field === 'programa_id') {
+            return $this->formatProgramaConflictParts($value, $importAssoc, true);
+        }
+
+        return [$this->formatConflictDisplayValue($field, $value, $importAssoc, true), null];
+    }
+
+    private function formatConflictDisplayValue(string $field, mixed $value, array $importAssoc, bool $fromImport): string
+    {
+        if ($field === 'jefe_id') {
+            return $this->formatJefeConflictLabel($value, $importAssoc, $fromImport);
+        }
+        if ($field === 'empresa_id') {
+            return $this->formatEmpresaConflictLabel($value, $importAssoc, $fromImport);
+        }
+        if ($field === 'programa_id') {
+            return $this->formatProgramaConflictLabel($value, $importAssoc, $fromImport);
+        }
+
+        $text = $this->stringifyValue($value);
+        if ($field === 'tipo_documento') {
+            return $text;
+        }
+
+        return $text;
+    }
+
+    private function formatJefeConflictLabel(mixed $jefeId, array $importAssoc, bool $fromImport): string
+    {
+        [$main] = $this->formatJefeConflictParts($jefeId, $importAssoc, $fromImport);
+
+        return $main;
+    }
+
+    /** @return array{0: string, 1: ?string} */
+    private function formatJefeConflictParts(mixed $jefeId, array $importAssoc, bool $fromImport): array
+    {
+        $id = (int) $jefeId;
+        $fileNombre = trim((string) ($importAssoc['nombre_jefe'] ?? ''));
+        $fileCargo = trim((string) ($importAssoc['cargo_jefe'] ?? ''));
+        $fileCorreo = trim((string) ($importAssoc['correo_jefe'] ?? ''));
+        $fileHint = $this->buildJefeHintLine($fileNombre, $fileCargo, $fileCorreo);
+
+        if ($id <= 0) {
+            if ($fromImport && $fileHint !== '') {
+                return [$fileHint, null];
+            }
+
+            return ['Sin supervisor asignado', null];
+        }
+
+        $jefe = EmpresaJefe::findById($id);
+        if ($jefe === null) {
+            $main = $fromImport && $fileHint !== '' ? $fileHint : ('Supervisor #' . $id);
+
+            return [$main, $fromImport && $fileHint !== '' ? ('Vinculado en catálogo: #' . $id) : null];
+        }
+
+        $catalogLabel = $this->buildJefeHintLine(
+            trim((string) ($jefe['nombre'] ?? '')),
+            trim((string) ($jefe['cargo'] ?? '')),
+            trim((string) ($jefe['correo'] ?? ''))
+        );
+        if ($catalogLabel === '') {
+            $catalogLabel = 'Supervisor #' . $id;
+        }
+
+        if ($fromImport && $fileHint !== '') {
+            $sub = $this->conflictCatalogSubline($fileHint, $catalogLabel) ? ('Vinculado en catálogo: ' . $catalogLabel) : null;
+
+            return [$fileHint, $sub];
+        }
+
+        return [$catalogLabel, null];
+    }
+
+    private function buildJefeHintLine(string $nombre, string $cargo, string $correo): string
+    {
+        $nombre = trim($nombre);
+        if ($nombre === '') {
+            return '';
+        }
+
+        $hint = $nombre;
+        if (trim($cargo) !== '') {
+            $hint .= ' — ' . trim($cargo);
+        }
+        if (trim($correo) !== '') {
+            $hint .= ' (' . trim($correo) . ')';
+        }
+
+        return $hint;
+    }
+
+    private function conflictCatalogSubline(string $fileLine, string $catalogLine): bool
+    {
+        if ($catalogLine === '' || $fileLine === $catalogLine) {
+            return false;
+        }
+
+        $fileKey = Normalizer::normalizeProgramComparableKey($fileLine);
+        $catalogKey = Normalizer::normalizeProgramComparableKey($catalogLine);
+
+        return $fileKey !== $catalogKey;
+    }
+
+    private function formatEmpresaConflictLabel(mixed $empresaId, array $importAssoc, bool $fromImport): string
+    {
+        [$main] = $this->formatEmpresaConflictParts($empresaId, $importAssoc, $fromImport);
+
+        return $main;
+    }
+
+    /** @return array{0: string, 1: ?string} */
+    private function formatEmpresaConflictParts(mixed $empresaId, array $importAssoc, bool $fromImport): array
+    {
+        $id = (int) $empresaId;
+        $fileNombre = trim((string) ($importAssoc['empresa_entidad_coformadora'] ?? ''));
+
+        if ($id <= 0) {
+            return [$fromImport && $fileNombre !== '' ? $fileNombre : 'Sin empresa', null];
+        }
+
+        $empresa = Empresa::findById($id);
+        $label = trim((string) ($empresa['nombre'] ?? ''));
+        if ($label === '') {
+            $label = 'Empresa #' . $id;
+        }
+
+        if ($fromImport && $fileNombre !== '') {
+            $sub = $this->conflictCatalogSubline($fileNombre, $label) ? ('Vinculado en catálogo: ' . $label) : null;
+
+            return [$fileNombre, $sub];
+        }
+
+        return [$label, null];
+    }
+
+    private function formatProgramaConflictLabel(mixed $programaId, array $importAssoc, bool $fromImport): string
+    {
+        [$main] = $this->formatProgramaConflictParts($programaId, $importAssoc, $fromImport);
+
+        return $main;
+    }
+
+    /** @return array{0: string, 1: ?string} */
+    private function formatProgramaConflictParts(mixed $programaId, array $importAssoc, bool $fromImport): array
+    {
+        $id = (int) $programaId;
+        $fileNombre = trim((string) ($importAssoc['programa_formacion'] ?? ''));
+
+        if ($id <= 0) {
+            return [$fromImport && $fileNombre !== '' ? $fileNombre : 'Sin programa', null];
+        }
+
+        $programa = Programa::findById($id);
+        $label = trim((string) ($programa['nombre'] ?? ''));
+        $nivel = trim((string) ($programa['nivel'] ?? ''));
+        if ($nivel !== '' && $label !== '') {
+            $label .= ' (' . $nivel . ')';
+        }
+        if ($label === '') {
+            $label = 'Programa #' . $id;
+        }
+
+        if ($fromImport && $fileNombre !== '') {
+            $sub = $this->conflictCatalogSubline($fileNombre, $label) ? ('Vinculado en catálogo: ' . $label) : null;
+
+            return [$fileNombre, $sub];
+        }
+
+        return [$label, null];
     }
 
     private function stringifyValue(mixed $value): string
@@ -471,80 +740,37 @@ class AprendicesImport
         return $stmt->fetch() ?: null;
     }
 
-    /** @return array{id: ?int, ambiguous: bool, normalized_name: string, detected_level: ?string, candidates: array<int, string>} */
-    private function findProgramaStrict(mixed $nombrePrograma, mixed $modalidad): array
-    {
-        $nombreRaw = $this->stringOrNull($nombrePrograma);
-        if ($nombreRaw === null) {
-            return [
-                'id' => null,
-                'ambiguous' => false,
-                'normalized_name' => '',
-                'detected_level' => null,
-                'candidates' => [],
-            ];
+    /**
+     * @param array<string,mixed> $results
+     * @param array<string,string> $rowSummary
+     * @param array{id:?int, ambiguous:bool, normalized_name:string, detected_level:?string, candidates:array<int,string>} $programaResolution
+     */
+    private function queueProgramaPending(
+        array &$results,
+        array $assoc,
+        string $doc,
+        string $nombre,
+        array $rowSummary,
+        array $programaResolution,
+        string $reason
+    ): void {
+        $programaFuente = trim((string) ($assoc['programa_formacion'] ?? ''));
+        if ($programaFuente === '') {
+            $programaFuente = (string) ($programaResolution['normalized_name'] ?? '');
         }
-        $nombre = Normalizer::normalizeProgramaNombre($nombreRaw);
-        $nivel = Normalizer::extractProgramaNivel($nombreRaw);
-        $nombreKey = Normalizer::normalizeProgramComparableKey($nombre);
-        $nivelKey = Normalizer::normalizeProgramComparableKey((string) ($nivel ?? ''));
-
-        $pdo = Database::connection();
-        $rows = $pdo->query('SELECT id, nombre, nivel, modalidad FROM programas')->fetchAll();
-        $matched = [];
-        foreach ($rows as $row) {
-            $rowNombre = Normalizer::normalizeProgramaNombre((string) ($row['nombre'] ?? ''));
-            if (Normalizer::normalizeProgramComparableKey($rowNombre) !== $nombreKey) {
-                continue;
-            }
-            $matched[] = $row;
+        if ($programaFuente === '') {
+            return;
         }
 
-        $selected = null;
-        if ($nivelKey !== '') {
-            foreach ($matched as $row) {
-                $rowNivelKey = Normalizer::normalizeProgramComparableKey((string) ($row['nivel'] ?? ''));
-                if ($rowNivelKey === $nivelKey || $rowNivelKey === '') {
-                    $selected = $row;
-                    break;
-                }
-            }
-        } elseif (count($matched) === 1) {
-            $selected = $matched[0];
-        }
-
-        if ($selected !== null) {
-            return [
-                'id' => (int) $selected['id'],
-                'ambiguous' => false,
-                'normalized_name' => $nombre,
-                'detected_level' => $nivel,
-                'candidates' => [],
-            ];
-        }
-
-        if ($nivelKey === '' && count($matched) > 1) {
-            $candidates = [];
-            foreach ($matched as $m) {
-                $candidateNivel = trim((string) ($m['nivel'] ?? ''));
-                $candidates[] = $candidateNivel !== '' ? $candidateNivel : 'Sin nivel';
-            }
-            return [
-                'id' => null,
-                'ambiguous' => true,
-                'normalized_name' => $nombre,
-                'detected_level' => null,
-                'candidates' => array_values(array_unique($candidates)),
-            ];
-        }
-
-        return [
-            'id' => null,
-            'ambiguous' => false,
-            'normalized_name' => $nombre,
-            'detected_level' => $nivel,
-            'candidates' => [],
+        $results['programa_pending_rows'][] = [
+            'nombre' => $rowSummary['nombre'],
+            'identificacion' => $rowSummary['identificacion'],
+            'programa' => $programaFuente,
+            'nivel_detectado' => (string) ($programaResolution['detected_level'] ?? ''),
+            'candidatos' => (array) ($programaResolution['candidates'] ?? []),
+            'motivo' => $reason,
         ];
+        $this->registerProgramaPendingLink($assoc, $doc, $nombre, $programaResolution, $reason);
     }
 
     /** @param array<string,mixed> $assoc @param array{id:?int, ambiguous:bool, normalized_name:string, detected_level:?string, candidates:array<int,string>} $programaResolution */
