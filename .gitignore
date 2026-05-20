@@ -17,7 +17,16 @@ Homestead.yaml
 /public/storage
 /storage/documents/*
 /storage/logs/*.log
-/storage/templates/*.docx
+# Plantillas F-023 (vacías): solo los archivos listados se versionan
+/storage/templates/*
+!/storage/templates/.gitkeep
+!/storage/templates/README.md
+!/storage/templates/info.docx
+!/storage/templates/m1.docx
+!/storage/templates/m2.docx
+!/storage/templates/m3_p1.docx
+!/storage/templates/m3_p2.docx
+/storage/templates/.~lock.*
 
 # --- Node / Vite / frontend ---
 /node_modules

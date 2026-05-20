@@ -31,6 +31,7 @@ Sistema de Gestión de Etapa Productiva para SENA CDITI, migrado a PHP puro con 
 - `app/views`: vistas PHP.
 - `database/migrations/*.sql`: scripts SQL versionados.
 - `storage/documents`: documentos generados (F-023 y reportes).
+- `storage/templates`: plantillas Word vacías del F-023 (versionadas; ver `storage/templates/README.md`).
 
 ## Documentación de UI
 
