@@ -171,7 +171,7 @@
 
             <!-- 🟪 ACCIONES -->
            
-            <div class="mt-4 flex flex-wrap gap-3">
+             <div class="grid mb:col-span-2 grid flex gap-3 mt-4">
 
                 <a href="<?= e(APP_BASE_PATH) ?>/documentos/generar?aprendiz_id=<?= (int)$aprendiz['id'] ?>"
                 class="<?= e(ui_button_small_classes()) ?> flex items-center justify-center text-center gap-2">
