@@ -281,6 +281,7 @@ class Aprendiz
         $sql = "
             SELECT 
                 a.*,
+                p.nombre AS programa_nombre,
                 e.nombre AS empresa_nombre,
                 e.nit,
                 e.direccion,
@@ -291,6 +292,7 @@ class Aprendiz
                 j.nombre_contacto2 AS nombre_contacto2_jefe,
                 j.correo_contacto2 AS correo_contacto2_jefe
             FROM aprendices a
+            LEFT JOIN programas p ON p.id = a.programa_id
             LEFT JOIN empresas e ON a.empresa_id = e.id
             LEFT JOIN empresa_jefes j ON a.jefe_id = j.id
             WHERE a.id = :id

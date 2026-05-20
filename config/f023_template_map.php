@@ -7,6 +7,7 @@ declare(strict_types=1);
  *
  * Variables Word: PhpWord usa ${nombre}. La plantilla `info.docx` no trae marcadores; antes de
  * reemplazar, `F023InfoTemplateMacroInjector` inserta ${...} en las celdas según las etiquetas.
+ * `m1.docx` usa `F023M1TemplateMacroInjector` con el mismo criterio (columnas de `momentos` + marcas de modalidad).
  * Las claves en `info_placeholders` deben coincidir con esos nombres. Momentos añaden columnas
  * de la tabla `momentos` y factores:
  *   factor_{0..12}_valoracion, factor_{0..12}_observacion (orden en config/factores.php: 8 técnicos + 5 actitudinales).

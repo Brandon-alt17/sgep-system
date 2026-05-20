@@ -170,7 +170,7 @@ $factorObsTextareaClass = e(ui_input_classes()) . ' mt-0 min-h-[72px] min-w-0 ma
             </section>
         <?php endif; ?>
 
-        <?php if ($tipo !== 'M3'): ?>
+        <?php if ($tipo === 'EX'): ?>
             <section class="<?= e(ui_card_classes()) ?> !p-6">
                 <?php $momentoSectionHeading('clock', 'Próxima visita'); ?>
                 <div class="<?= e($grid) ?>">
@@ -339,19 +339,35 @@ $factorObsTextareaClass = e(ui_input_classes()) . ' mt-0 min-h-[72px] min-w-0 ma
                         <input type="text" name="fecha_diligenciamiento" value="<?= e(date_iso_to_dmY($valueFrom($momento, 'fecha_diligenciamiento'))) ?>" data-date-input="dmy" placeholder="dd/mm/aaaa" title="Formato día/mes/año (dd/mm/aaaa)" inputmode="numeric" maxlength="10" spellcheck="false" autocomplete="off" class="<?= $ic ?> mt-1.5">
                     </label>
                 <?php endif; ?>
-                <label class="<?= $lc ?> min-w-0 self-start <?= $tipo === 'M3' ? 'md:col-span-3' : '' ?>">Modalidad diligenciamiento
-                    <span class="<?= e(ui_select_wrapper_classes()) ?> mt-1.5">
-                        <?php $modalidadD = $valueFrom($momento, 'modalidad_diligenciamiento', ''); ?>
-                        <select name="modalidad_diligenciamiento" class="<?= e(ui_select_classes()) ?>">
-                            <option value="" <?= $modalidadD === '' ? 'selected' : '' ?>>Sin definir</option>
-                            <option value="Presencial" <?= $modalidadD === 'Presencial' ? 'selected' : '' ?>>Presencial</option>
-                            <option value="Virtual" <?= $modalidadD === 'Virtual' ? 'selected' : '' ?>>Virtual</option>
-                        </select>
-                        <span class="<?= e(ui_select_chevron_classes()) ?>" data-select-chevron aria-hidden="true">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-4 w-4"><path d="m6 9 6 6 6-6"></path></svg>
+                <?php $modalidadD = $valueFrom($momento, 'modalidad_diligenciamiento', ''); ?>
+                <div class="min-w-0 self-start <?= $tipo === 'M3' ? 'md:col-span-3' : '' ?>">
+                    <span class="<?= $lc ?> block">Modalidad diligenciamiento</span>
+                    <?php if ($tipo === 'M1'): ?>
+                        <div class="mt-1.5 w-full min-w-0">
+                            <?php partial('components/combobox', [
+                                'name' => 'modalidad_diligenciamiento',
+                                'placeholder' => 'Seleccionar modalidad…',
+                                'value' => $modalidadD,
+                                'comboboxDropUp' => true,
+                                'options' => [
+                                    ['value' => 'Presencial', 'label' => 'Presencial', 'search' => 'Presencial'],
+                                    ['value' => 'Virtual', 'label' => 'Virtual', 'search' => 'Virtual'],
+                                ],
+                            ]); ?>
+                        </div>
+                    <?php else: ?>
+                        <span class="<?= e(ui_select_wrapper_classes()) ?> mt-1.5">
+                            <select name="modalidad_diligenciamiento" class="<?= e(ui_select_classes()) ?>">
+                                <option value="" <?= $modalidadD === '' ? 'selected' : '' ?>>Sin definir</option>
+                                <option value="Presencial" <?= $modalidadD === 'Presencial' ? 'selected' : '' ?>>Presencial</option>
+                                <option value="Virtual" <?= $modalidadD === 'Virtual' ? 'selected' : '' ?>>Virtual</option>
+                            </select>
+                            <span class="<?= e(ui_select_chevron_classes()) ?>" data-select-chevron aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-4 w-4"><path d="m6 9 6 6 6-6"></path></svg>
+                            </span>
                         </span>
-                    </span>
-                </label>
+                    <?php endif; ?>
+                </div>
             </div>
         </section>
     </form>

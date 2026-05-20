@@ -166,8 +166,9 @@ class Programa
     public static function countPendientesEnlace(): int
     {
         try {
-            $stmt = Database::connection()->query('SELECT COUNT(*) FROM programa_enlaces_pendientes WHERE estado = "pendiente"');
-            return (int) $stmt->fetchColumn();
+            ProgramaEnlacePendiente::syncAprendicesSinVinculoValido();
+
+            return ProgramaEnlacePendiente::countAbiertos();
         } catch (\Throwable) {
             // Compatibilidad temporal: si la migración 017 aún no fue ejecutada, no bloquea la vista.
             return 0;

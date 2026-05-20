@@ -1,17 +1,26 @@
+function portalModalOverlaysToBody() {
+  document.querySelectorAll(".modal-overlay[id^='modal-']").forEach(function (modal) {
+    if (modal.parentElement !== document.body) {
+      document.body.appendChild(modal);
+    }
+  });
+}
+
 function openModal(id) {
+  if (!id) return;
+  portalModalOverlaysToBody();
   var modal = document.getElementById("modal-" + id);
   if (!modal) return;
   modal.classList.remove("hidden");
-  modal.classList.add("flex");
   document.body.style.overflow = "hidden";
 }
 
 function closeModal(id) {
+  if (!id) return;
   var modal = document.getElementById("modal-" + id);
   if (!modal) return;
   modal.classList.add("hidden");
-  modal.classList.remove("flex");
-  if (!document.querySelector('[id^="modal-"]:not(.hidden)')) {
+  if (!document.querySelector(".modal-overlay:not(.hidden)")) {
     document.body.style.overflow = "";
   }
 }
@@ -43,6 +52,10 @@ function resolveConflictRow(row, action) {
   }
   if (!aprendizId || !field) return Promise.resolve();
 
+  var modalId = row.getAttribute("data-conflict-modal") || "";
+  var modal = modalId ? document.getElementById("modal-" + modalId) : null;
+  var incomingJefeId = modal ? parseInt(modal.getAttribute("data-incoming-jefe-id") || "0", 10) : 0;
+
   return fetch((window.APP_BASE_PATH || "") + "/importar/conflicto/resolver", {
     method: "POST",
     headers: {
@@ -53,7 +66,8 @@ function resolveConflictRow(row, action) {
       aprendiz_id: aprendizId,
       field: field,
       value: value,
-      action: action
+      action: action,
+      incoming_jefe_id: incomingJefeId > 0 ? incomingJefeId : null
     })
   }).then(function (response) {
     if (!response.ok) throw new Error("No se pudo resolver el conflicto.");
@@ -70,6 +84,10 @@ function resolveConflictRow(row, action) {
       if (currentText && newText) {
         currentText.textContent = newText.textContent || "";
       }
+      var newSub = row.querySelector(".conflict-value__sub");
+      if (newSub) {
+        newSub.remove();
+      }
     }
     return data;
   }).catch(function () {
@@ -82,6 +100,8 @@ function resolveConflictRow(row, action) {
 }
 
 (function () {
+  portalModalOverlaysToBody();
+
   var pendingConfirmTrigger = null;
   var handleConfirmAction = function () {
     var trigger = pendingConfirmTrigger;
@@ -138,6 +158,7 @@ function resolveConflictRow(row, action) {
 
     var openTarget = event.target.closest("[data-modal-open]");
     if (openTarget) {
+      event.preventDefault();
       openModal(openTarget.getAttribute("data-modal-open"));
       return;
     }

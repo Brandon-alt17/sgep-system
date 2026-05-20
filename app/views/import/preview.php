@@ -92,6 +92,14 @@ $pendingFieldLabels = [
     'sugerencias_comentarios' => 'Sugerencias y comentarios',
     'jefe_grupo' => 'Jefe de grupo',
     'coordinacion' => 'Coordinación',
+    'programa_id' => 'Programa de formación',
+    'empresa_id' => 'Empresa co-formadora',
+    'jefe_id' => 'Vinculación de supervisor',
+    'correo_organizacional' => 'Correo organizacional de la empresa',
+    'jefe_nombre' => 'Nombre del jefe inmediato',
+    'jefe_cargo' => 'Cargo del jefe inmediato',
+    'jefe_correo' => 'Correo del jefe inmediato',
+    'jefe_telefono' => 'Teléfono del jefe inmediato',
 ];
 ?>
 
@@ -263,8 +271,10 @@ $pendingFieldLabels = [
         $conflicts = (array) ($conflictRow['conflicts'] ?? []);
         $conflictName = trim((string) ($conflictRow['nombre'] ?? ''));
         $conflictDoc = trim((string) ($conflictRow['identificacion'] ?? ''));
+        $conflictIncomingJefeId = (int) ($conflictRow['incoming_jefe_id'] ?? 0);
+        $conflictEmpresaId = (int) ($conflictRow['empresa_id'] ?? 0);
         ?>
-        <div id="modal-conflict-<?= e((string) $conflictAprendizId) ?>" class="modal-overlay hidden " data-modal-overlay="conflict-<?= e((string) $conflictAprendizId) ?>">
+        <div id="modal-conflict-<?= e((string) $conflictAprendizId) ?>" class="modal-overlay hidden" data-modal-overlay="conflict-<?= e((string) $conflictAprendizId) ?>" data-incoming-jefe-id="<?= e((string) $conflictIncomingJefeId) ?>" data-empresa-id="<?= e((string) $conflictEmpresaId) ?>">
             <div class="modal-panel modal-panel--conflict bg-app-panel " role="dialog" aria-modal="true" aria-labelledby="conflict-modal-title-<?= e((string) $conflictAprendizId) ?>">
                 <div class="mb-3 flex items-center justify-between gap-3">
                     <div>
@@ -279,56 +289,65 @@ $pendingFieldLabels = [
                     </button>
                 </div>
                 <p class="mb-3 mt-0 text-sm text-app-muted">Estos cambios están en conflicto y no se actualizaron automáticamente. Selecciona si conservar el valor actual o tomar el nuevo por cada campo.</p>
-                <div class="max-h-[70vh] overflow-auto rounded border border-app-border">
-                    <table class="<?= e(ui_table_classes()) ?> table-fixed">
-                        <colgroup>
-                            <col class="w-[22%]">
-                            <col class="w-[26%]">
-                            <col class="w-[28%]">
-                            <col class="w-[24%]">
-                        </colgroup>
-                        <thead>
-                        <tr>
-                            <th class="<?= e(ui_th_classes()) ?> px-1">Campo</th>
-                            <th class="<?= e(ui_th_classes()) ?> px-1">Actual</th>
-                            <th class="<?= e(ui_th_classes()) ?> px-1">Nuevo archivo</th>
-                            <th class="<?= e(ui_th_classes()) ?> px-1">Acción</th>
-                        </tr>
-                        </thead>
-                        <tbody>
+                <div class="max-h-[70vh] overflow-auto rounded-lg border border-app-border bg-white/50">
+                    <div class="conflict-table">
+                        <div class="conflict-table__header">
+                            <div>Campo</div>
+                            <div>Actual</div>
+                            <div>Nuevo archivo</div>
+                            <div class="text-right">Acción</div>
+                        </div>
                         <?php foreach ($conflicts as $index => $conflict): ?>
                             <?php $fieldKey = (string) ($conflict['field'] ?? ''); ?>
                             <?php
                             $actualConflictValue = (string) ($conflict['actual'] ?? '');
                             $newConflictValue = (string) ($conflict['nuevo'] ?? '');
+                            $newConflictRaw = (string) ($conflict['nuevo_raw'] ?? $conflict['nuevo'] ?? '');
+                            $newConflictSub = trim((string) ($conflict['nuevo_sub'] ?? ''));
                             if ($fieldKey === 'tipo_documento') {
                                 $actualConflictValue = ui_document_type_label($actualConflictValue);
                                 $newConflictValue = ui_document_type_label($newConflictValue);
+                                $newConflictRaw = (string) ($conflict['nuevo'] ?? '');
+                                $newConflictSub = '';
                             }
+                            $conflictField = (string) ($conflict['field'] ?? '');
+                            $encodedNewValue = rawurlencode($newConflictRaw);
+                            $fieldLabel = (string) ($pendingFieldLabels[$fieldKey] ?? $fieldKey);
                             ?>
-                            <tr>
-                                <td class="<?= e(ui_td_classes()) ?> px-4 py-3"><?= e((string) ($pendingFieldLabels[$fieldKey] ?? $fieldKey)) ?></td>
-                                <td class="<?= e(ui_td_classes()) ?> px-4 py-3" data-conflict-current-text><?= e($actualConflictValue) ?></td>
-                                <td class="<?= e(ui_td_classes()) ?> px-4 py-3" data-conflict-new-text><?= e($newConflictValue) ?></td>
-                                <td class="<?= e(ui_td_classes()) ?> px-4 py-3">
-                                    <?php
-                                    $conflictField = (string) ($conflict['field'] ?? '');
-                                    $newValue = (string) ($conflict['nuevo'] ?? '');
-                                    $encodedNewValue = rawurlencode($newValue);
-                                    ?>
-                                    <div class="inline-flex flex-wrap items-center gap-1.5" data-conflict-row data-conflict-modal="conflict-<?= e((string) $conflictAprendizId) ?>" data-aprendiz-id="<?= e((string) $conflictAprendizId) ?>" data-conflict-field="<?= e($conflictField) ?>" data-conflict-value="<?= e($encodedNewValue) ?>">
-                                        <button type="button" class="inline-flex rounded-md border border-rose-200 bg-rose-50 px-2.5 py-1 text-xs font-medium text-rose-700 hover:bg-rose-100" data-conflict-action-button="current">Mantener actual</button>
-                                        <button type="button" class="inline-flex rounded-md border border-app-accent bg-app-accent px-2.5 py-1 text-xs font-medium text-app-textOnBrand hover:bg-app-accentHover" data-conflict-action-button="new">Aceptar nuevo</button>
-                                        <span class="text-[11px] text-app-muted" data-conflict-status></span>
+                            <div
+                                class="conflict-table__row"
+                                data-conflict-row
+                                data-conflict-modal="conflict-<?= e((string) $conflictAprendizId) ?>"
+                                data-aprendiz-id="<?= e((string) $conflictAprendizId) ?>"
+                                data-conflict-field="<?= e($conflictField) ?>"
+                                data-conflict-value="<?= e($encodedNewValue) ?>"
+                            >
+                                <div class="conflict-table__field"><?= e($fieldLabel) ?></div>
+                                <div class="conflict-value conflict-value--current">
+                                    <p class="conflict-value__text" data-conflict-current-text><?= e($actualConflictValue) ?></p>
+                                </div>
+                                <div class="conflict-value conflict-value--new">
+                                    <p class="conflict-value__text" data-conflict-new-text><?= e($newConflictValue) ?></p>
+                                    <?php if ($newConflictSub !== ''): ?>
+                                        <p class="conflict-value__sub"><?= e($newConflictSub) ?></p>
+                                    <?php endif; ?>
+                                </div>
+                                <div class="conflict-table__actions">
+                                    <div class="conflict-table__actions-inner">
+                                        <div class="flex flex-col items-end gap-2">
+                                            <button type="button" class="inline-flex w-full justify-center rounded-md border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-medium text-rose-700 hover:bg-rose-100 sm:w-auto sm:min-w-[9.5rem]" data-conflict-action-button="current">Mantener actual</button>
+                                            <button type="button" class="inline-flex w-full justify-center rounded-md border border-app-accent bg-app-accent px-3 py-1.5 text-xs font-medium text-app-textOnBrand hover:bg-app-accentHover sm:w-auto sm:min-w-[9.5rem]" data-conflict-action-button="new">Aceptar nuevo</button>
+                                        </div>
+                                        <span class="text-right text-xs text-app-muted" data-conflict-status></span>
                                     </div>
-                                </td>
-                            </tr>
+                                </div>
+                            </div>
                         <?php endforeach; ?>
-                        </tbody>
-                    </table>
+                    </div>
                 </div>
-                <div class="mt-4 flex flex-wrap items-center justify-end gap-2">
-                    <button type="button" class="inline-flex rounded-md border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-medium text-rose-700 hover:bg-rose-100" data-conflict-bulk="current" data-conflict-modal="conflict-<?= e((string) $conflictAprendizId) ?>">Rechazar todos</button>
+                <div class="mt-5 flex flex-wrap items-center justify-end gap-3 border-t border-app-borderSoft pt-4">
+                    <p class="mr-auto mb-0 hidden text-xs text-app-muted sm:block">Aplica la misma decisión a todos los campos en conflicto de este aprendiz.</p>
+                    <button type="button" class="inline-flex rounded-md border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-medium text-rose-700 hover:bg-rose-100" data-conflict-bulk="current" data-conflict-modal="conflict-<?= e((string) $conflictAprendizId) ?>">Mantener todos los actuales</button>
                     <button type="button" class="inline-flex rounded-md border border-app-accent bg-app-accent px-4 py-2 text-sm font-medium text-app-textOnBrand hover:bg-app-accentHover" data-conflict-bulk="new" data-conflict-modal="conflict-<?= e((string) $conflictAprendizId) ?>">Aceptar todos los nuevos</button>
                 </div>
             </div>

@@ -41,6 +41,105 @@
     border-radius: 0.5rem;
   }
 
+  /* Modales genéricos (importación, pendientes, etc.) */
+  .modal-overlay {
+    @apply fixed inset-0 z-[70] items-center justify-center bg-black/45 p-4;
+  }
+
+  .modal-overlay.hidden {
+    display: none;
+  }
+
+  .modal-overlay:not(.hidden) {
+    @apply flex;
+  }
+
+  .modal-panel {
+    @apply relative max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-xl border border-app-border bg-app-panel p-6 shadow-lg;
+  }
+
+  .modal-panel--conflict {
+    @apply max-w-5xl;
+  }
+
+  .conflict-table {
+    @apply min-w-0;
+  }
+
+  .conflict-table__header,
+  .conflict-table__row {
+    display: grid;
+    grid-template-columns: minmax(6.5rem, 16%) minmax(0, 1fr) minmax(0, 1fr) minmax(10.5rem, auto);
+    column-gap: 1.25rem;
+    row-gap: 0.75rem;
+    align-items: start;
+    padding: 1rem 1.25rem;
+  }
+
+  .conflict-table__header {
+    @apply sticky top-0 z-[1] border-b border-app-border bg-app-panelSubtle text-[11px] font-semibold uppercase tracking-wide text-app-muted;
+  }
+
+  .conflict-table__row {
+    @apply border-b border-app-borderSoft last:border-b-0;
+  }
+
+  .conflict-table__field {
+    @apply pt-0.5 text-sm font-semibold leading-snug text-app-text;
+  }
+
+  .conflict-table__actions {
+    @apply flex justify-end self-stretch;
+  }
+
+  .conflict-table__actions-inner {
+    @apply flex min-w-[10.5rem] flex-col items-end gap-2;
+  }
+
+  .conflict-value {
+    @apply min-w-0 rounded-lg border p-3;
+  }
+
+  .conflict-value--current {
+    @apply border-slate-200 bg-slate-50/90;
+  }
+
+  .conflict-value--new {
+    @apply border-teal-200/80 bg-teal-50/50;
+  }
+
+  .conflict-value__text {
+    @apply m-0 break-words text-sm leading-relaxed text-app-text;
+  }
+
+  .conflict-value__sub {
+    @apply mb-0 mt-2 break-words border-t border-teal-200/70 pt-2 text-xs leading-relaxed text-app-muted;
+  }
+
+  @media (max-width: 767px) {
+    .conflict-table__header {
+      display: none;
+    }
+
+    .conflict-table__row {
+      grid-template-columns: 1fr;
+      padding: 1.25rem 1rem;
+      row-gap: 0.875rem;
+    }
+
+    .conflict-table__field {
+      @apply border-b border-app-borderSoft pb-2;
+    }
+
+    .conflict-table__actions {
+      @apply justify-stretch;
+    }
+
+    .conflict-table__actions-inner {
+      @apply w-full min-w-0 flex-row flex-wrap justify-end;
+    }
+  }
+
   .upload-dropzone-dashed::before {
     content: "";
     position: absolute;

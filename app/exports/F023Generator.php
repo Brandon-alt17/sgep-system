@@ -85,6 +85,10 @@ class F023Generator
                     $path = F023InfoTemplateMacroInjector::patchToTemp($path);
                     $tempCleanup[] = $path;
                 }
+                if (!empty($seg['patch_m1_macros'])) {
+                    $path = F023M1TemplateMacroInjector::patchToTemp($path);
+                    $tempCleanup[] = $path;
+                }
                 if (!is_file($path)) {
                     throw new \RuntimeException('Plantilla no encontrada: ' . basename($path));
                 }
@@ -175,12 +179,17 @@ class F023Generator
             $infoForTpl,
             ['nombre_aprendiz' => (string) ($aprendiz['nombre_completo'] ?? '')],
             $this->momentoRowTemplateVars($momento),
-            $this->factorTemplateVars(Momento::factoresByMomento((int) $momento['id']))
+            $this->factorTemplateVars(Momento::factoresByMomento((int) $momento['id'])),
+            $this->m1DiligenciamientoTemplateVars($momento)
         );
 
         $tplDir = base_path('storage/templates/');
         if ($tipo === 'M1') {
-            return [['path' => $tplDir . ($map['m1_template'] ?? 'm1.docx'), 'vars' => $vars]];
+            return [[
+                'path' => $tplDir . ($map['m1_template'] ?? 'm1.docx'),
+                'vars' => $vars,
+                'patch_m1_macros' => true,
+            ]];
         }
         if ($tipo === 'M2' || $tipo === 'EX') {
             $file = $tipo === 'EX' ? ($map['ex_template'] ?? 'm2.docx') : ($map['m2_template'] ?? 'm2.docx');
@@ -228,6 +237,26 @@ class F023Generator
         }
 
         return $out;
+    }
+
+    /**
+     * Marcas de modalidad en la línea de diligenciamiento del Momento 1.
+     *
+     * @param array<string,mixed> $momento
+     * @return array<string,string>
+     */
+    private function m1DiligenciamientoTemplateVars(array $momento): array
+    {
+        if ((string) ($momento['tipo'] ?? '') !== 'M1') {
+            return [];
+        }
+
+        $modalidad = trim((string) ($momento['modalidad_diligenciamiento'] ?? ''));
+
+        return [
+            'm1_marca_presencial' => strcasecmp($modalidad, 'Presencial') === 0 ? 'X' : '',
+            'm1_marca_virtual' => strcasecmp($modalidad, 'Virtual') === 0 ? 'X' : '',
+        ];
     }
 
     /**

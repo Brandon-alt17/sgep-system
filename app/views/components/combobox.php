@@ -7,6 +7,7 @@ $required = (bool) ($required ?? false);
 $value = trim((string) ($value ?? ''));
 $options = is_array($options ?? null) ? (array) $options : [];
 $valueInputAttrs = is_array($valueInputAttrs ?? null) ? (array) $valueInputAttrs : [];
+$comboboxDropUp = (bool) ($comboboxDropUp ?? false);
 // Misma apariencia que el select del catálogo (ui_select_classes: altura, texto, borde).
 $fieldClasses = trim(ui_select_classes() . ' cursor-text');
 
@@ -38,7 +39,7 @@ foreach ($valueInputAttrs as $attrName => $attrValue) {
     $valueInputAttrHtml .= ' ' . e($inputAttrName) . '="' . e((string) $attrValue) . '"';
 }
 ?>
-<div class="relative min-w-0 block" data-combobox-root>
+<div class="relative min-w-0 block w-full" data-combobox-root<?= $comboboxDropUp ? ' data-combobox-drop-up="1"' : '' ?>>
     <input type="hidden" name="<?= e($name) ?>" value="<?= e($value) ?>" data-combobox-value <?= $required ? 'data-combobox-required="1"' : '' ?><?= $valueInputAttrHtml ?>>
     <div class="relative">
         <input
