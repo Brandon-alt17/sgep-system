@@ -1,40 +1,220 @@
-<?php partial('components/page_header', [
-    'title' => 'Reporte maestro',
-    'subtitle' => 'Consulte el consolidado y actualice campos libres de cada aprendiz.',
-]); ?>
+<!-- CONTENEDOR PRINCIPAL CON ANCHO FIJO Y OVERFLOW ESCONDIDO -->
+<div class="w-full overflow-x-hidden" style="max-width: 100vw;">
 
-<p class="mb-3">
-    <a class="<?= e(ui_button_primary_classes()) ?>" href="<?= e(APP_BASE_PATH) ?>/reportes/exportar">Exportar a Excel</a>
-</p>
+<div style="max-width: 100vw; overflow-x: hidden;">
+<div class="space-y-6">
 
-<section class="<?= e(ui_card_classes()) ?>">
-    <table class="<?= e(ui_table_classes()) ?>">
-        <thead>
-        <tr>
-            <th class="<?= e(ui_th_classes()) ?>">Documento</th>
-            <th class="<?= e(ui_th_classes()) ?>">Nombre</th>
-            <th class="<?= e(ui_th_classes()) ?>">Estado</th>
-            <th class="<?= e(ui_th_classes()) ?>">Últ. edición reporte</th>
-            <th class="<?= e(ui_th_classes()) ?>">Editar campo libre</th>
-        </tr>
-        </thead>
-        <tbody>
-        <?php foreach (($rows ?? []) as $row): ?>
-            <tr>
-                <td class="<?= e(ui_td_classes()) ?>"><?= e((string) $row['numero_documento']) ?></td>
-                <td class="<?= e(ui_td_classes()) ?>"><?= e((string) $row['nombre_completo']) ?></td>
-                <td class="<?= e(ui_td_classes()) ?>"><?= e((string) $row['estado']) ?></td>
-                <td class="<?= e(ui_td_classes()) ?>"><?= e((string) ($row['reporte_actualizado'] ?? '')) ?></td>
-                <td class="<?= e(ui_td_classes()) ?>">
-                    <form method="post" action="<?= e(APP_BASE_PATH) ?>/reportes/update" class="grid gap-2 md:grid-cols-[1fr_1fr_auto] md:items-end">
-                        <input type="hidden" name="aprendiz_id" value="<?= (int) $row['id'] ?>">
-                        <input type="text" name="campo" placeholder="campo" class="w-full rounded-lg border border-app-borderControlStrong px-3 py-2 text-xs">
-                        <input type="text" name="valor" placeholder="valor" class="w-full rounded-lg border border-app-borderControlStrong px-3 py-2 text-xs">
-                        <button type="submit" class="<?= e(ui_button_primary_classes()) ?> px-3 py-2 text-xs">Guardar</button>
-                    </form>
-                </td>
-            </tr>
-        <?php endforeach; ?>
-        </tbody>
-    </table>
-</section>
+    <!-- HEADER -->
+    <div>
+        <h1 class="text-3xl font-bold tracking-tight text-slate-900">
+            Reporte de seguimiento — Etapa productiva
+        </h1>
+
+        <p class="text-sm text-slate-500 mt-1">
+            Los datos se consolidan automáticamente desde el sistema.
+            Algunos campos deben ser completados manualmente por el instructor.
+        </p>
+    </div>
+
+    <!-- FILTROS -->
+    <div class="flex flex-wrap items-center gap-3">
+
+        <select class="h-10 px-3 rounded-lg border border-gray-300 bg-white text-sm min-w-[180px]">
+            <option>Carlos Mendoza</option>
+        </select>
+
+        <select class="h-10 px-3 rounded-lg border border-gray-300 bg-white text-sm min-w-[160px]">
+            <option>Todos</option>
+            <option>2745623</option>
+            <option>2801445</option>
+        </select>
+
+        <select class="h-10 px-3 rounded-lg border border-gray-300 bg-white text-sm min-w-[180px]">
+            <option>Todos</option>
+            <option>En ejecución</option>
+            <option>Finalizada</option>
+            <option>Pendiente</option>
+        </select>
+
+        <div class="flex-1"></div>
+
+        <a
+            href="<?= APP_BASE_PATH ?>/reportes/export"
+            class="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium px-4 h-10 rounded-lg transition-colors"
+        >
+            Exportar a Excel
+        </a>
+
+    </div>
+
+    <!-- STATS -->
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+
+        <div class="bg-white border border-gray-200 rounded-xl p-4">
+            <p class="text-xs text-gray-500">Total aprendices</p>
+            <p class="text-3xl font-bold text-gray-900 mt-1">
+                <?= count($rows) ?>
+            </p>
+        </div>
+
+        <div class="bg-white border border-gray-200 rounded-xl p-4">
+            <p class="text-xs text-gray-500">En ejecución</p>
+            <p class="text-3xl font-bold text-sky-700 mt-1">
+                <?= count(array_filter($rows, fn($r) => ($r['estado_etapa'] ?? '') === 'En ejecución')) ?>
+            </p>
+        </div>
+
+        <div class="bg-white border border-gray-200 rounded-xl p-4">
+            <p class="text-xs text-gray-500">Por certificar</p>
+            <p class="text-3xl font-bold text-amber-600 mt-1">
+                <?= count(array_filter($rows, fn($r) => ($r['estado_aprendiz'] ?? '') === 'Por certificar')) ?>
+            </p>
+        </div>
+
+        <div class="bg-white border border-gray-200 rounded-xl p-4">
+            <p class="text-xs text-gray-500">Certificados</p>
+            <p class="text-3xl font-bold text-emerald-600 mt-1">
+                <?= count(array_filter($rows, fn($r) => ($r['estado_aprendiz'] ?? '') === 'Certificado')) ?>
+            </p>
+        </div>
+
+    </div>
+
+    <!-- SOLO LA TABLA SE DESPLAZA HORIZONTALMENTE -->
+    <div class="bg-white border border-gray-200 rounded-2xl">
+        
+        <!-- ESTE ES EL ÚNICO CONTENEDOR CON SCROLL -->
+        <div style="overflow-x: auto; overflow-y: visible; width: 100%;">
+            
+            <table style="min-width: 2800px; width: 100%; border-collapse: collapse;" class="text-xs">
+
+                <thead>
+                    <tr>
+                        <th colspan="10" style="padding: 10px 8px; text-align: center; font-weight: 600; border: 1px solid #e5e7eb; background: #f3f4f6;">Aprendices y grupos</th>
+                        <th colspan="5" style="padding: 10px 8px; text-align: center; font-weight: 600; border: 1px solid #e5e7eb; background: #f3e8ff;">Reglamento</th>
+                        <th colspan="8" style="padding: 10px 8px; text-align: center; font-weight: 600; border: 1px solid #e5e7eb; background: #dbeafe;">Información del aprendiz</th>
+                        <th colspan="12" style="padding: 10px 8px; text-align: center; font-weight: 600; border: 1px solid #e5e7eb; background: #ccfbf1;">Información de la etapa productiva</th>
+                        <th colspan="9" style="padding: 10px 8px; text-align: center; font-weight: 600; border: 1px solid #e5e7eb; background: #ffedd5;">Proceso documental del seguimiento</th>
+                        <th colspan="11" style="padding: 10px 8px; text-align: center; font-weight: 600; border: 1px solid #e5e7eb; background: #d1fae5;">Documentos para certificación</th>
+                        <th colspan="3" style="padding: 10px 8px; text-align: center; font-weight: 600; border: 1px solid #e5e7eb; background: #f3f4f6;">Instructor de seguimiento</th>
+                    </tr>
+                    <tr style="background: #f9fafb;">
+                        <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">#</th>
+                        <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;"># Grupo</th>
+                        <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">Ficha</th>
+                        <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">Cód. programa</th>
+                        <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">Programa</th>
+                        <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">Nivel</th>
+                        <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">Modalidad</th>
+                        <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">F. inicio plat.</th>
+                        <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">F. fin plat.</th>
+                        <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">Instructor jefe</th>
+                        <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">Ac. 007</th>
+                        <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">Ac. 009</th>
+                        <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">≤18 meses</th>
+                        <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">≤12 meses</th>
+                        <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">Venc. términos</th>
+                        <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">Nombre</th>
+                        <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">N° identificación</th>
+                        <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">Celular</th>
+                        <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">Correo</th>
+                        <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">Mod. práctica</th>
+                        <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">F. aval</th>
+                        <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">Estado ARL</th>
+                        <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">ARL</th>
+                        <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">F. inicio</th>
+                        <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">F. fin</th>
+                        <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">Empresa</th>
+                        <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">Dir. empresa</th>
+                        <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">Ciudad</th>
+                        <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">Contacto</th>
+                        <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">Tel. contacto</th>
+                        <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">Correo contacto</th>
+                        <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">Estado etapa</th>
+                        <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">Reingreso</th>
+                        <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">Cambio/Cond./Canc.</th>
+                        <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">Obs. novedad</th>
+                        <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">F-165</th>
+                        <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">M1 023</th>
+                        <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">Bit. 1</th>
+                        <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">Bit. 2</th>
+                        <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">Bit. 3</th>
+                        <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">Bit. 4</th>
+                        <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">Bit. 5</th>
+                        <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">Bit. 6</th>
+                        <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">M. Final</th>
+                        <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">Doc. ID</th>
+                        <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">Paz y salvo</th>
+                        <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">F-023</th>
+                        <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">Bitácoras</th>
+                        <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">Cert. cumpl.</th>
+                        <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">APE</th>
+                        <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">Carnet</th>
+                        <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">Saber T&T</th>
+                        <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">F. entrega</th>
+                        <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">Estado</th>
+                        <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">Obs.</th>
+                        <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">Instructor</th>
+                        <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">Tel.</th>
+                        <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">Correo</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    <?php foreach ($rows as $a): ?>
+                        <tr style="border-bottom: 1px solid #f1f5f9;">
+                            <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;"><?= $a['num_aprendiz'] ?? '' ?></td>
+                            <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;"><?= $a['num_por_grupo'] ?? '' ?></td>
+                            <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;"><?= $a['ficha'] ?? '' ?></td>
+                            <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;"><?= $a['codigo_programa'] ?? '' ?></td>
+                            <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap; max-width: 150px; overflow: hidden; text-overflow: ellipsis;"><?= $a['programa_formacion'] ?? '' ?></td>
+                            <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;"><span style="display: inline-flex; border-radius: 9999px; padding: 2px 8px; font-size: 11px; background: #dbeafe;"><?= $a['nivel'] ?? '' ?></span></td>
+                            <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;"><?= $a['modalidad_programa'] ?? '' ?></td>
+                            <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;"><?= $a['fecha_inicio_plataforma'] ?? '' ?></td>
+                            <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;"><?= $a['fecha_fin_plataforma'] ?? '' ?></td>
+                            <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap; max-width: 150px; overflow: hidden; text-overflow: ellipsis;"><?= $a['instructor_jefe'] ?? '' ?></td>
+
+                            <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: center;"><?= !empty($a['acuerdo_007']) ? '✓' : '' ?></td>
+                            <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: center;"><?= !empty($a['acuerdo_009']) ? '✓' : '' ?></td>
+                            <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: center;"><?= !empty($a['inicio_18_meses']) ? '✓' : '' ?></td>
+                            <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: center;"><?= !empty($a['inicio_12_meses']) ? '✓' : '' ?></td>
+                            <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: center;"><?= !empty($a['vencimiento_terminos']) ? '✓' : '' ?></td>
+
+                            <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap; font-weight: 500;"><?= $a['nombre'] ?? '' ?></td>
+                            <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;"><?= $a['identificacion'] ?? '' ?></td>
+                            <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;"><?= $a['celular'] ?? '' ?></td>
+                            <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap; max-width: 150px; overflow: hidden; text-overflow: ellipsis;"><?= $a['correo'] ?? '' ?></td>
+                            <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;"><?= $a['modalidad_practica'] ?? '' ?></td>
+                            <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;"><?= $a['fecha_aval_modalidad'] ?? '' ?></td>
+                            <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;"><?= $a['estado_arl'] ?? '' ?></td>
+                            <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;"><?= $a['arl'] ?? '' ?></td>
+
+                            <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;"><?= $a['fecha_inicio_etapa'] ?? '' ?></td>
+                            <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;"><?= $a['fecha_fin_etapa'] ?? '' ?></td>
+                            <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap; max-width: 150px; overflow: hidden; text-overflow: ellipsis;"><?= $a['empresa'] ?? '' ?></td>
+                            <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap; max-width: 150px; overflow: hidden; text-overflow: ellipsis;"><?= $a['direccion_empresa'] ?? '' ?></td>
+                            <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;"><?= $a['ciudad'] ?? '' ?></td>
+                            <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap; max-width: 150px; overflow: hidden; text-overflow: ellipsis;"><?= $a['contacto_empresa'] ?? '' ?></td>
+                            <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;"><?= $a['telefono_contacto'] ?? '' ?></td>
+                            <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap; max-width: 150px; overflow: hidden; text-overflow: ellipsis;"><?= $a['correo_contacto'] ?? '' ?></td>
+                            <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;"><span style="display: inline-flex; border-radius: 9999px; padding: 2px 8px; font-size: 11px; background: #dbeafe;"><?= $a['estado_etapa'] ?? '' ?></span></td>
+                            <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: center;"><?= !empty($a['reingreso_vencimiento']) ? 'Sí' : 'No' ?></td>
+                            <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;"><?= $a['cambio_modalidad'] ?? '' ?></td>
+                            <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap; max-width: 150px; overflow: hidden; text-overflow: ellipsis;"><?= $a['observaciones_novedad'] ?: '—' ?></td>
+                            <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: center;"><?= !empty($a['doc_gfpi_165']) ? '✓' : '—' ?></td>
+
+                            <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;"><?= $a['instructor_asignado'] ?? '' ?></td>
+                            <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;"><?= $a['telefono_instructor'] ?? '' ?></td>
+                            <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap; max-width: 150px; overflow: hidden; text-overflow: ellipsis;"><?= $a['correo_instructor'] ?? '' ?></td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+
+            </table>
+        </div>
+    </div>
+
+</div>
+</div>
+
+</div>
