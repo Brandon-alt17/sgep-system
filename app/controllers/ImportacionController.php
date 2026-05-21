@@ -137,9 +137,6 @@ class ImportacionController
         $conflictsBaseUrl .= '&page=%d';
 
         $aprendicesUrl = $base . '/aprendices';
-        if ($importCtx['fromImport']) {
-            $aprendicesUrl .= import_nav_query_suffix($id);
-        }
 
         view('import/conflictos', [
             'entry' => $entry,
@@ -211,9 +208,113 @@ class ImportacionController
         }
 
         $incomingJefeId = (int) ($decoded['incoming_jefe_id'] ?? 0);
-        $updated = $this->applyConflictAcceptNew($aprendizId, $field, $newValue, $incomingJefeId);
+        try {
+            $updated = $this->applyConflictAcceptNew($aprendizId, $field, $newValue, $incomingJefeId);
+        } catch (\Throwable $e) {
+            $this->jsonResponse(['ok' => false, 'message' => 'No se pudo aplicar el cambio.'], 500);
+
+            return;
+        }
 
         $this->jsonResponse(['ok' => true, 'updated' => $updated]);
+    }
+
+    public function completeConflictAprendiz(): void
+    {
+        $raw = file_get_contents('php://input');
+        $decoded = json_decode($raw ?: '', true);
+        if (!is_array($decoded)) {
+            $this->jsonResponse(['ok' => false, 'message' => 'Solicitud inválida.'], 422);
+
+            return;
+        }
+
+        $importId = trim((string) ($decoded['import_id'] ?? ''));
+        $aprendizId = (int) ($decoded['aprendiz_id'] ?? 0);
+
+        if ($importId === '' || $aprendizId <= 0) {
+            $this->jsonResponse(['ok' => false, 'message' => 'Parámetros inválidos.'], 422);
+
+            return;
+        }
+
+        if (ImportHistory::findById($importId) === null) {
+            $this->jsonResponse(['ok' => false, 'message' => 'Importación no encontrada.'], 404);
+
+            return;
+        }
+
+        $conflictRow = ImportHistory::findConflictAprendizRow($importId, $aprendizId);
+        $resolutions = (array) ($decoded['resolutions'] ?? []);
+        if ($conflictRow !== null) {
+            $this->alignAprendizAfterConflictResolution($aprendizId, $conflictRow, $resolutions);
+        }
+
+        $removed = ImportHistory::removeConflictAprendiz($importId, $aprendizId);
+        $remaining = ImportHistory::countConflictAprendices($importId);
+        $this->jsonResponse([
+            'ok' => true,
+            'removed' => $removed,
+            'remaining' => $remaining,
+        ]);
+    }
+
+    /**
+     * Alinea el aprendiz con los datos del archivo tras resolver conflictos (evita que reaparezcan al reimportar).
+     *
+     * @param array<string, mixed> $conflictRow
+     * @param list<array{field?: string, action?: string, value?: mixed}> $resolutions
+     */
+    private function alignAprendizAfterConflictResolution(int $aprendizId, array $conflictRow, array $resolutions): void
+    {
+        $incomingJefeId = (int) ($conflictRow['incoming_jefe_id'] ?? 0);
+
+        $actionByField = [];
+        foreach ($resolutions as $item) {
+            if (!is_array($item)) {
+                continue;
+            }
+            $field = trim((string) ($item['field'] ?? ''));
+            if ($field === '') {
+                continue;
+            }
+            $actionByField[$field] = trim((string) ($item['action'] ?? '')) === 'new' ? 'new' : 'current';
+        }
+
+        if ($incomingJefeId > 0) {
+            $pdo = \App\Helpers\Database::connection();
+            $checkJefe = $pdo->prepare(
+                'SELECT id FROM empresa_jefes WHERE id = :id LIMIT 1'
+            );
+            $checkJefe->execute(['id' => $incomingJefeId]);
+            if ($checkJefe->fetch() !== false) {
+                $pdo->prepare('UPDATE aprendices SET jefe_id = :jefe_id, updated_at = NOW() WHERE id = :id')
+                    ->execute(['jefe_id' => $incomingJefeId, 'id' => $aprendizId]);
+            }
+        }
+
+        foreach ($resolutions as $item) {
+            if (!is_array($item)) {
+                continue;
+            }
+            $field = trim((string) ($item['field'] ?? ''));
+            if ($field === '' || ($actionByField[$field] ?? '') !== 'new') {
+                continue;
+            }
+            $this->applyConflictAcceptNew(
+                $aprendizId,
+                $field,
+                $item['value'] ?? null,
+                $incomingJefeId
+            );
+        }
+
+        if (($actionByField['correo_organizacional'] ?? '') === 'new') {
+            $fileCorreoOrg = trim((string) ($conflictRow['file_correo_org'] ?? ''));
+            if ($fileCorreoOrg !== '') {
+                $this->applyConflictAcceptNew($aprendizId, 'correo_organizacional', $fileCorreoOrg, $incomingJefeId);
+            }
+        }
     }
 
     private function applyConflictAcceptNew(int $aprendizId, string $field, mixed $newValue, int $incomingJefeId = 0): bool
@@ -228,6 +329,35 @@ class ImportacionController
 
         $empresaId = (int) ($aprendiz['empresa_id'] ?? 0);
         $currentJefeId = (int) ($aprendiz['jefe_id'] ?? 0);
+
+        if ($field === 'jefe_id') {
+            if ($empresaId <= 0) {
+                return false;
+            }
+
+            $newJefeId = (int) $this->normalizeConflictValue($field, $newValue);
+            if ($newJefeId <= 0 && $incomingJefeId > 0) {
+                $newJefeId = $incomingJefeId;
+            }
+            if ($newJefeId <= 0) {
+                return false;
+            }
+
+            $check = $pdo->prepare(
+                'SELECT id FROM empresa_jefes WHERE id = :id AND empresa_id = :empresa_id LIMIT 1'
+            );
+            $check->execute(['id' => $newJefeId, 'empresa_id' => $empresaId]);
+            if ($check->fetch() === false) {
+                return false;
+            }
+
+            $update = $pdo->prepare(
+                'UPDATE aprendices SET jefe_id = :jefe_id, updated_at = NOW() WHERE id = :id'
+            );
+            $update->execute(['jefe_id' => $newJefeId, 'id' => $aprendizId]);
+
+            return true;
+        }
 
         if ($field === 'correo_organizacional') {
             if ($empresaId <= 0) {

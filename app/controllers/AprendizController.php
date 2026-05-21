@@ -52,13 +52,14 @@ class AprendizController
             ? import_result_url($activeFilters['import_id'])
             : '';
 
-        $conflictImportId = $activeFilters['import_id'] !== ''
+        $fromImportContext = $activeFilters['from'] === 'import' && $activeFilters['import_id'] !== '';
+        $conflictImportId = $fromImportContext
             ? $activeFilters['import_id']
-            : (string) ((ImportHistory::latestWithConflicts()['id'] ?? '') ?: '');
+            : (string) ((ImportHistory::latestImport()['id'] ?? '') ?: '');
         $conflictsCount = ImportHistory::countConflictAprendices(
             $conflictImportId !== '' ? $conflictImportId : null
         );
-        $conflictsManageUrl = import_conflicts_url($conflictImportId, true);
+        $conflictsManageUrl = import_conflicts_url($conflictImportId, $fromImportContext);
 
         view('aprendices/index', [
             'aprendices' => $aprendices,

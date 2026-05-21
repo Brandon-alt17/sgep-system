@@ -77,8 +77,8 @@ $pendingFieldLabels = (array) ($pendingFieldLabels ?? []);
                             <div class="conflict-table__actions">
                                 <div class="conflict-table__actions-inner">
                                     <div class="flex flex-col items-end gap-2">
-                                        <button type="button" class="inline-flex w-full justify-center rounded-md border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-medium text-rose-700 hover:bg-rose-100 sm:w-auto sm:min-w-[9.5rem]" data-conflict-action-button="current">Mantener actual</button>
-                                        <button type="button" class="inline-flex w-full justify-center rounded-md border border-app-accent bg-app-accent px-3 py-1.5 text-xs font-medium text-app-textOnBrand hover:bg-app-accentHover sm:w-auto sm:min-w-[9.5rem]" data-conflict-action-button="new">Aceptar nuevo</button>
+                                        <button type="button" class="inline-flex w-full cursor-pointer select-none justify-center rounded-md border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-medium text-rose-700 hover:bg-rose-100 sm:w-auto sm:min-w-[9.5rem]" data-conflict-action-button="current">Mantener actual</button>
+                                        <button type="button" class="inline-flex w-full cursor-pointer select-none justify-center rounded-md border border-app-accent bg-app-accent px-3 py-1.5 text-xs font-medium text-app-textOnBrand hover:bg-app-accentHover sm:w-auto sm:min-w-[9.5rem]" data-conflict-action-button="new">Aceptar nuevo</button>
                                     </div>
                                     <span class="text-right text-xs text-app-muted" data-conflict-status></span>
                                 </div>
@@ -89,8 +89,8 @@ $pendingFieldLabels = (array) ($pendingFieldLabels ?? []);
             </div>
             <div class="mt-5 flex flex-wrap items-center justify-end gap-3 border-t border-app-borderSoft pt-4">
                 <p class="mr-auto mb-0 hidden cursor-default select-none text-xs text-app-muted sm:block">Aplica la misma decisión a todos los campos en conflicto de este aprendiz.</p>
-                <button type="button" class="inline-flex rounded-md border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-medium text-rose-700 hover:bg-rose-100" data-conflict-bulk="current" data-conflict-modal="conflict-<?= e((string) $conflictAprendizId) ?>">Mantener todos los actuales</button>
-                <button type="button" class="inline-flex rounded-md border border-app-accent bg-app-accent px-4 py-2 text-sm font-medium text-app-textOnBrand hover:bg-app-accentHover" data-conflict-bulk="new" data-conflict-modal="conflict-<?= e((string) $conflictAprendizId) ?>">Aceptar todos los nuevos</button>
+                <button type="button" class="inline-flex cursor-pointer select-none rounded-md border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-medium text-rose-700 hover:bg-rose-100" data-conflict-bulk="current" data-conflict-modal="conflict-<?= e((string) $conflictAprendizId) ?>">Mantener todos los actuales</button>
+                <button type="button" class="inline-flex cursor-pointer select-none rounded-md border border-app-accent bg-app-accent px-4 py-2 text-sm font-medium text-app-textOnBrand hover:bg-app-accentHover" data-conflict-bulk="new" data-conflict-modal="conflict-<?= e((string) $conflictAprendizId) ?>">Aceptar todos los nuevos</button>
             </div>
         </div>
     </div>

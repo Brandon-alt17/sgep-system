@@ -37,6 +37,18 @@
   h6 {
     cursor: default;
   }
+
+  button,
+  [type="button"],
+  [type="submit"],
+  [type="reset"] {
+    cursor: pointer;
+    user-select: none;
+  }
+
+  a.font-app:hover {
+    text-decoration: none;
+  }
 }
 
 @layer components {

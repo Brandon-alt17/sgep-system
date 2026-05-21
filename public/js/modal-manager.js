@@ -28,6 +28,7 @@ function closeModal(id) {
 function setConflictRowState(row, action) {
   if (!row) return;
   row.setAttribute("data-conflict-selected", action);
+  row.setAttribute("data-conflict-resolution", action === "new" ? "new" : "current");
   row.querySelectorAll("[data-conflict-action-button]").forEach(function (button) {
     var isActive = button.getAttribute("data-conflict-action-button") === action;
     if (isActive) {
@@ -65,26 +66,94 @@ function showImportConflictToast(message) {
   }
 }
 
-function updateImportConflictsCount() {
-  var tbody = document.getElementById("import-conflicts-tbody");
-  if (!tbody) return;
-  var remaining = tbody.querySelectorAll("[data-conflict-aprendiz-row]").length;
+function applyImportConflictsRemaining(remaining) {
+  var count = Math.max(0, parseInt(String(remaining), 10) || 0);
   var countEl = document.getElementById("import-conflicts-count");
   if (countEl) {
-    countEl.textContent = String(remaining);
+    countEl.textContent = String(count);
   }
   var alertSection = document.getElementById("import-conflicts-alert");
-  if (alertSection && remaining === 0) {
-    alertSection.classList.add("hidden");
+  if (alertSection) {
+    if (count === 0) {
+      alertSection.classList.add("hidden");
+    } else {
+      alertSection.classList.remove("hidden");
+    }
   }
   var searchCard = document.querySelector("[data-import-conflicts-root] [data-live-filter-root]");
   var tableSection = document.getElementById("tabla-conflictos");
-  if (remaining === 0) {
+  var tbody = document.getElementById("import-conflicts-tbody");
+  var rowsOnPage = tbody
+    ? tbody.querySelectorAll("[data-conflict-aprendiz-row]").length
+    : 0;
+  if (count === 0) {
     if (searchCard) searchCard.classList.add("hidden");
     if (tableSection) tableSection.classList.add("hidden");
     var doneSection = document.getElementById("import-conflicts-all-done");
     if (doneSection) doneSection.classList.remove("hidden");
+    return;
   }
+  var doneSection = document.getElementById("import-conflicts-all-done");
+  if (doneSection) doneSection.classList.add("hidden");
+  if (searchCard) searchCard.classList.remove("hidden");
+  if (tableSection) tableSection.classList.remove("hidden");
+  if (rowsOnPage === 0) {
+    window.location.reload();
+  }
+}
+
+function updateImportConflictsCount() {
+  var tbody = document.getElementById("import-conflicts-tbody");
+  if (!tbody) return;
+  applyImportConflictsRemaining(
+    tbody.querySelectorAll("[data-conflict-aprendiz-row]").length
+  );
+}
+
+function collectConflictResolutions(modal) {
+  var resolutions = [];
+  if (!modal) return resolutions;
+  modal.querySelectorAll("[data-conflict-row]").forEach(function (row) {
+    var field = row.getAttribute("data-conflict-field") || "";
+    if (!field) return;
+    var encoded = row.getAttribute("data-conflict-value") || "";
+    var value = "";
+    try {
+      value = encoded ? decodeURIComponent(encoded) : "";
+    } catch (e) {
+      value = "";
+    }
+    resolutions.push({
+      field: field,
+      action: row.getAttribute("data-conflict-resolution") || "new",
+      value: value
+    });
+  });
+  return resolutions;
+}
+
+function persistConflictAprendizResolved(aprendizId, resolutions) {
+  var root = document.querySelector("[data-import-conflicts-root]");
+  if (!root) return Promise.resolve(null);
+  var importId = (root.getAttribute("data-import-id") || "").trim();
+  var aprendizKey = parseInt(String(aprendizId), 10);
+  if (!importId || !aprendizKey) return Promise.resolve(null);
+
+  return fetch((window.APP_BASE_PATH || "") + "/importar/conflicto/completado", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Requested-With": "XMLHttpRequest"
+    },
+    body: JSON.stringify({
+      import_id: importId,
+      aprendiz_id: aprendizKey,
+      resolutions: resolutions || []
+    })
+  }).then(function (response) {
+    if (!response || !response.ok) return null;
+    return response.json();
+  });
 }
 
 function onAprendizConflictsResolved(modalId, modal) {
@@ -93,18 +162,31 @@ function onAprendizConflictsResolved(modalId, modal) {
   var listRow = document.querySelector(
     '[data-conflict-aprendiz-row][data-aprendiz-id="' + aprendizKey + '"]'
   );
-  var displayName = listRow
-    ? (listRow.getAttribute("data-conflict-name") || "Aprendiz").trim()
-    : "Aprendiz";
-  closeModal(modalId);
-  if (listRow) {
-    listRow.remove();
-  }
-  updateImportConflictsCount();
-  showImportConflictToast(
-    displayName + ": todos los conflictos de este aprendiz quedaron resueltos."
-  );
-  modal.remove();
+  var resolutions = collectConflictResolutions(modal);
+
+  persistConflictAprendizResolved(aprendizKey, resolutions)
+    .then(function (data) {
+      if (!data || !data.ok) {
+        alert("No se pudo registrar la resolución en el historial de importación.");
+        return;
+      }
+      closeModal(modalId);
+      if (listRow) {
+        listRow.remove();
+      }
+      if (typeof data.remaining === "number") {
+        applyImportConflictsRemaining(data.remaining);
+      } else {
+        updateImportConflictsCount();
+      }
+      showImportConflictToast("Conflictos del aprendiz resueltos");
+      if (modal) {
+        modal.remove();
+      }
+    })
+    .catch(function () {
+      alert("No se pudo registrar la resolución en el historial de importación.");
+    });
 }
 
 function checkConflictModalComplete(modalId) {
@@ -137,6 +219,12 @@ function resolveConflictRow(row, action) {
   var modalId = row.getAttribute("data-conflict-modal") || "";
   var modal = modalId ? document.getElementById("modal-" + modalId) : null;
   var incomingJefeId = modal ? parseInt(modal.getAttribute("data-incoming-jefe-id") || "0", 10) : 0;
+  if (field === "jefe_id" && incomingJefeId <= 0) {
+    var parsedJefe = parseInt(String(value), 10);
+    if (parsedJefe > 0) {
+      incomingJefeId = parsedJefe;
+    }
+  }
 
   return fetch((window.APP_BASE_PATH || "") + "/importar/conflicto/resolver", {
     method: "POST",
@@ -174,6 +262,7 @@ function resolveConflictRow(row, action) {
         }
       }
       row.setAttribute("data-conflict-resolved", "1");
+      row.setAttribute("data-conflict-resolution", action);
       return data;
     })
     .catch(function () {

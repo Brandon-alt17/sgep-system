@@ -117,6 +117,8 @@ class AprendicesImport
                             'identificacion' => $rowSummary['identificacion'],
                             'incoming_jefe_id' => $jefeId !== null && $jefeId > 0 ? $jefeId : null,
                             'empresa_id' => $empresaId !== null && $empresaId > 0 ? $empresaId : null,
+                            'file_supervisor' => $this->fileSupervisorSnapshot($assoc),
+                            'file_correo_org' => $this->stringOrNull($assoc['correo_organizacional'] ?? null),
                             'conflicts' => $comparison['conflicts'],
                         ];
                     } elseif ($comparison['fillable_payload'] !== []) {
@@ -264,6 +266,8 @@ class AprendicesImport
                 $currentInt = ($current === null || $current === '') ? 0 : (int) $current;
                 if ($currentInt <= 0) {
                     $fillable[$field] = $incomingJefe;
+                } elseif ($currentInt !== $incomingJefe) {
+                    $conflicts[] = $this->buildConflictEntry($field, $current, $incoming, $importAssoc);
                 }
                 continue;
             }
@@ -315,7 +319,7 @@ class AprendicesImport
             $fileCorreoOrg = $this->stringOrNull($importAssoc['correo_organizacional'] ?? null);
             if ($fileCorreoOrg !== null) {
                 $currentCorreoOrg = trim((string) ($empresa['correo_org'] ?? ''));
-                if (!$this->areEquivalentValues($currentCorreoOrg === '' ? null : $currentCorreoOrg, $fileCorreoOrg)) {
+                if (!$this->areEquivalentValues($currentCorreoOrg === '' ? null : $currentCorreoOrg, $fileCorreoOrg, 'correo_organizacional')) {
                     $conflicts[] = $this->buildScalarConflictEntry(
                         'correo_organizacional',
                         $currentCorreoOrg !== '' ? $currentCorreoOrg : 'Sin dato',
@@ -325,12 +329,18 @@ class AprendicesImport
             }
         }
 
+        if ($incomingJefe > 0 && $incomingJefe !== $currentJefeId) {
+            return $conflicts;
+        }
+
         $currentJefe = $currentJefeId > 0 ? EmpresaJefe::findById($currentJefeId) : null;
         $jefeColumns = [
             'jefe_nombre' => ['column' => 'nombre', 'file_key' => 'nombre_jefe'],
-            'jefe_cargo' => ['column' => 'cargo', 'file_key' => 'cargo_jefe'],
             'jefe_correo' => ['column' => 'correo', 'file_key' => 'correo_jefe'],
-            'jefe_telefono' => ['column' => 'telefono', 'file_key' => 'telefono_jefe'],
+            // jefe_cargo y jefe_telefono excluidos: distintas filas del mismo Excel
+            // pueden tener valores diferentes para el mismo supervisor (datos inconsistentes
+            // en la fuente), lo que genera un ping-pong de conflictos entre aprendices.
+            // El cargo y teléfono del supervisor se actualizan manualmente desde la UI.
         ];
 
         foreach ($jefeColumns as $fieldKey => $meta) {
@@ -342,7 +352,7 @@ class AprendicesImport
             $currentValue = $currentJefe !== null
                 ? trim((string) ($currentJefe[$meta['column']] ?? ''))
                 : '';
-            if ($this->areEquivalentValues($currentValue === '' ? null : $currentValue, $fileValue)) {
+            if ($this->areEquivalentValues($currentValue === '' ? null : $currentValue, $fileValue, $fieldKey)) {
                 continue;
             }
 
@@ -397,10 +407,26 @@ class AprendicesImport
         $normalized = preg_replace('/\s+/', ' ', trim($value)) ?? trim($value);
         $normalized = mb_strtolower($normalized);
         $normalized = str_replace(
-            ['á', 'é', 'í', 'ó', 'ú', 'ü'],
-            ['a', 'e', 'i', 'o', 'u', 'u'],
+            ['á', 'é', 'í', 'ó', 'ú', 'ü', 'ñ'],
+            ['a', 'e', 'i', 'o', 'u', 'u', 'n'],
             $normalized
         );
+
+        if (in_array($field, ['jefe_nombre', 'jefe_cargo', 'nombre_completo', 'jefe_grupo', 'coordinacion'], true)) {
+            $normalized = preg_replace('/[^a-z0-9\s]/u', '', $normalized) ?? $normalized;
+            $normalized = preg_replace('/\s+/', ' ', $normalized) ?? $normalized;
+        }
+
+        if ($field === 'jefe_cargo') {
+            $parts = explode(' ', $normalized);
+            if ($parts !== []) {
+                $last = (string) end($parts);
+                if (strlen($last) > 3 && str_ends_with($last, 's')) {
+                    $parts[count($parts) - 1] = substr($last, 0, -1);
+                    $normalized = implode(' ', $parts);
+                }
+            }
+        }
 
         if ($field === 'tipo_documento') {
             if (str_starts_with($normalized, 'cedula de')) {
@@ -417,7 +443,27 @@ class AprendicesImport
             }
         }
 
+        if (in_array($field, ['telefono', 'jefe_telefono', 'telefono_instructor_seguimiento'], true)) {
+            return preg_replace('/\D+/', '', $normalized) ?? $normalized;
+        }
+
         return $normalized;
+    }
+
+    /**
+     * @param array<string, mixed> $assoc
+     * @return array{nombre: string, cargo: ?string, correo: ?string, telefono: ?string}
+     */
+    private function fileSupervisorSnapshot(array $assoc): array
+    {
+        $nombre = trim((string) ($assoc['nombre_jefe'] ?? ''));
+
+        return [
+            'nombre' => $nombre,
+            'cargo' => $this->stringOrNull($assoc['cargo_jefe'] ?? null),
+            'correo' => $this->stringOrNull($assoc['correo_jefe'] ?? null),
+            'telefono' => $this->stringOrNull($assoc['telefono_jefe'] ?? null),
+        ];
     }
 
     /**
