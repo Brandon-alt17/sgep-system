@@ -7,6 +7,7 @@ namespace App\Controllers;
 use App\Helpers\ImportHistory;
 use App\Helpers\Database;
 use App\Imports\AprendicesImport;
+use App\Imports\AprendicesImportValidator;
 use App\Models\EmpresaJefe;
 use App\Models\ProgramaEnlacePendiente;
 
@@ -29,7 +30,7 @@ class ImportacionController
     public function process(): void
     {
         if (empty($_FILES['archivo']['tmp_name'])) {
-            $errorMessage = 'Debe seleccionar un archivo.';
+            $errorMessage = 'Seleccione un archivo.';
             if ($this->isAjaxRequest()) {
                 $this->jsonResponse(['ok' => false, 'message' => $errorMessage], 422);
                 return;
@@ -47,7 +48,16 @@ class ImportacionController
         }
 
         $fileName = (string) ($_FILES['archivo']['name'] ?? 'archivo.xlsx');
-        $resultado = (new AprendicesImport())->import($_FILES['archivo']['tmp_name']);
+        $tmpPath = (string) $_FILES['archivo']['tmp_name'];
+        $fileSize = (int) ($_FILES['archivo']['size'] ?? 0);
+
+        $validation = (new AprendicesImportValidator())->validate($tmpPath, $fileName, $fileSize);
+        if (!$validation['valid']) {
+            $this->respondImportValidationFailed($validation['errors']);
+            return;
+        }
+
+        $resultado = (new AprendicesImport())->import($tmpPath);
         ProgramaEnlacePendiente::syncAprendicesSinVinculoValido();
         $processed = (int) ($resultado['inserted'] ?? 0) + (int) ($resultado['updated'] ?? 0);
         $errorCount = count($resultado['errors'] ?? []);
@@ -216,6 +226,33 @@ class ImportacionController
         ]);
 
         return $stmt->rowCount() > 0;
+    }
+
+    /**
+     * @param list<string> $errors
+     */
+    private function respondImportValidationFailed(array $errors): void
+    {
+        $message = $errors[0] ?? 'El archivo no coincide con la plantilla.';
+        if ($this->isAjaxRequest()) {
+            $this->jsonResponse([
+                'ok' => false,
+                'message' => $message,
+                'errors' => $errors,
+            ], 422);
+            return;
+        }
+
+        $historyState = $this->historyPaginationState();
+        view('import/upload', [
+            'history' => $historyState['items'],
+            'historyPage' => $historyState['page'],
+            'historyTotalPages' => $historyState['totalPages'],
+            'templateUrl' => $this->templateUrl(),
+            'templateAvailable' => $this->templateAvailable(),
+            'flashError' => $message,
+            'flashErrors' => $errors,
+        ]);
     }
 
     private function templateUrl(): string
