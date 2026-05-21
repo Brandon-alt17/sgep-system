@@ -120,39 +120,19 @@ class EmpresaJefe
         $nombreKey = self::normalizeComparableName($nombre);
 
         $pdo = Database::connection();
-        $stmt = $pdo->prepare('SELECT id, nombre, correo FROM empresa_jefes WHERE empresa_id = :eid');
+        $stmt = $pdo->prepare(
+            'SELECT id, nombre, correo, telefono, cargo FROM empresa_jefes WHERE empresa_id = :eid ORDER BY id ASC'
+        );
         $stmt->execute(['eid' => $empresaId]);
         $candidates = $stmt->fetchAll() ?: [];
 
-        if ($correo !== null) {
-            $correoKey = mb_strtolower(trim($correo));
-            foreach ($candidates as $row) {
-                $rowCorreo = self::nullIfEmptyString($row['correo'] ?? null);
-                if ($rowCorreo === null) {
-                    continue;
-                }
-                if (mb_strtolower(trim($rowCorreo)) === $correoKey) {
-                    self::patchAltContactIfMissing((int) $row['id'], $nombreContacto2, $correoContacto2);
-
-                    return (int) $row['id'];
-                }
-            }
-        }
-
         foreach ($candidates as $row) {
-            $rowNombre = self::normalizeComparableName((string) ($row['nombre'] ?? ''));
-            if ($rowNombre !== $nombreKey) {
+            if (!self::matchesImportSupervisorRow($row, $nombreKey, $cargo, $correo, $telefono)) {
                 continue;
             }
-            $rowCorreo = self::nullIfEmptyString($row['correo'] ?? null);
-            if ($correo === null && $rowCorreo === null) {
-                self::patchAltContactIfMissing((int) $row['id'], $nombreContacto2, $correoContacto2);
-                return (int) $row['id'];
-            }
-            if ($correo !== null && $rowCorreo !== null && mb_strtolower(trim($correo)) === mb_strtolower(trim((string) $rowCorreo))) {
-                self::patchAltContactIfMissing((int) $row['id'], $nombreContacto2, $correoContacto2);
-                return (int) $row['id'];
-            }
+            self::patchAltContactIfMissing((int) $row['id'], $nombreContacto2, $correoContacto2);
+
+            return (int) $row['id'];
         }
 
         $ins = $pdo->prepare(
@@ -182,16 +162,85 @@ class EmpresaJefe
         return $s === '' ? null : $s;
     }
 
+    /**
+     * Identidad del jefe: nombre normalizado + correo (si ambos presentes deben coincidir).
+     * Cargo y teléfono son atributos resolubles por UI, no discriminadores de identidad.
+     *
+     * @param array<string, mixed> $row
+     */
+    private static function matchesImportSupervisorRow(
+        array $row,
+        string $nombreKey,
+        ?string $cargo,
+        ?string $correo,
+        ?string $telefono,
+    ): bool {
+        if (self::normalizeComparableName((string) ($row['nombre'] ?? '')) !== $nombreKey) {
+            return false;
+        }
+
+        $rowCorreo = self::nullIfEmptyString($row['correo'] ?? null);
+
+        // Si el archivo trae correo, debe coincidir con el de BD (o BD no tiene correo aún)
+        if ($correo !== null && $rowCorreo !== null
+            && mb_strtolower(trim($correo)) !== mb_strtolower(trim((string) $rowCorreo))) {
+            return false;
+        }
+        // Si el archivo trae correo y BD no tiene, no reutilizar (podría ser otra persona sin correo)
+        if ($correo !== null && $rowCorreo === null) {
+            return false;
+        }
+
+        return true;
+    }
+
+    private static function normalizeComparablePhone(?string $value): string
+    {
+        if ($value === null) {
+            return '';
+        }
+
+        return preg_replace('/\D+/', '', trim($value)) ?? '';
+    }
+
+    private static function normalizeComparableCargo(?string $value): string
+    {
+        if ($value === null) {
+            return '';
+        }
+
+        $normalized = preg_replace('/\s+/', ' ', trim($value)) ?? trim($value);
+        $normalized = mb_strtolower($normalized);
+        $normalized = str_replace(
+            ['á', 'é', 'í', 'ó', 'ú', 'ü', 'ñ'],
+            ['a', 'e', 'i', 'o', 'u', 'u', 'n'],
+            $normalized
+        );
+        $normalized = preg_replace('/[^a-z0-9\s]/u', '', $normalized) ?? $normalized;
+        $parts = explode(' ', $normalized);
+        if ($parts !== []) {
+            $last = (string) end($parts);
+            if (strlen($last) > 3 && str_ends_with($last, 's')) {
+                $parts[count($parts) - 1] = substr($last, 0, -1);
+                $normalized = implode(' ', $parts);
+            }
+        }
+
+        return $normalized;
+    }
+
     private static function normalizeComparableName(string $value): string
     {
         $normalized = preg_replace('/\s+/', ' ', trim($value)) ?? trim($value);
         $normalized = mb_strtolower($normalized);
 
-        return str_replace(
-            ['á', 'é', 'í', 'ó', 'ú', 'ü'],
-            ['a', 'e', 'i', 'o', 'u', 'u'],
+        $normalized = str_replace(
+            ['á', 'é', 'í', 'ó', 'ú', 'ü', 'ñ'],
+            ['a', 'e', 'i', 'o', 'u', 'u', 'n'],
             $normalized
         );
+
+        return preg_replace('/[^a-z0-9\s]/u', '', $normalized) ?? $normalized;
     }
 
     private static function patchAltContactIfMissing(int $jefeId, ?string $nombreContacto2, ?string $correoContacto2): void

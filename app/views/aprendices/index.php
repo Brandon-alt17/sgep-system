@@ -17,6 +17,10 @@ $initialQ = trim((string) ($activeFilters['q'] ?? ($initialQ ?? '')));
 $initialEmpresaId = (int) ($activeFilters['empresa_id'] ?? 0);
 $initialProgramaId = (int) ($activeFilters['programa_id'] ?? 0);
 $source = trim((string) ($activeFilters['from'] ?? ''));
+$importId = trim((string) ($activeFilters['import_id'] ?? ''));
+$importReturnUrl = trim((string) ($importReturnUrl ?? ''));
+$conflictsCount = (int) ($conflictsCount ?? 0);
+$conflictsManageUrl = trim((string) ($conflictsManageUrl ?? ''));
 
 $activeQuery = array_filter([
     'q' => $initialQ,
@@ -24,7 +28,8 @@ $activeQuery = array_filter([
     'estado' => $initialEstado,
     'empresa_id' => $initialEmpresaId > 0 ? (string) $initialEmpresaId : '',
     'programa_id' => $initialProgramaId > 0 ? (string) $initialProgramaId : '',
-    'from' => in_array($source, ['grupos', 'empresas'], true) ? $source : '',
+    'from' => in_array($source, ['grupos', 'empresas', 'import'], true) ? $source : '',
+    'import_id' => $source === 'import' && $importId !== '' ? $importId : '',
 ], static fn ($v): bool => (string) $v !== '');
 
 $profileFiltersQuery = $activeQuery === [] ? '' : '&' . http_build_query($activeQuery);
@@ -105,6 +110,20 @@ partial('components/page_header', [
 ]);
 ?>
 
+<?php partial('components/back_link_text', [
+    'url' => $importReturnUrl,
+    'label' => 'Volver a importación',
+]); ?>
+
+<?php partial('components/alerts/pending_link', [
+    'count' => $conflictsCount,
+    'manageUrl' => $conflictsManageUrl,
+    'subjectPlural' => 'aprendices con conflictos de datos',
+    'messageTail' => 'sin resolver en la última importación.',
+    'ctaText' => 'Gestionar ahora',
+    'extraClasses' => 'mb-4',
+]); ?>
+
 <?php if ($source === 'grupos' || $source === 'empresas'): ?>
     <?php if ($returnToCatalogUrl !== ''): ?>
         <a href="<?= e($returnToCatalogUrl) ?>" class="mb-4 inline-block text-sm text-app-link hover:underline">
@@ -116,9 +135,19 @@ partial('components/page_header', [
 <?php endif; ?>
 
 <section class="<?= e(ui_card_classes()) ?> mb-4">
-    <form method="get" action="<?= e(APP_BASE_PATH) ?>/aprendices" class="flex w-full flex-wrap items-center gap-3" data-auto-filter-form data-auto-filter-ajax="true" data-auto-filter-target="#aprendices-table tbody">
+    <form
+        method="get"
+        action="<?= e(APP_BASE_PATH) ?>/aprendices"
+        class="flex w-full flex-wrap items-center gap-3"
+        data-remote-table-filter-form
+        data-remote-table-filter-target="#aprendices-table tbody"
+        data-remote-table-filter-debounce="350"
+    >
         <?php if ($source !== ''): ?>
             <input type="hidden" name="from" value="<?= e($source) ?>">
+        <?php endif; ?>
+        <?php if ($source === 'import' && $importId !== ''): ?>
+            <input type="hidden" name="import_id" value="<?= e($importId) ?>">
         <?php endif; ?>
 
         <div class="relative w-full min-w-0 md:flex-1">
@@ -132,10 +161,9 @@ partial('components/page_header', [
                 placeholder="Buscar por nombre o documento"
                 class="<?= e(ui_input_classes()) ?> mt-0 block w-full min-w-0 pl-10 pr-10"
                 autocomplete="off"
-                data-auto-filter-input
-                data-auto-filter-main-input
+                data-remote-table-filter-q
             >
-            <button type="button" class="<?= $initialQ !== '' ? '' : 'hidden' ?> absolute right-2 top-1/2 -translate-y-1/2 rounded-md px-2 py-1 text-sm text-app-muted hover:bg-app-panelSubtle hover:text-app-text" aria-label="Limpiar búsqueda" data-auto-filter-clear>&times;</button>
+            <button type="button" class="<?= $initialQ !== '' ? '' : 'hidden' ?> absolute right-2 top-1/2 -translate-y-1/2 rounded-md px-2 py-1 text-sm text-app-muted hover:bg-app-panelSubtle hover:text-app-text" aria-label="Limpiar búsqueda" data-remote-table-filter-clear>&times;</button>
         </div>
         <div class="relative w-full min-w-[220px] md:w-72 md:flex-none">
                 <button type="button" id="open-filters-popover" class="<?= e(ui_button_small_classes()) ?> inline-flex w-full items-center justify-center gap-2 bg-white border-app-borderControlStrong text-app-muted hover:bg-white hover:text-app-text" aria-expanded="false" aria-controls="aprendices-filters-popover" data-filter-popover-trigger>
@@ -156,6 +184,7 @@ partial('components/page_header', [
                                 'value' => $initialFicha,
                                 'placeholder' => 'Todas las fichas',
                                 'options' => $fichaComboboxOptions,
+                                'valueInputAttrs' => ['data-remote-table-filter-change' => true],
                             ]); ?>
                         </div>
 
@@ -166,6 +195,7 @@ partial('components/page_header', [
                                 'value' => $initialEmpresaId > 0 ? (string) $initialEmpresaId : '',
                                 'placeholder' => 'Todas las empresas',
                                 'options' => $empresaComboboxOptions,
+                                'valueInputAttrs' => ['data-remote-table-filter-change' => true],
                             ]); ?>
                         </div>
 
@@ -176,6 +206,7 @@ partial('components/page_header', [
                                 'value' => $initialProgramaId > 0 ? (string) $initialProgramaId : '',
                                 'placeholder' => 'Todos los programas',
                                 'options' => $programaComboboxOptions,
+                                'valueInputAttrs' => ['data-remote-table-filter-change' => true],
                             ]); ?>
                         </div>
 
@@ -186,7 +217,7 @@ partial('components/page_header', [
                 </div>
             </div>
         <div class="<?= e(ui_select_wrapper_classes()) ?> w-full min-w-[220px] shrink-0 md:w-64">
-            <select name="estado" class="<?= e(ui_select_classes()) ?>">
+            <select name="estado" class="<?= e(ui_select_classes()) ?>" data-remote-table-filter-change aria-label="Filtrar por estado">
                 <option value="">Todos los estados</option>
                 <?php foreach ($estadosOptions as $st): ?>
                     <?php if ($st === null || $st === '') { continue; } ?>
@@ -204,7 +235,7 @@ partial('components/page_header', [
     </form>
 </section>
 
-<section class="<?= e(ui_card_classes()) ?> !p-4 overflow-hidden">
+<section class="<?= e(ui_card_classes()) ?> !p-0 overflow-hidden">
     <div class="overflow-x-auto">
         <table id="aprendices-table" class="<?= e(ui_table_classes()) ?>">
             <thead class="border-b bg-app-panelSubtle">

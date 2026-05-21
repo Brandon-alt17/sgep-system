@@ -24,6 +24,6 @@ $toastRootId = trim((string) ($toastRootId ?? ''));
         <?php else: ?>
             <span class="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-white [&_svg]:h-3.5 [&_svg]:w-3.5"><?= ui_icon('check') ?></span>
         <?php endif; ?>
-        <p class="m-0 max-h-48 min-w-0 flex-1 overflow-y-auto text-sm text-app-text"><?= e($message) ?></p>
+        <p class="m-0 max-h-48 min-w-0 flex-1 overflow-y-auto whitespace-pre-line text-sm text-app-text"><?= e($message) ?></p>
     </div>
 </section>

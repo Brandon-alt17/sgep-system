@@ -70,7 +70,7 @@ $errors = (array) ($errors ?? []);
         <div data-inline-view>
             <div class="flex items-start gap-2">
                 <div>
-                    <h3 class="m-0 text-2xl font-semibold text-app-text"><?= e($programName) ?></h3>
+                    <h3 class="m-0 cursor-default select-none text-2xl font-semibold text-app-text"><?= e($programName) ?></h3>
                     <p class="mt-1 text-sm text-app-muted">Código: <?= e($programCode !== '' ? $programCode : 'No detectado') ?></p>
                 </div>
                 <button type="button" class="<?= e(ui_button_icon_classes()) ?>" data-inline-edit-open aria-label="Editar título del programa">
@@ -81,7 +81,6 @@ $errors = (array) ($errors ?? []);
     </div>
     <form id="programa-cabecera-form" method="post" action="<?= e(APP_BASE_PATH) ?>/catalogo/programas/actualizar-datos" data-inline-edit-form class="hidden mt-3 max-w-3xl">
         <input type="hidden" name="programa_id" value="<?= (int) $programId ?>">
-        <input type="hidden" name="modalidad" value="<?= e((string) ($meta['modalidad'] ?? '')) ?>">
         <input type="hidden" name="horas_lectiva" value="<?= e((string) ($meta['horas_lectiva'] ?? '')) ?>">
         <input type="hidden" name="horas_productiva" value="<?= e((string) ($meta['horas_productiva'] ?? '')) ?>">
         <div class="grid gap-3 max-w-xl w-full">

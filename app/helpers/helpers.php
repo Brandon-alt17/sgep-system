@@ -106,3 +106,59 @@ function log_error(string $message): void
     }
     error_log('[' . date('Y-m-d H:i:s') . '] ' . $message . PHP_EOL, 3, $dir . '/error.log');
 }
+
+function import_result_url(string $importId): string
+{
+    $importId = trim($importId);
+    if ($importId === '') {
+        return '';
+    }
+
+    return rtrim((string) APP_BASE_PATH, '/') . '/importar/resultado?id=' . rawurlencode($importId);
+}
+
+/**
+ * @return array{fromImport: bool, importId: string, returnUrl: string}
+ */
+function import_nav_context(): array
+{
+    $from = trim((string) ($_GET['from'] ?? ''));
+    $importId = trim((string) ($_GET['import_id'] ?? ''));
+    if ($importId === '' && $from === 'import') {
+        $importId = trim((string) ($_GET['id'] ?? ''));
+    }
+    if ($from !== 'import' || $importId === '') {
+        return ['fromImport' => false, 'importId' => '', 'returnUrl' => ''];
+    }
+
+    return [
+        'fromImport' => true,
+        'importId' => $importId,
+        'returnUrl' => import_result_url($importId),
+    ];
+}
+
+function import_conflicts_url(string $importId, bool $fromImport = false): string
+{
+    $importId = trim($importId);
+    if ($importId === '') {
+        return '';
+    }
+
+    $url = rtrim((string) APP_BASE_PATH, '/') . '/importar/conflictos?id=' . rawurlencode($importId);
+    if ($fromImport) {
+        $url .= '&from=import';
+    }
+
+    return $url;
+}
+
+function import_nav_query_suffix(string $importId): string
+{
+    $importId = trim($importId);
+    if ($importId === '') {
+        return '';
+    }
+
+    return '?from=import&import_id=' . rawurlencode($importId);
+}

@@ -180,8 +180,6 @@ class Programa
         $codigo = trim((string) ($meta['codigo'] ?? ''));
         $nombre = trim((string) ($meta['nombre'] ?? ''));
         $nivel = trim((string) ($meta['nivel'] ?? ''));
-        $modalidad = trim((string) ($meta['modalidad'] ?? ''));
-
         $pdo = Database::connection();
         if ($codigo !== '') {
             $stmt = $pdo->prepare('SELECT id FROM programas WHERE codigo = :codigo LIMIT 1');
@@ -204,7 +202,7 @@ class Programa
             'codigo' => $codigo !== '' ? $codigo : null,
             'nombre' => $nombre !== '' ? $nombre : 'Programa pendiente de nombre',
             'nivel' => $nivel,
-            'modalidad' => $modalidad,
+            'modalidad' => null,
         ];
         $sql = 'INSERT INTO programas (codigo, nombre, nivel, modalidad, created_at, updated_at)
                 VALUES (:codigo, :nombre, :nivel, :modalidad, NOW(), NOW())';

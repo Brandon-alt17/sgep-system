@@ -69,6 +69,19 @@ document.querySelectorAll("input, textarea").forEach(function (field) {
   input.setAttribute("autocapitalize", "off");
   input.setAttribute("spellcheck", "false");
   input.setAttribute("data-lpignore", "true");
+  if (
+    input.closest("[data-live-filter-root]") ||
+    input.closest("[data-import-conflicts-root]") ||
+    input.matches("[data-remote-table-filter-q]") ||
+    input.matches("[data-live-filter-input]") ||
+    input.hasAttribute("data-combobox-input") ||
+    input.hasAttribute("data-inline-input") ||
+    input.closest("[data-inline-edit-form].hidden") ||
+    input.closest(".modal-overlay")
+  ) {
+    return;
+  }
+
   var typeForReadonly = ((input.getAttribute("type") || "text") + "").toLowerCase();
   if (["text", "search", "number", "email", "url", "tel"].indexOf(typeForReadonly) !== -1) {
     input.readOnly = true;
@@ -502,6 +515,21 @@ document.querySelectorAll("[data-import-form]").forEach(function (form) {
   var autoSend = form.getAttribute("data-import-autosend") !== "false";
   if (!fileInput || !trigger) return;
 
+  var showImportToast = function (message, variant) {
+    var text = (message || "").trim();
+    if (!text) return;
+    if (typeof window.sgToastShow === "function") {
+      window.sgToastShow(
+        "#import-toast-root",
+        text,
+        variant === "error" ? "error" : "warning",
+        variant === "error" ? 7000 : 6500
+      );
+      return;
+    }
+    showGlobalToast(text);
+  };
+
   var openPicker = function () { fileInput.click(); };
   trigger.addEventListener("click", function (event) {
     event.preventDefault();
@@ -549,25 +577,27 @@ document.querySelectorAll("[data-import-form]").forEach(function (form) {
           return;
         }
         setProgressState("No se pudo completar la importación", 0);
-        if (data.message) {
-          alert(data.message);
+        if (data.errors && data.errors.length) {
+          showImportToast(data.errors[0], "warning");
+        } else if (data.message) {
+          showImportToast(data.message, "warning");
         } else {
-          alert("No se pudo completar la importación.");
+          showImportToast("Importación fallida.", "warning");
         }
       } catch (e) {
         setProgressState("Error inesperado durante la importación", 0);
-        alert("Error inesperado durante la importación.");
+        showImportToast("Error inesperado.", "error");
       }
     });
 
     xhr.addEventListener("error", function () {
       setProgressState("Error de red durante la carga", 0);
-      alert("Error de red durante la importación.");
+      showImportToast("Error de red.", "error");
     });
 
     xhr.addEventListener("timeout", function () {
       setProgressState("La importación tardó demasiado", 95);
-      alert("La importación está tardando más de lo esperado. Intente nuevamente.");
+      showImportToast("Tiempo de espera agotado.", "warning");
     });
 
     xhr.send(new FormData(form));

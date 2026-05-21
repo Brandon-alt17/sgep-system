@@ -7,7 +7,9 @@ namespace App\Controllers;
 use App\Helpers\ImportHistory;
 use App\Helpers\Database;
 use App\Imports\AprendicesImport;
+use App\Imports\AprendicesImportValidator;
 use App\Models\EmpresaJefe;
+use App\Models\Programa;
 use App\Models\ProgramaEnlacePendiente;
 
 class ImportacionController
@@ -29,7 +31,7 @@ class ImportacionController
     public function process(): void
     {
         if (empty($_FILES['archivo']['tmp_name'])) {
-            $errorMessage = 'Debe seleccionar un archivo.';
+            $errorMessage = 'Seleccione un archivo.';
             if ($this->isAjaxRequest()) {
                 $this->jsonResponse(['ok' => false, 'message' => $errorMessage], 422);
                 return;
@@ -47,7 +49,16 @@ class ImportacionController
         }
 
         $fileName = (string) ($_FILES['archivo']['name'] ?? 'archivo.xlsx');
-        $resultado = (new AprendicesImport())->import($_FILES['archivo']['tmp_name']);
+        $tmpPath = (string) $_FILES['archivo']['tmp_name'];
+        $fileSize = (int) ($_FILES['archivo']['size'] ?? 0);
+
+        $validation = (new AprendicesImportValidator())->validate($tmpPath, $fileName, $fileSize);
+        if (!$validation['valid']) {
+            $this->respondImportValidationFailed($validation['errors']);
+            return;
+        }
+
+        $resultado = (new AprendicesImport())->import($tmpPath);
         ProgramaEnlacePendiente::syncAprendicesSinVinculoValido();
         $processed = (int) ($resultado['inserted'] ?? 0) + (int) ($resultado['updated'] ?? 0);
         $errorCount = count($resultado['errors'] ?? []);
@@ -85,9 +96,59 @@ class ImportacionController
             return;
         }
 
+        $resultado = (array) ($entry['resultado'] ?? []);
+        $tieneProgramasPendientes = ($resultado['programa_pending_rows'] ?? []) !== [];
+
         view('import/preview', [
             'entry' => $entry,
-            'resultado' => (array) ($entry['resultado'] ?? []),
+            'resultado' => $resultado,
+            'pendientesEnlaceCount' => $tieneProgramasPendientes ? Programa::countPendientesEnlace() : 0,
+        ]);
+    }
+
+    public function showConflicts(): void
+    {
+        $id = trim((string) ($_GET['id'] ?? ''));
+        $entry = $id !== '' ? ImportHistory::findById($id) : null;
+
+        if ($entry === null) {
+            http_response_code(404);
+            view('errors/404', ['uri' => '/importar/conflictos?id=' . $id]);
+
+            return;
+        }
+
+        $resultado = (array) ($entry['resultado'] ?? []);
+        $base = rtrim((string) APP_BASE_PATH, '/');
+        $importCtx = import_nav_context();
+        $allConflictRows = (array) ($resultado['conflict_rows'] ?? []);
+        $perPage = 10;
+        $totalConflicts = count($allConflictRows);
+        $totalPages = max(1, (int) ceil($totalConflicts / $perPage));
+        $currentPage = (int) ($_GET['page'] ?? 1);
+        $currentPage = min(max(1, $currentPage), $totalPages);
+        $offset = ($currentPage - 1) * $perPage;
+        $conflictPageItems = array_slice($allConflictRows, $offset, $perPage);
+
+        $conflictsBaseUrl = $base . '/importar/conflictos?id=' . rawurlencode($id);
+        if ($importCtx['fromImport']) {
+            $conflictsBaseUrl .= '&from=import';
+        }
+        $conflictsBaseUrl .= '&page=%d';
+
+        $aprendicesUrl = $base . '/aprendices';
+
+        view('import/conflictos', [
+            'entry' => $entry,
+            'conflictRows' => $conflictPageItems,
+            'conflictRowsAll' => $allConflictRows,
+            'conflictsCount' => $totalConflicts,
+            'currentPage' => $currentPage,
+            'totalPages' => $totalPages,
+            'conflictsPaginationUrl' => $conflictsBaseUrl,
+            'pendingFieldLabels' => (array) require base_path('config/import_field_labels.php'),
+            'importReturnUrl' => $importCtx['returnUrl'],
+            'aprendicesUrl' => $aprendicesUrl,
         ]);
     }
 
@@ -147,9 +208,113 @@ class ImportacionController
         }
 
         $incomingJefeId = (int) ($decoded['incoming_jefe_id'] ?? 0);
-        $updated = $this->applyConflictAcceptNew($aprendizId, $field, $newValue, $incomingJefeId);
+        try {
+            $updated = $this->applyConflictAcceptNew($aprendizId, $field, $newValue, $incomingJefeId);
+        } catch (\Throwable $e) {
+            $this->jsonResponse(['ok' => false, 'message' => 'No se pudo aplicar el cambio.'], 500);
+
+            return;
+        }
 
         $this->jsonResponse(['ok' => true, 'updated' => $updated]);
+    }
+
+    public function completeConflictAprendiz(): void
+    {
+        $raw = file_get_contents('php://input');
+        $decoded = json_decode($raw ?: '', true);
+        if (!is_array($decoded)) {
+            $this->jsonResponse(['ok' => false, 'message' => 'Solicitud inválida.'], 422);
+
+            return;
+        }
+
+        $importId = trim((string) ($decoded['import_id'] ?? ''));
+        $aprendizId = (int) ($decoded['aprendiz_id'] ?? 0);
+
+        if ($importId === '' || $aprendizId <= 0) {
+            $this->jsonResponse(['ok' => false, 'message' => 'Parámetros inválidos.'], 422);
+
+            return;
+        }
+
+        if (ImportHistory::findById($importId) === null) {
+            $this->jsonResponse(['ok' => false, 'message' => 'Importación no encontrada.'], 404);
+
+            return;
+        }
+
+        $conflictRow = ImportHistory::findConflictAprendizRow($importId, $aprendizId);
+        $resolutions = (array) ($decoded['resolutions'] ?? []);
+        if ($conflictRow !== null) {
+            $this->alignAprendizAfterConflictResolution($aprendizId, $conflictRow, $resolutions);
+        }
+
+        $removed = ImportHistory::removeConflictAprendiz($importId, $aprendizId);
+        $remaining = ImportHistory::countConflictAprendices($importId);
+        $this->jsonResponse([
+            'ok' => true,
+            'removed' => $removed,
+            'remaining' => $remaining,
+        ]);
+    }
+
+    /**
+     * Alinea el aprendiz con los datos del archivo tras resolver conflictos (evita que reaparezcan al reimportar).
+     *
+     * @param array<string, mixed> $conflictRow
+     * @param list<array{field?: string, action?: string, value?: mixed}> $resolutions
+     */
+    private function alignAprendizAfterConflictResolution(int $aprendizId, array $conflictRow, array $resolutions): void
+    {
+        $incomingJefeId = (int) ($conflictRow['incoming_jefe_id'] ?? 0);
+
+        $actionByField = [];
+        foreach ($resolutions as $item) {
+            if (!is_array($item)) {
+                continue;
+            }
+            $field = trim((string) ($item['field'] ?? ''));
+            if ($field === '') {
+                continue;
+            }
+            $actionByField[$field] = trim((string) ($item['action'] ?? '')) === 'new' ? 'new' : 'current';
+        }
+
+        if ($incomingJefeId > 0) {
+            $pdo = \App\Helpers\Database::connection();
+            $checkJefe = $pdo->prepare(
+                'SELECT id FROM empresa_jefes WHERE id = :id LIMIT 1'
+            );
+            $checkJefe->execute(['id' => $incomingJefeId]);
+            if ($checkJefe->fetch() !== false) {
+                $pdo->prepare('UPDATE aprendices SET jefe_id = :jefe_id, updated_at = NOW() WHERE id = :id')
+                    ->execute(['jefe_id' => $incomingJefeId, 'id' => $aprendizId]);
+            }
+        }
+
+        foreach ($resolutions as $item) {
+            if (!is_array($item)) {
+                continue;
+            }
+            $field = trim((string) ($item['field'] ?? ''));
+            if ($field === '' || ($actionByField[$field] ?? '') !== 'new') {
+                continue;
+            }
+            $this->applyConflictAcceptNew(
+                $aprendizId,
+                $field,
+                $item['value'] ?? null,
+                $incomingJefeId
+            );
+        }
+
+        if (($actionByField['correo_organizacional'] ?? '') === 'new') {
+            $fileCorreoOrg = trim((string) ($conflictRow['file_correo_org'] ?? ''));
+            if ($fileCorreoOrg !== '') {
+                $this->applyConflictAcceptNew($aprendizId, 'correo_organizacional', $fileCorreoOrg, $incomingJefeId);
+            }
+        }
     }
 
     private function applyConflictAcceptNew(int $aprendizId, string $field, mixed $newValue, int $incomingJefeId = 0): bool
@@ -164,6 +329,35 @@ class ImportacionController
 
         $empresaId = (int) ($aprendiz['empresa_id'] ?? 0);
         $currentJefeId = (int) ($aprendiz['jefe_id'] ?? 0);
+
+        if ($field === 'jefe_id') {
+            if ($empresaId <= 0) {
+                return false;
+            }
+
+            $newJefeId = (int) $this->normalizeConflictValue($field, $newValue);
+            if ($newJefeId <= 0 && $incomingJefeId > 0) {
+                $newJefeId = $incomingJefeId;
+            }
+            if ($newJefeId <= 0) {
+                return false;
+            }
+
+            $check = $pdo->prepare(
+                'SELECT id FROM empresa_jefes WHERE id = :id AND empresa_id = :empresa_id LIMIT 1'
+            );
+            $check->execute(['id' => $newJefeId, 'empresa_id' => $empresaId]);
+            if ($check->fetch() === false) {
+                return false;
+            }
+
+            $update = $pdo->prepare(
+                'UPDATE aprendices SET jefe_id = :jefe_id, updated_at = NOW() WHERE id = :id'
+            );
+            $update->execute(['jefe_id' => $newJefeId, 'id' => $aprendizId]);
+
+            return true;
+        }
 
         if ($field === 'correo_organizacional') {
             if ($empresaId <= 0) {
@@ -216,6 +410,33 @@ class ImportacionController
         ]);
 
         return $stmt->rowCount() > 0;
+    }
+
+    /**
+     * @param list<string> $errors
+     */
+    private function respondImportValidationFailed(array $errors): void
+    {
+        $message = $errors[0] ?? 'El archivo no coincide con la plantilla.';
+        if ($this->isAjaxRequest()) {
+            $this->jsonResponse([
+                'ok' => false,
+                'message' => $message,
+                'errors' => $errors,
+            ], 422);
+            return;
+        }
+
+        $historyState = $this->historyPaginationState();
+        view('import/upload', [
+            'history' => $historyState['items'],
+            'historyPage' => $historyState['page'],
+            'historyTotalPages' => $historyState['totalPages'],
+            'templateUrl' => $this->templateUrl(),
+            'templateAvailable' => $this->templateAvailable(),
+            'flashError' => $message,
+            'flashErrors' => $errors,
+        ]);
     }
 
     private function templateUrl(): string

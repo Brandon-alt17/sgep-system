@@ -35,11 +35,27 @@
     </article>
 </section>
 
-<?php if (!empty($flashError)): ?>
-    <section class="mt-4 <?= e(ui_warning_card_classes()) ?>">
-        <?= e((string) $flashError) ?>
-    </section>
-<?php endif; ?>
+<?php
+$flashErrors = (array) ($flashErrors ?? []);
+if (!empty($flashError) && $flashErrors === []) {
+    $flashErrors = [(string) $flashError];
+}
+$importToastParts = [];
+foreach ($flashErrors as $err) {
+    $t = trim((string) $err);
+    if ($t !== '') {
+        $importToastParts[] = $t;
+    }
+}
+$importToastMessage = $importToastParts === [] ? '' : $importToastParts[0];
+?>
+
+<?php partial('components/toast', [
+    'message' => $importToastMessage,
+    'variant' => 'warning',
+    'toastRootId' => 'import-toast-root',
+]); ?>
+<script src="<?= e(APP_BASE_PATH) ?>/js/ui-toast.js"></script>
 
 <section id="historial-importaciones" class="<?= e(ui_card_surface_classes()) ?> mt-6">
     <div class="<?= e(ui_card_header_classes()) ?>">

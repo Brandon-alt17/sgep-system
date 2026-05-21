@@ -380,11 +380,14 @@ class CatalogoController
             return;
         }
 
+        $importCtx = import_nav_context();
+
         view('catalogo/programas/pendientes', [
             'pendientes' => $pendientes,
             'filters' => $filters,
             'programas' => $programas,
             'pendientesCount' => $pendientesCount,
+            'importReturnUrl' => $importCtx['returnUrl'],
         ]);
     }
 
@@ -397,7 +400,14 @@ class CatalogoController
             ProgramaEnlacePendiente::resolve($pendingId, $programaId);
             $resolved = true;
         }
-        $suffix = $resolved ? '?toast=pendiente_resuelto' : '';
+        $query = $resolved ? ['toast' => 'pendiente_resuelto'] : [];
+        $importFrom = trim((string) ($_POST['from'] ?? ''));
+        $importId = trim((string) ($_POST['import_id'] ?? ''));
+        if ($importFrom === 'import' && $importId !== '') {
+            $query['from'] = 'import';
+            $query['import_id'] = $importId;
+        }
+        $suffix = $query === [] ? '' : '?' . http_build_query($query);
         redirect(APP_BASE_PATH . '/catalogo/programas/pendientes' . $suffix);
     }
 
@@ -455,6 +465,7 @@ class CatalogoController
         }
 
         $meta = (array) ($decoded['meta'] ?? []);
+        unset($meta['modalidad']);
         $competencias = (array) ($decoded['competencias'] ?? []);
         $warnings = (array) ($decoded['warnings'] ?? []);
         $hasWarnings = $warnings !== [];
@@ -480,7 +491,6 @@ class CatalogoController
                 'codigo' => '',
                 'nombre' => '',
                 'nivel' => '',
-                'modalidad' => '',
                 'horas_lectiva' => '',
                 'horas_productiva' => '',
                 'horas_total' => '',
@@ -502,7 +512,6 @@ class CatalogoController
             'codigo' => trim((string) ($_POST['codigo'] ?? '')),
             'nombre' => trim((string) ($_POST['nombre'] ?? '')),
             'nivel' => trim((string) ($_POST['nivel'] ?? '')),
-            'modalidad' => trim((string) ($_POST['modalidad'] ?? '')),
             'horas_lectiva' => '',
             'horas_productiva' => '',
         ];
@@ -694,7 +703,6 @@ class CatalogoController
             'codigo' => trim((string) ($_POST['codigo'] ?? '')),
             'nombre' => trim((string) ($_POST['nombre'] ?? '')),
             'nivel' => trim((string) ($_POST['nivel'] ?? '')),
-            'modalidad' => trim((string) ($_POST['modalidad'] ?? '')),
             'horas_lectiva' => trim((string) ($_POST['horas_lectiva'] ?? '')),
             'horas_productiva' => trim((string) ($_POST['horas_productiva'] ?? '')),
         ];
@@ -981,11 +989,6 @@ class CatalogoController
 
         if (trim((string) ($meta['codigo'] ?? '')) === '') {
             $errors[] = 'El código del programa es obligatorio.';
-        }
-
-        $modalidad = trim((string) ($meta['modalidad'] ?? ''));
-        if ($modalidad !== '' && !in_array($modalidad, ['Presencial', 'Virtual', 'Mixta'], true)) {
-            $errors[] = 'La modalidad no es válida.';
         }
 
         $nivel = trim((string) ($meta['nivel'] ?? ''));

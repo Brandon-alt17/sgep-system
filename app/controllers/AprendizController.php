@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Controllers;
 
+use App\Helpers\ImportHistory;
 use App\Helpers\Validator;
 use App\Models\Aprendiz;
 use App\Models\EmpresaJefe;
@@ -47,6 +48,19 @@ class AprendizController
             return;
         }
 
+        $importReturnUrl = $activeFilters['from'] === 'import' && $activeFilters['import_id'] !== ''
+            ? import_result_url($activeFilters['import_id'])
+            : '';
+
+        $fromImportContext = $activeFilters['from'] === 'import' && $activeFilters['import_id'] !== '';
+        $conflictImportId = $fromImportContext
+            ? $activeFilters['import_id']
+            : (string) ((ImportHistory::latestImport()['id'] ?? '') ?: '');
+        $conflictsCount = ImportHistory::countConflictAprendices(
+            $conflictImportId !== '' ? $conflictImportId : null
+        );
+        $conflictsManageUrl = import_conflicts_url($conflictImportId, $fromImportContext);
+
         view('aprendices/index', [
             'aprendices' => $aprendices,
             'fichasOptions' => Aprendiz::getUniqueFichas(),
@@ -61,6 +75,9 @@ class AprendizController
             'totalPages' => $totalPages,
             'perPage' => $perPage,
             'totalItems' => $totalItems,
+            'conflictsCount' => $conflictsCount,
+            'conflictsManageUrl' => $conflictsManageUrl,
+            'importReturnUrl' => $importReturnUrl,
         ]);
     }
 
@@ -189,8 +206,14 @@ class AprendizController
         $empresaId = (int) ($input['empresa_id'] ?? 0);
         $programaId = (int) ($input['programa_id'] ?? 0);
         $from = trim((string) ($input['from'] ?? ''));
+        $importId = trim((string) ($input['import_id'] ?? ''));
         $page = (int) ($input['page'] ?? 1);
-        if (!in_array($from, ['grupos', 'empresas'], true)) {
+        if (!in_array($from, ['grupos', 'empresas', 'import'], true)) {
+            $from = '';
+        }
+        if ($from !== 'import') {
+            $importId = '';
+        } elseif ($importId === '') {
             $from = '';
         }
         if ($page < 1) {
@@ -204,6 +227,7 @@ class AprendizController
             'empresa_id' => $empresaId > 0 ? $empresaId : 0,
             'programa_id' => $programaId > 0 ? $programaId : 0,
             'from' => $from,
+            'import_id' => $importId,
             'page' => $page,
         ];
     }
@@ -220,6 +244,7 @@ class AprendizController
             'programa_id' => $filters['programa_id'] > 0 ? (string) $filters['programa_id'] : '',
             'page' => $filters['page'] > 1 ? (string) $filters['page'] : '',
             'from' => $filters['from'],
+            'import_id' => $filters['import_id'],
         ], static fn ($v): bool => (string) $v !== '');
 
         $base = APP_BASE_PATH . '/aprendices';
