@@ -69,6 +69,19 @@ document.querySelectorAll("input, textarea").forEach(function (field) {
   input.setAttribute("autocapitalize", "off");
   input.setAttribute("spellcheck", "false");
   input.setAttribute("data-lpignore", "true");
+  if (
+    input.closest("[data-live-filter-root]") ||
+    input.closest("[data-import-conflicts-root]") ||
+    input.matches("[data-remote-table-filter-q]") ||
+    input.matches("[data-live-filter-input]") ||
+    input.hasAttribute("data-combobox-input") ||
+    input.hasAttribute("data-inline-input") ||
+    input.closest("[data-inline-edit-form].hidden") ||
+    input.closest(".modal-overlay")
+  ) {
+    return;
+  }
+
   var typeForReadonly = ((input.getAttribute("type") || "text") + "").toLowerCase();
   if (["text", "search", "number", "email", "url", "tel"].indexOf(typeForReadonly) !== -1) {
     input.readOnly = true;

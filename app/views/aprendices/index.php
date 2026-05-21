@@ -17,6 +17,10 @@ $initialQ = trim((string) ($activeFilters['q'] ?? ($initialQ ?? '')));
 $initialEmpresaId = (int) ($activeFilters['empresa_id'] ?? 0);
 $initialProgramaId = (int) ($activeFilters['programa_id'] ?? 0);
 $source = trim((string) ($activeFilters['from'] ?? ''));
+$importId = trim((string) ($activeFilters['import_id'] ?? ''));
+$importReturnUrl = trim((string) ($importReturnUrl ?? ''));
+$conflictsCount = (int) ($conflictsCount ?? 0);
+$conflictsManageUrl = trim((string) ($conflictsManageUrl ?? ''));
 
 $activeQuery = array_filter([
     'q' => $initialQ,
@@ -24,7 +28,8 @@ $activeQuery = array_filter([
     'estado' => $initialEstado,
     'empresa_id' => $initialEmpresaId > 0 ? (string) $initialEmpresaId : '',
     'programa_id' => $initialProgramaId > 0 ? (string) $initialProgramaId : '',
-    'from' => in_array($source, ['grupos', 'empresas'], true) ? $source : '',
+    'from' => in_array($source, ['grupos', 'empresas', 'import'], true) ? $source : '',
+    'import_id' => $source === 'import' && $importId !== '' ? $importId : '',
 ], static fn ($v): bool => (string) $v !== '');
 
 $profileFiltersQuery = $activeQuery === [] ? '' : '&' . http_build_query($activeQuery);
@@ -105,6 +110,20 @@ partial('components/page_header', [
 ]);
 ?>
 
+<?php partial('components/back_link_text', [
+    'url' => $importReturnUrl,
+    'label' => 'Volver a importación',
+]); ?>
+
+<?php partial('components/alerts/pending_link', [
+    'count' => $conflictsCount,
+    'manageUrl' => $conflictsManageUrl,
+    'subjectPlural' => 'aprendices con conflictos de datos',
+    'messageTail' => 'sin resolver en la última importación.',
+    'ctaText' => 'Gestionar ahora',
+    'extraClasses' => 'mb-4',
+]); ?>
+
 <?php if ($source === 'grupos' || $source === 'empresas'): ?>
     <?php if ($returnToCatalogUrl !== ''): ?>
         <a href="<?= e($returnToCatalogUrl) ?>" class="mb-4 inline-block text-sm text-app-link hover:underline">
@@ -126,6 +145,9 @@ partial('components/page_header', [
     >
         <?php if ($source !== ''): ?>
             <input type="hidden" name="from" value="<?= e($source) ?>">
+        <?php endif; ?>
+        <?php if ($source === 'import' && $importId !== ''): ?>
+            <input type="hidden" name="import_id" value="<?= e($importId) ?>">
         <?php endif; ?>
 
         <div class="relative w-full min-w-0 md:flex-1">
@@ -213,7 +235,7 @@ partial('components/page_header', [
     </form>
 </section>
 
-<section class="<?= e(ui_card_classes()) ?> !p-4 overflow-hidden">
+<section class="<?= e(ui_card_classes()) ?> !p-0 overflow-hidden">
     <div class="overflow-x-auto">
         <table id="aprendices-table" class="<?= e(ui_table_classes()) ?>">
             <thead class="border-b bg-app-panelSubtle">

@@ -40,6 +40,88 @@ function setConflictRowState(row, action) {
   });
 }
 
+function isConflictRowResolved(row) {
+  if (!row) return false;
+  var status = row.querySelector("[data-conflict-status]");
+  if (!status) return false;
+  var text = (status.textContent || "").trim();
+  return text === "Aplicado" || text === "Sin cambios";
+}
+
+function showImportConflictToast(message) {
+  var text = (message || "").trim();
+  if (!text) return;
+  if (typeof window.sgToastShow === "function") {
+    var roots = ["#import-conflictos-toast-root", "#import-preview-toast-root"];
+    for (var i = 0; i < roots.length; i++) {
+      if (document.querySelector(roots[i])) {
+        window.sgToastShow(roots[i], text, "success", 5200);
+        return;
+      }
+    }
+  }
+  if (typeof window.showGlobalToast === "function") {
+    window.showGlobalToast(text);
+  }
+}
+
+function updateImportConflictsCount() {
+  var tbody = document.getElementById("import-conflicts-tbody");
+  if (!tbody) return;
+  var remaining = tbody.querySelectorAll("[data-conflict-aprendiz-row]").length;
+  var countEl = document.getElementById("import-conflicts-count");
+  if (countEl) {
+    countEl.textContent = String(remaining);
+  }
+  var alertSection = document.getElementById("import-conflicts-alert");
+  if (alertSection && remaining === 0) {
+    alertSection.classList.add("hidden");
+  }
+  var searchCard = document.querySelector("[data-import-conflicts-root] [data-live-filter-root]");
+  var tableSection = document.getElementById("tabla-conflictos");
+  if (remaining === 0) {
+    if (searchCard) searchCard.classList.add("hidden");
+    if (tableSection) tableSection.classList.add("hidden");
+    var doneSection = document.getElementById("import-conflicts-all-done");
+    if (doneSection) doneSection.classList.remove("hidden");
+  }
+}
+
+function onAprendizConflictsResolved(modalId, modal) {
+  if (!modalId || !modal) return;
+  var aprendizKey = modalId.replace(/^conflict-/, "");
+  var listRow = document.querySelector(
+    '[data-conflict-aprendiz-row][data-aprendiz-id="' + aprendizKey + '"]'
+  );
+  var displayName = listRow
+    ? (listRow.getAttribute("data-conflict-name") || "Aprendiz").trim()
+    : "Aprendiz";
+  closeModal(modalId);
+  if (listRow) {
+    listRow.remove();
+  }
+  updateImportConflictsCount();
+  showImportConflictToast(
+    displayName + ": todos los conflictos de este aprendiz quedaron resueltos."
+  );
+  modal.remove();
+}
+
+function checkConflictModalComplete(modalId) {
+  var modal = document.getElementById("modal-" + modalId);
+  if (!modal) return;
+  var rows = modal.querySelectorAll(
+    '[data-conflict-row][data-conflict-modal="' + modalId + '"]'
+  );
+  if (!rows.length) return;
+  for (var i = 0; i < rows.length; i++) {
+    if (!isConflictRowResolved(rows[i])) {
+      return;
+    }
+  }
+  onAprendizConflictsResolved(modalId, modal);
+}
+
 function resolveConflictRow(row, action) {
   var aprendizId = parseInt(row.getAttribute("data-aprendiz-id") || "0", 10);
   var field = row.getAttribute("data-conflict-field") || "";
@@ -69,34 +151,43 @@ function resolveConflictRow(row, action) {
       action: action,
       incoming_jefe_id: incomingJefeId > 0 ? incomingJefeId : null
     })
-  }).then(function (response) {
-    if (!response.ok) throw new Error("No se pudo resolver el conflicto.");
-    return response.json();
-  }).then(function (data) {
-    if (!data || data.ok !== true) throw new Error("No se pudo resolver el conflicto.");
-    var status = row.querySelector("[data-conflict-status]");
-    if (status) {
-      status.textContent = data.updated ? "Aplicado" : "Sin cambios";
-    }
-    if (action === "new" && data.updated) {
-      var currentText = row.querySelector("[data-conflict-current-text]");
-      var newText = row.querySelector("[data-conflict-new-text]");
-      if (currentText && newText) {
-        currentText.textContent = newText.textContent || "";
+  })
+    .then(function (response) {
+      if (!response.ok) throw new Error("No se pudo resolver el conflicto.");
+      return response.json();
+    })
+    .then(function (data) {
+      if (!data || data.ok !== true) throw new Error("No se pudo resolver el conflicto.");
+      var status = row.querySelector("[data-conflict-status]");
+      if (status) {
+        status.textContent = data.updated ? "Aplicado" : "Sin cambios";
       }
-      var newSub = row.querySelector(".conflict-value__sub");
-      if (newSub) {
-        newSub.remove();
+      if (action === "new" && data.updated) {
+        var currentText = row.querySelector("[data-conflict-current-text]");
+        var newText = row.querySelector("[data-conflict-new-text]");
+        if (currentText && newText) {
+          currentText.textContent = newText.textContent || "";
+        }
+        var newSub = row.querySelector(".conflict-value__sub");
+        if (newSub) {
+          newSub.remove();
+        }
       }
-    }
-    return data;
-  }).catch(function () {
-    var status = row.querySelector("[data-conflict-status]");
-    if (status) {
-      status.textContent = "Error";
-    }
-    alert("No se pudo guardar la decisión del conflicto.");
-  });
+      row.setAttribute("data-conflict-resolved", "1");
+      return data;
+    })
+    .catch(function () {
+      var status = row.querySelector("[data-conflict-status]");
+      if (status) {
+        status.textContent = "Error";
+      }
+      alert("No se pudo guardar la decisión del conflicto.");
+      throw new Error("conflict-resolve-failed");
+    });
+}
+
+function afterConflictRowsResolved(modalId) {
+  checkConflictModalComplete(modalId);
 }
 
 (function () {
@@ -177,10 +268,19 @@ function resolveConflictRow(row, action) {
       var modal = document.getElementById("modal-" + modalId);
       if (!modal) return;
       var action = mode === "new" ? "new" : "current";
-      modal.querySelectorAll('[data-conflict-row][data-conflict-modal="' + modalId + '"]').forEach(function (row) {
+      var rows = Array.prototype.slice.call(
+        modal.querySelectorAll('[data-conflict-row][data-conflict-modal="' + modalId + '"]')
+      );
+      rows.forEach(function (row) {
         setConflictRowState(row, action);
-        resolveConflictRow(row, action);
       });
+      Promise.all(rows.map(function (row) {
+        return resolveConflictRow(row, action);
+      }))
+        .then(function () {
+          afterConflictRowsResolved(modalId);
+        })
+        .catch(function () {});
       return;
     }
 
@@ -189,8 +289,13 @@ function resolveConflictRow(row, action) {
       var row = conflictActionButton.closest("[data-conflict-row]");
       if (!row) return;
       var rowAction = conflictActionButton.getAttribute("data-conflict-action-button") === "new" ? "new" : "current";
+      var modalIdSingle = row.getAttribute("data-conflict-modal") || "";
       setConflictRowState(row, rowAction);
-      resolveConflictRow(row, rowAction);
+      resolveConflictRow(row, rowAction)
+        .then(function () {
+          afterConflictRowsResolved(modalIdSingle);
+        })
+        .catch(function () {});
       return;
     }
 
@@ -204,6 +309,15 @@ function resolveConflictRow(row, action) {
   });
 
   document.addEventListener("keydown", function (event) {
+    if (event.key === "Enter" || event.key === " ") {
+      var conflictListRow = event.target.closest("[data-conflict-aprendiz-row][data-modal-open]");
+      if (conflictListRow && event.target === conflictListRow) {
+        event.preventDefault();
+        openModal(conflictListRow.getAttribute("data-modal-open"));
+        return;
+      }
+    }
+
     if (event.key !== "Escape") return;
     var openModals = document.querySelectorAll('[id^="modal-"]:not(.hidden)');
     if (!openModals.length) return;

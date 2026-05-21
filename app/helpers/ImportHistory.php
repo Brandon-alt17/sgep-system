@@ -62,5 +62,39 @@ class ImportHistory
 
         return null;
     }
+
+    /**
+     * Importación más reciente del historial que aún reporta conflictos sin resolver.
+     *
+     * @return array<string, mixed>|null
+     */
+    public static function latestWithConflicts(): ?array
+    {
+        foreach (self::all() as $row) {
+            $conflictRows = (array) (((array) ($row['resultado'] ?? []))['conflict_rows'] ?? []);
+            if ($conflictRows !== []) {
+                return $row;
+            }
+        }
+
+        return null;
+    }
+
+    public static function countConflictAprendices(?string $importId = null): int
+    {
+        if ($importId !== null && $importId !== '') {
+            $entry = self::findById($importId);
+
+            return $entry === null
+                ? 0
+                : count((array) (((array) ($entry['resultado'] ?? []))['conflict_rows'] ?? []));
+        }
+
+        $entry = self::latestWithConflicts();
+
+        return $entry === null
+            ? 0
+            : count((array) (((array) ($entry['resultado'] ?? []))['conflict_rows'] ?? []));
+    }
 }
 

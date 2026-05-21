@@ -9,6 +9,7 @@ use App\Helpers\Database;
 use App\Imports\AprendicesImport;
 use App\Imports\AprendicesImportValidator;
 use App\Models\EmpresaJefe;
+use App\Models\Programa;
 use App\Models\ProgramaEnlacePendiente;
 
 class ImportacionController
@@ -95,9 +96,62 @@ class ImportacionController
             return;
         }
 
+        $resultado = (array) ($entry['resultado'] ?? []);
+        $tieneProgramasPendientes = ($resultado['programa_pending_rows'] ?? []) !== [];
+
         view('import/preview', [
             'entry' => $entry,
-            'resultado' => (array) ($entry['resultado'] ?? []),
+            'resultado' => $resultado,
+            'pendientesEnlaceCount' => $tieneProgramasPendientes ? Programa::countPendientesEnlace() : 0,
+        ]);
+    }
+
+    public function showConflicts(): void
+    {
+        $id = trim((string) ($_GET['id'] ?? ''));
+        $entry = $id !== '' ? ImportHistory::findById($id) : null;
+
+        if ($entry === null) {
+            http_response_code(404);
+            view('errors/404', ['uri' => '/importar/conflictos?id=' . $id]);
+
+            return;
+        }
+
+        $resultado = (array) ($entry['resultado'] ?? []);
+        $base = rtrim((string) APP_BASE_PATH, '/');
+        $importCtx = import_nav_context();
+        $allConflictRows = (array) ($resultado['conflict_rows'] ?? []);
+        $perPage = 10;
+        $totalConflicts = count($allConflictRows);
+        $totalPages = max(1, (int) ceil($totalConflicts / $perPage));
+        $currentPage = (int) ($_GET['page'] ?? 1);
+        $currentPage = min(max(1, $currentPage), $totalPages);
+        $offset = ($currentPage - 1) * $perPage;
+        $conflictPageItems = array_slice($allConflictRows, $offset, $perPage);
+
+        $conflictsBaseUrl = $base . '/importar/conflictos?id=' . rawurlencode($id);
+        if ($importCtx['fromImport']) {
+            $conflictsBaseUrl .= '&from=import';
+        }
+        $conflictsBaseUrl .= '&page=%d';
+
+        $aprendicesUrl = $base . '/aprendices';
+        if ($importCtx['fromImport']) {
+            $aprendicesUrl .= import_nav_query_suffix($id);
+        }
+
+        view('import/conflictos', [
+            'entry' => $entry,
+            'conflictRows' => $conflictPageItems,
+            'conflictRowsAll' => $allConflictRows,
+            'conflictsCount' => $totalConflicts,
+            'currentPage' => $currentPage,
+            'totalPages' => $totalPages,
+            'conflictsPaginationUrl' => $conflictsBaseUrl,
+            'pendingFieldLabels' => (array) require base_path('config/import_field_labels.php'),
+            'importReturnUrl' => $importCtx['returnUrl'],
+            'aprendicesUrl' => $aprendicesUrl,
         ]);
     }
 

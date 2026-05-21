@@ -24,7 +24,6 @@ class ProgramaPdfParser
             'codigo' => self::detectCodigo($flat),
             'nombre' => self::detectNombre($flat),
             'nivel' => self::detectNivel($flat),
-            'modalidad' => self::detectModalidad($flat),
             'horas_lectiva' => self::firstMatch('/etapa\s+lectiva\s*[:\-]?\s*(\d{2,5})\s*horas/iu', $flat, 1),
             'horas_productiva' => self::firstMatch('/etapa\s+productiva\s*[:\-]?\s*(\d{2,5})\s*horas/iu', $flat, 1),
             'horas_total' => self::firstMatch('/total\s*[:\-]?\s*(\d{2,5})\s*horas/iu', $flat, 1),

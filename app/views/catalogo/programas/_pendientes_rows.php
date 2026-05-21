@@ -21,6 +21,10 @@ $tdClasses = isset($tdClasses) && (string) $tdClasses !== ''
             <td class="<?= e($tdClasses) ?> relative z-0 overflow-visible px-5 py-4 pr-6 align-middle focus-within:z-30">
                 <form method="post" action="<?= e(APP_BASE_PATH) ?>/catalogo/programas/pendientes/resolver" class="flex flex-row flex-nowrap items-center justify-start gap-2">
                     <input type="hidden" name="pending_id" value="<?= (int) ($row['id'] ?? 0) ?>">
+                    <?php if (!empty($preserveImportNav) && trim((string) ($importId ?? '')) !== ''): ?>
+                        <input type="hidden" name="from" value="import">
+                        <input type="hidden" name="import_id" value="<?= e((string) $importId) ?>">
+                    <?php endif; ?>
                     <?php
                     $comboboxOptions = [];
                     foreach ($programas as $programa) {

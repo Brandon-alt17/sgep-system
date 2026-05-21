@@ -24,6 +24,7 @@ $routes = [
     ['GET', '/importar', [ImportacionController::class, 'upload']],
     ['POST', '/importar', [ImportacionController::class, 'process']],
     ['GET', '/importar/resultado', [ImportacionController::class, 'showResult']],
+    ['GET', '/importar/conflictos', [ImportacionController::class, 'showConflicts']],
     ['POST', '/importar/conflicto/resolver', [ImportacionController::class, 'resolveConflict']],
     ['GET', '/aprendices', [AprendizController::class, 'index']],
     ['GET', '/aprendices/create', [AprendizController::class, 'create']],

@@ -6,6 +6,7 @@ $programas = (array) ($programas ?? []);
 $filters = (array) ($filters ?? []);
 $q = trim((string) ($filters['q'] ?? ''));
 $pendientesCount = (int) ($pendientesCount ?? 0);
+$importReturnUrl = trim((string) ($importReturnUrl ?? ''));
 $toastKey = trim((string) ($_GET['toast'] ?? ''));
 $toastMessage = match ($toastKey) {
     'pendiente_resuelto' => 'Vínculo con el programa guardado correctamente.',
@@ -21,12 +22,25 @@ $pendientesAlertBadge = $pendientesAlertUrgente
 ?>
 
 <section class="bg-app-bg flex flex-row items-start gap-2">
-    <a class="<?= e(ui_button_icon_classes()) ?> mt-2.5 shrink-0 self-start" href="<?= e(APP_BASE_PATH) ?>/catalogo/programas" aria-label="Volver al catálogo de programas">
-        <span class="inline-flex h-3.5 w-3.5 [&_svg]:h-3.5 [&_svg]:w-3.5"><?= ui_icon('arrow') ?></span>
-    </a>
+    <?php if ($importReturnUrl !== ''): ?>
+        <a class="<?= e(ui_button_icon_classes()) ?> mt-2.5 shrink-0 self-start" href="<?= e($importReturnUrl) ?>" aria-label="Volver al detalle de importación">
+            <span class="inline-flex h-3.5 w-3.5 [&_svg]:h-3.5 [&_svg]:w-3.5"><?= ui_icon('arrow') ?></span>
+        </a>
+    <?php else: ?>
+        <a class="<?= e(ui_button_icon_classes()) ?> mt-2.5 shrink-0 self-start" href="<?= e(APP_BASE_PATH) ?>/catalogo/programas" aria-label="Volver al catálogo de programas">
+            <span class="inline-flex h-3.5 w-3.5 [&_svg]:h-3.5 [&_svg]:w-3.5"><?= ui_icon('arrow') ?></span>
+        </a>
+    <?php endif; ?>
     <div class="mb-3 flex min-w-0 flex-1 flex-col gap-2 pl-4">
         <h2 class="m-0 text-2xl font-semibold text-app-text">Pendientes por enlazar</h2>
         <p class="m-0 text-sm text-app-muted">Aprendices importados sin vínculo a un programa del catálogo. Asigna un programa existente en cada fila para resolver el pendiente.</p>
+        <?php if ($importReturnUrl !== ''): ?>
+            <?php partial('components/back_link_text', [
+                'url' => $importReturnUrl,
+                'label' => 'Volver a importación',
+                'extraClasses' => 'mb-0 mt-1',
+            ]); ?>
+        <?php endif; ?>
     </div>
 </section>
 
@@ -94,6 +108,8 @@ $pendientesAlertBadge = $pendientesAlertUrgente
                     'pendientes' => $pendientes,
                     'programas' => $programas,
                     'tdClasses' => $tdClasses,
+                    'preserveImportNav' => $importReturnUrl !== '',
+                    'importId' => trim((string) ($_GET['import_id'] ?? '')),
                 ]); ?>
             </tbody>
         </table>
