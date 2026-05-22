@@ -76,6 +76,9 @@ class AprendicesImport
                     $assoc['modalidad_formacion'] ?? null
                 );
                 $programaId = $programaResolution['id'];
+                $existing = $this->findByDocumento($doc);
+                $yaTieneProgramaVinculado = ProgramaEnlacePendiente::aprendizHasValidProgramaVinculo($doc);
+
                 $empresaId = $this->findOrCreateEmpresa($assoc);
 
                 $jefeId = null;
@@ -93,17 +96,15 @@ class AprendicesImport
                 $payload = $this->buildAprendizPayload($assoc, $doc, $programaId, $empresaId, $jefeId);
                 $rowSummary = $this->rowSummary($assoc, $doc);
 
-                if (($programaResolution['ambiguous'] ?? false) === true) {
+                if ($yaTieneProgramaVinculado) {
+                    ProgramaEnlacePendiente::closePendingIfAprendizVinculado($doc);
+                } elseif (($programaResolution['ambiguous'] ?? false) === true) {
                     $results['warnings'][] = $usuarioLabel . ': programa ambiguo sin nivel (' . ($programaResolution['normalized_name'] ?? 'N/D') . ').';
                     $this->queueProgramaPending($results, $assoc, $doc, $nombre, $rowSummary, $programaResolution, 'ambiguous');
-                }
-
-                if ($programaId === null && ($programaResolution['ambiguous'] ?? false) !== true) {
+                } elseif ($programaId === null) {
                     $results['warnings'][] = $usuarioLabel . ': programa no encontrado en catálogo (' . ($programaResolution['normalized_name'] ?? 'N/D') . ').';
                     $this->queueProgramaPending($results, $assoc, $doc, $nombre, $rowSummary, $programaResolution, 'not_found');
                 }
-
-                $existing = $this->findByDocumento($doc);
                 if ($existing) {
                     $aprendizId = (int) $existing['id'];
                     $comparison = $this->compareExistingWithPayload($existing, $payload, $assoc, $jefeId, $empresaId);

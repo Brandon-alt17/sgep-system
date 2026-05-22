@@ -9,6 +9,8 @@ $importReturnUrl = trim((string) ($importReturnUrl ?? ''));
 $aprendicesUrl = (string) ($aprendicesUrl ?? APP_BASE_PATH . '/aprendices');
 $importId = (string) ($entry['id'] ?? '');
 $conflictsCount = (int) ($conflictsCount ?? count($conflictRowsAll));
+$conflictsFilteredCount = (int) ($conflictsFilteredCount ?? count($conflictRows));
+$searchQ = trim((string) ($searchQ ?? ''));
 $currentPage = max(1, (int) ($currentPage ?? 1));
 $totalPages = max(1, (int) ($totalPages ?? 1));
 $conflictsPaginationUrl = (string) ($conflictsPaginationUrl ?? '');
@@ -66,27 +68,42 @@ $conflictsAlertBadge = $conflictsAlertUrgente
         data-import-conflicts-root
         data-import-id="<?= e($importId) ?>"
     >
-        <section class="<?= e(ui_card_classes()) ?> mb-4 p-6" data-live-filter-root data-live-filter-items-target="#import-conflicts-tbody">
-            <div class="relative min-w-0 w-full">
-                <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-app-muted [&_svg]:h-4 [&_svg]:w-4">
-                    <?= ui_icon('search') ?>
-                </span>
-                <input
-                    type="text"
-                    placeholder="Buscar en esta página"
-                    aria-label="Buscar conflictos en la página actual"
-                    autocomplete="off"
-                    class="<?= e(ui_input_classes()) ?> mt-0 w-full bg-white pl-10 pr-10"
-                    data-live-filter-input
-                >
-                <button
-                    type="button"
-                    class="hidden absolute right-2 top-1/2 -translate-y-1/2 rounded-md px-2 py-1 text-sm text-app-muted hover:bg-app-panelSubtle hover:text-app-text"
-                    aria-label="Limpiar búsqueda"
-                    data-live-filter-clear
-                >&times;</button>
-            </div>
-            <p class="mb-0 mt-3 hidden text-sm text-app-muted" data-live-filter-empty>Sin coincidencias en esta página.</p>
+        <section class="<?= e(ui_card_classes()) ?> mb-4 p-6">
+            <form
+                method="get"
+                action="<?= e(APP_BASE_PATH) ?>/importar/conflictos"
+                class="w-full"
+                data-remote-table-filter-form
+                data-remote-table-filter-target="#import-conflicts-tbody"
+                data-remote-table-filter-pagination="#import-conflicts-pagination"
+                data-remote-table-filter-debounce="350"
+            >
+                <input type="hidden" name="id" value="<?= e($importId) ?>">
+                <?php if ($importReturnUrl !== ''): ?>
+                    <input type="hidden" name="from" value="import">
+                <?php endif; ?>
+                <div class="relative min-w-0 w-full">
+                    <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-app-muted [&_svg]:h-4 [&_svg]:w-4">
+                        <?= ui_icon('search') ?>
+                    </span>
+                    <input
+                        type="text"
+                        name="q"
+                        value="<?= e($searchQ) ?>"
+                        placeholder="Buscar por aprendiz o documento"
+                        aria-label="Buscar conflictos en toda la importación"
+                        autocomplete="off"
+                        class="<?= e(ui_input_classes()) ?> mt-0 w-full bg-white pl-10 pr-10"
+                        data-remote-table-filter-q
+                    >
+                    <button
+                        type="button"
+                        class="<?= $searchQ !== '' ? '' : 'hidden' ?> absolute right-2 top-1/2 -translate-y-1/2 rounded-md px-2 py-1 text-sm text-app-muted hover:bg-app-panelSubtle hover:text-app-text"
+                        aria-label="Limpiar búsqueda"
+                        data-remote-table-filter-clear
+                    >&times;</button>
+                </div>
+            </form>
         </section>
 
         <section class="<?= e(ui_card_classes()) ?> mb-2 !p-0" id="tabla-conflictos">
@@ -106,27 +123,32 @@ $conflictsAlertBadge = $conflictsAlertUrgente
                         <th class="<?= e(ui_th_classes()) ?> px-5 pr-6 text-left">Acción</th>
                     </tr>
                     </thead>
-                    <tbody id="import-conflicts-tbody" data-live-filter-items>
+                    <tbody id="import-conflicts-tbody">
                         <?php partial('import/_conflicts_rows', [
                             'conflictRows' => $conflictRows,
                             'tdClasses' => $conflictsTdClasses,
+                            'emptyMessage' => $searchQ !== ''
+                                ? 'Sin coincidencias para esta búsqueda.'
+                                : 'No hay aprendices con conflictos pendientes.',
                         ]); ?>
                     </tbody>
                 </table>
             </div>
         </section>
 
-        <?php if ($conflictsPaginationUrl !== ''): ?>
-            <?php
-            ui_render_pagination(
-                $currentPage,
-                $totalPages,
-                $conflictsPaginationUrl,
-                'Paginación de conflictos de importación',
-                'tabla-conflictos'
-            );
-            ?>
-        <?php endif; ?>
+        <div id="import-conflicts-pagination">
+            <?php if ($conflictsPaginationUrl !== '' && $totalPages > 1): ?>
+                <?php
+                ui_render_pagination(
+                    $currentPage,
+                    $totalPages,
+                    $conflictsPaginationUrl,
+                    'Paginación de conflictos de importación',
+                    'tabla-conflictos'
+                );
+                ?>
+            <?php endif; ?>
+        </div>
 
         <?php partial('import/_conflict_modals', [
             'conflictRows' => $conflictRowsAll,

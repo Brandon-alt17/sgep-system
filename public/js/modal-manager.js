@@ -80,7 +80,7 @@ function applyImportConflictsRemaining(remaining) {
       alertSection.classList.remove("hidden");
     }
   }
-  var searchCard = document.querySelector("[data-import-conflicts-root] [data-live-filter-root]");
+  var searchCard = document.querySelector("[data-import-conflicts-root] form");
   var tableSection = document.getElementById("tabla-conflictos");
   var tbody = document.getElementById("import-conflicts-tbody");
   var rowsOnPage = tbody

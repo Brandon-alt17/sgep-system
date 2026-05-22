@@ -9,8 +9,8 @@ $tdClasses = isset($tdClasses) && (string) $tdClasses !== ''
     : str_replace('h-[50px] ', '', $defaultTd);
 ?>
 <?php if ($pendientes === []): ?>
-    <tr>
-        <td class="<?= e($tdClasses) ?> px-5 py-6 pl-6 text-app-muted" colspan="4">No hay pendientes por enlazar.</td>
+    <tr class="h-[4.5rem]">
+        <td class="<?= e($tdClasses) ?> px-5 pl-6 text-center align-middle text-app-muted" colspan="4"><?= e((string) ($emptyMessage ?? 'No hay pendientes por enlazar.')) ?></td>
     </tr>
 <?php else: ?>
     <?php foreach ($pendientes as $row): ?>
