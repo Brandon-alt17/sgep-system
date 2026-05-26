@@ -106,6 +106,30 @@ class Aprendiz
             $params['q_documento'] = $likeQ;
         }
 
+        if (!empty($filters['datos_pendientes'])) {
+            $nullOrEmpty = static fn (string $col): string => "($col IS NULL OR $col = \"\")";
+            $nullOrZero = static fn (string $col): string => "($col IS NULL OR $col = 0)";
+            $where[] = '('
+                . implode(' OR ', [
+                    $nullOrZero('a.empresa_id'),
+                    $nullOrZero('a.programa_id'),
+                    $nullOrZero('a.jefe_id'),
+                    $nullOrEmpty('a.ficha'),
+                    $nullOrEmpty('a.telefono'),
+                    $nullOrEmpty('a.correo_personal'),
+                    $nullOrEmpty('a.correo_institucional'),
+                    $nullOrEmpty('a.direccion_domicilio'),
+                    $nullOrEmpty('a.ciudad_domicilio'),
+                    $nullOrEmpty('a.alternativa_ep'),
+                    $nullOrEmpty('a.nombre_instructor_seguimiento'),
+                    $nullOrEmpty('a.telefono_instructor_seguimiento'),
+                    $nullOrEmpty('a.tipo_asistencia'),
+                    $nullOrEmpty('a.jefe_grupo'),
+                    $nullOrEmpty('a.coordinacion'),
+                ])
+                . ')';
+        }
+
         return ['where' => $where, 'params' => $params];
     }
 

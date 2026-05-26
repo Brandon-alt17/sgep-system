@@ -388,6 +388,7 @@ initComboboxes(document);
 document.querySelectorAll("[data-remote-table-filter-form]").forEach(function (form) {
   var targetSelector = form.getAttribute("data-remote-table-filter-target") || "";
   var paginationSelector = form.getAttribute("data-remote-table-filter-pagination") || "";
+  var counterSelector = form.getAttribute("data-remote-table-filter-counter") || "";
   var debounceMs = parseInt(form.getAttribute("data-remote-table-filter-debounce") || "350", 10);
   if (isNaN(debounceMs) || debounceMs < 0) debounceMs = 350;
 
@@ -396,6 +397,9 @@ document.querySelectorAll("[data-remote-table-filter-form]").forEach(function (f
   var target = document.querySelector(targetSelector);
   var paginationTarget = paginationSelector
     ? document.querySelector(paginationSelector)
+    : null;
+  var counterTarget = counterSelector
+    ? document.querySelector(counterSelector)
     : null;
 
   if (!qInput || !target) return;
@@ -414,6 +418,7 @@ document.querySelectorAll("[data-remote-table-filter-form]").forEach(function (f
       if (key === "page") return;
       var trimmed = value.trim();
       if (trimmed === "") return;
+      if (key === "datos_pendientes" && trimmed === "0") return;
       params.set(key, trimmed);
     });
   };
@@ -468,6 +473,10 @@ document.querySelectorAll("[data-remote-table-filter-form]").forEach(function (f
         if (paginationTarget && typeof payload.paginationHtml === "string") {
           paginationTarget.innerHTML = payload.paginationHtml;
         }
+        if (counterTarget && typeof payload.total === "number") {
+          counterTarget.textContent =
+            payload.total + " " + (payload.total === 1 ? "aprendiz" : "aprendices");
+        }
         if (window.history && typeof window.history.replaceState === "function") {
           window.history.replaceState(null, "", buildBrowserUrl());
         }
@@ -520,6 +529,27 @@ document.querySelectorAll("[data-remote-table-filter-form]").forEach(function (f
       if (debounceTimer) window.clearTimeout(debounceTimer);
       runFetch();
       qInput.focus();
+    });
+  }
+
+  var dpToggle = form.querySelector("[data-datos-pendientes-toggle]");
+  var dpInput = form.querySelector("[data-datos-pendientes-input]");
+  if (dpToggle && dpInput) {
+    dpToggle.addEventListener("click", function () {
+      var active = dpInput.value === "1";
+      dpInput.value = active ? "0" : "1";
+      dpToggle.setAttribute("aria-pressed", active ? "false" : "true");
+      dpToggle.classList.toggle("bg-amber-100", !active);
+      dpToggle.classList.toggle("border-amber-300", !active);
+      dpToggle.classList.toggle("text-amber-800", !active);
+      dpToggle.classList.toggle("hover:bg-amber-200", !active);
+      dpToggle.classList.toggle("bg-white", active);
+      dpToggle.classList.toggle("border-app-borderControlStrong", active);
+      dpToggle.classList.toggle("text-app-muted", active);
+      dpToggle.classList.toggle("hover:bg-white", active);
+      dpToggle.classList.toggle("hover:text-app-text", active);
+      if (debounceTimer) window.clearTimeout(debounceTimer);
+      runFetch();
     });
   }
 });

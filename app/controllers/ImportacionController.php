@@ -8,6 +8,7 @@ use App\Helpers\ImportHistory;
 use App\Helpers\Database;
 use App\Imports\AprendicesImport;
 use App\Imports\AprendicesImportValidator;
+use App\Models\Aprendiz;
 use App\Models\EmpresaJefe;
 use App\Models\Programa;
 use App\Models\ProgramaEnlacePendiente;
@@ -99,10 +100,13 @@ class ImportacionController
         $resultado = (array) ($entry['resultado'] ?? []);
         $tieneProgramasPendientes = ($resultado['programa_pending_rows'] ?? []) !== [];
 
+        $datosPendientesCount = Aprendiz::countFiltered(['datos_pendientes' => true]);
+
         view('import/preview', [
             'entry' => $entry,
             'resultado' => $resultado,
             'pendientesEnlaceCount' => $tieneProgramasPendientes ? Programa::countPendientesEnlace() : 0,
+            'datosPendientesCount' => $datosPendientesCount,
         ]);
     }
 
@@ -339,7 +343,8 @@ class ImportacionController
             $actionByField[$field] = trim((string) ($item['action'] ?? '')) === 'new' ? 'new' : 'current';
         }
 
-        if ($incomingJefeId > 0) {
+        $jefeAction = $actionByField['jefe_id'] ?? '';
+        if ($incomingJefeId > 0 && $jefeAction !== 'current') {
             $pdo = \App\Helpers\Database::connection();
             $checkJefe = $pdo->prepare(
                 'SELECT id FROM empresa_jefes WHERE id = :id LIMIT 1'

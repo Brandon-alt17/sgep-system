@@ -8,10 +8,48 @@
   body {
     @apply m-0 bg-app-bg font-sans text-app-text;
     font-family: "Inter", system-ui, sans-serif;
+    cursor: default;
+  }
+
+  /*
+   * Cursor y caret: forzar flecha estándar en contenedores y tablas.
+   * Solo los campos editables (input, textarea, [contenteditable]) conservan
+   * el caret parpadeante; el resto lo suprime con caret-color: transparent.
+   */
+  table,
+  thead,
+  tbody,
+  tr,
+  th,
+  td,
+  div,
+  section,
+  article,
+  aside,
+  main,
+  nav,
+  header,
+  footer,
+  ul,
+  ol,
+  li,
+  p,
+  span,
+  label {
+    cursor: default;
+    caret-color: transparent;
+  }
+
+  input,
+  textarea,
+  select,
+  [contenteditable="true"] {
+    caret-color: auto;
   }
 
   a {
     @apply text-app-link no-underline;
+    cursor: pointer;
   }
 
   a:hover {

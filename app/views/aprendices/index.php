@@ -16,6 +16,7 @@ $initialEstado = trim((string) ($activeFilters['estado'] ?? ($initialEstado ?? '
 $initialQ = trim((string) ($activeFilters['q'] ?? ($initialQ ?? '')));
 $initialEmpresaId = (int) ($activeFilters['empresa_id'] ?? 0);
 $initialProgramaId = (int) ($activeFilters['programa_id'] ?? 0);
+$initialDatosPendientes = !empty($activeFilters['datos_pendientes']);
 $source = trim((string) ($activeFilters['from'] ?? ''));
 $importId = trim((string) ($activeFilters['import_id'] ?? ''));
 $importReturnUrl = trim((string) ($importReturnUrl ?? ''));
@@ -28,6 +29,7 @@ $activeQuery = array_filter([
     'estado' => $initialEstado,
     'empresa_id' => $initialEmpresaId > 0 ? (string) $initialEmpresaId : '',
     'programa_id' => $initialProgramaId > 0 ? (string) $initialProgramaId : '',
+    'datos_pendientes' => $initialDatosPendientes ? '1' : '',
     'from' => in_array($source, ['grupos', 'empresas', 'import'], true) ? $source : '',
     'import_id' => $source === 'import' && $importId !== '' ? $importId : '',
 ], static fn ($v): bool => (string) $v !== '');
@@ -141,6 +143,7 @@ partial('components/page_header', [
         class="flex w-full flex-wrap items-center gap-3"
         data-remote-table-filter-form
         data-remote-table-filter-target="#aprendices-table tbody"
+        data-remote-table-filter-counter="#aprendices-counter"
         data-remote-table-filter-debounce="350"
     >
         <?php if ($source !== ''): ?>
@@ -149,6 +152,7 @@ partial('components/page_header', [
         <?php if ($source === 'import' && $importId !== ''): ?>
             <input type="hidden" name="import_id" value="<?= e($importId) ?>">
         <?php endif; ?>
+        <input type="hidden" name="datos_pendientes" value="<?= $initialDatosPendientes ? '1' : '0' ?>" data-datos-pendientes-input>
 
         <div class="relative w-full min-w-0 md:flex-1">
             <span class="pointer-events-none absolute inset-y-0 left-3 flex items-center text-app-muted [&_svg]:h-4 [&_svg]:w-4">
@@ -228,12 +232,25 @@ partial('components/page_header', [
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-4 w-4"><path d="m6 9 6 6 6-6"></path></svg>
             </span>
         </div>
+        <button
+            type="button"
+            class="<?= e(ui_button_small_classes()) ?> inline-flex items-center gap-2 whitespace-nowrap <?= $initialDatosPendientes ? 'bg-amber-100 border-amber-300 text-amber-800 hover:bg-amber-200' : 'bg-white border-app-borderControlStrong text-app-muted hover:bg-white hover:text-app-text' ?>"
+            aria-pressed="<?= $initialDatosPendientes ? 'true' : 'false' ?>"
+            data-datos-pendientes-toggle
+        >
+            <span class="inline-flex h-4 w-4 items-center justify-center [&_svg]:h-4 [&_svg]:w-4" aria-hidden="true"><?= ui_icon('circle-alert') ?></span>
+            Datos pendientes
+        </button>
         <a class="<?= e(ui_button_primary_classes()) ?> inline-flex items-center gap-2 text-white" href="<?= e($clearFiltersUrl) ?>">
                 <span class="inline-flex h-4 w-4 items-center justify-center [&_svg]:h-4 [&_svg]:w-4" aria-hidden="true"><?= ui_icon('brush-cleaning') ?></span>
                 Limpiar filtros
         </a>
     </form>
 </section>
+
+<p class="mb-2 text-sm text-app-muted" id="aprendices-counter">
+    <?= $totalItems ?> <?= $totalItems === 1 ? 'aprendiz' : 'aprendices' ?>
+</p>
 
 <section class="<?= e(ui_card_classes()) ?> !p-0 overflow-hidden">
     <div class="overflow-x-auto">
