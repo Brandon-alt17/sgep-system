@@ -113,6 +113,8 @@ final class F023InfoTemplateMacroInjector
             );
         }
 
+        $xml = self::compactLayoutForSinglePage($xml);
+
         if ($zip->locateName(self::DOCUMENT_XML) !== false) {
             $zip->deleteName(self::DOCUMENT_XML);
         }
@@ -124,6 +126,74 @@ final class F023InfoTemplateMacroInjector
         $zip->close();
 
         return $tmpDocx;
+    }
+
+    /**
+     * La plantilla oficial deja un párrafo vacío con w:before="1540" entre la tabla de encabezado
+     * y la de «Información general», lo que fuerza una segunda hoja al exportar solo info.
+     */
+    private static function compactLayoutForSinglePage(string $xml): string
+    {
+        $next = preg_replace(
+            '/(<w:spacing w:after="240" w:before=")1540(")/',
+            '${1}0${2}',
+            $xml,
+            1
+        );
+        if (is_string($next)) {
+            $xml = $next;
+        }
+
+        $xml = self::stripEmptyParagraphsBetweenFirstTwoTables($xml);
+
+        return self::removeTrailingEmptyParagraphAfterLastTable($xml);
+    }
+
+    private static function stripEmptyParagraphsBetweenFirstTwoTables(string $xml): string
+    {
+        $firstTableEnd = strpos($xml, '</w:tbl>');
+        if ($firstTableEnd === false) {
+            return $xml;
+        }
+        $firstTableEnd += strlen('</w:tbl>');
+        $secondTableStart = strpos($xml, '<w:tbl>', $firstTableEnd);
+        if ($secondTableStart === false) {
+            return $xml;
+        }
+
+        $between = substr($xml, $firstTableEnd, $secondTableStart - $firstTableEnd);
+        if (
+            str_contains($between, '${')
+            || preg_match('/<w:t[^>]*>[^<\s][^<]*<\/w:t>/', $between)
+        ) {
+            return $xml;
+        }
+
+        return substr($xml, 0, $firstTableEnd) . substr($xml, $secondTableStart);
+    }
+
+    private static function removeTrailingEmptyParagraphAfterLastTable(string $xml): string
+    {
+        $lastTableEnd = strrpos($xml, '</w:tbl>');
+        if ($lastTableEnd === false) {
+            return $xml;
+        }
+        $lastTableEnd += strlen('</w:tbl>');
+
+        $sectPos = strrpos($xml, '<w:sectPr');
+        if ($sectPos === false || $sectPos <= $lastTableEnd) {
+            return $xml;
+        }
+
+        $between = substr($xml, $lastTableEnd, $sectPos - $lastTableEnd);
+        if (
+            str_contains($between, '${')
+            || preg_match('/<w:t[^>]*>[^<\s][^<]*<\/w:t>/', $between)
+        ) {
+            return $xml;
+        }
+
+        return substr($xml, 0, $lastTableEnd) . substr($xml, $sectPos);
     }
 
     private static function injectAfterAnchor(string $xml, string $anchor, int $occurrence, string $macro): string

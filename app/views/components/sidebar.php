@@ -15,9 +15,6 @@ $catalogItems = [
     ['label' => 'Empresas', 'path' => '/catalogo/empresas', 'icon' => 'building-2'],
 ];
 
-$bottomItems = [
-    ['label' => 'Configuración', 'path' => '/documentos/generar', 'icon' => 'settings'],
-];
 ?>
 <aside class="hidden border-r border-app-border bg-app-sidebar md:fixed md:inset-y-0 md:left-0 md:z-50 md:flex md:h-screen md:w-[260px] md:flex-col md:overflow-y-auto">
     <div class="border-b border-app-border px-[24px] py-[18.5px] text-lg font-bold leading-none text-app-brand">SGEP</div>
@@ -94,25 +91,6 @@ $bottomItems = [
             </div>
         </div>
 
-        <?php foreach ($bottomItems as $item): ?>
-            <?php
-            $normalizedItem = rtrim((string) $item['path'], '/') ?: '/';
-            $active = $normalizedCurrent === $normalizedItem || str_starts_with($normalizedCurrent, $normalizedItem . '/');
-            $classes = 'relative mt-1 flex items-center gap-2.5 rounded-lg px-3 py-2.5 font-medium text-sm transition-colors duration-200 ease-out';
-            if ($active) {
-                $classes .= ' bg-app-accentSoft font-semibold text-app-accentStrong hover:bg-app-accentSoft hover:text-app-accentStrong hover:no-underline';
-            } else {
-                $classes .= ' text-app-muted hover:bg-app-navHover hover:text-app-text hover:no-underline';
-            }
-            ?>
-            <a class="<?= e($classes) ?>" href="<?= e(APP_BASE_PATH . $item['path']) ?>">
-                <?php if ($active): ?>
-                    <span class="absolute left-0 top-1/2 h-full w-1 -translate-y-1/2 rounded-l bg-app-accentStrong" aria-hidden="true"></span>
-                <?php endif; ?>
-                <span class="inline-flex h-4 w-4 [&_svg]:h-4 [&_svg]:w-4"><?= ui_icon($item['icon']) ?></span>
-                <span><?= e($item['label']) ?></span>
-            </a>
-        <?php endforeach; ?>
     </nav>
     <footer class="mt-auto border-t border-app-border px-3 py-2.5 text-[11px] text-app-muted">SENA - Regional Risaralda</footer>
 </aside>

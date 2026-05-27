@@ -7,6 +7,12 @@ $filters = (array) ($filters ?? []);
 $q = trim((string) ($filters['q'] ?? ''));
 $pendientesCount = (int) ($pendientesCount ?? 0);
 $importReturnUrl = trim((string) ($importReturnUrl ?? ''));
+$currentPage = max(1, (int) ($currentPage ?? 1));
+$totalPages = max(1, (int) ($totalPages ?? 1));
+$pendientesPaginationUrl = (string) ($pendientesPaginationUrl ?? '');
+$totalFiltered = (int) ($totalFiltered ?? count($pendientes));
+$importId = trim((string) ($_GET['import_id'] ?? ''));
+$fromImport = trim((string) ($_GET['from'] ?? '')) === 'import' && $importId !== '';
 $toastKey = trim((string) ($_GET['toast'] ?? ''));
 $toastMessage = match ($toastKey) {
     'pendiente_resuelto' => 'Vínculo con el programa guardado correctamente.',
@@ -58,8 +64,13 @@ $pendientesAlertBadge = $pendientesAlertUrgente
         class="w-full"
         data-remote-table-filter-form
         data-remote-table-filter-target="#tabla-pendientes-tbody"
+        data-remote-table-filter-pagination="#pendientes-pagination"
         data-remote-table-filter-debounce="350"
     >
+        <?php if ($fromImport): ?>
+            <input type="hidden" name="from" value="import">
+            <input type="hidden" name="import_id" value="<?= e($importId) ?>">
+        <?php endif; ?>
         <div class="relative min-w-0 w-full">
             <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-app-muted [&_svg]:h-4 [&_svg]:w-4">
                 <?= ui_icon('search') ?>
@@ -86,7 +97,7 @@ $pendientesAlertBadge = $pendientesAlertUrgente
 
 <?php partial('components/toast', ['message' => $toastMessage]); ?>
 
-<section class="<?= e(ui_card_classes()) ?> mb-6 !p-0">
+<section id="tabla-pendientes" class="<?= e(ui_card_classes()) ?> mb-2 !p-0">
     <div class="overflow-x-auto rounded-[10px]">
         <table class="<?= e(ui_table_in_card_classes()) ?> table-fixed min-w-[900px] !m-0 !p-0">
             <colgroup>
@@ -110,8 +121,25 @@ $pendientesAlertBadge = $pendientesAlertUrgente
                     'tdClasses' => $tdClasses,
                     'preserveImportNav' => $importReturnUrl !== '',
                     'importId' => trim((string) ($_GET['import_id'] ?? '')),
+                    'emptyMessage' => $q !== ''
+                        ? 'Sin coincidencias para esta búsqueda.'
+                        : 'No hay pendientes por enlazar.',
                 ]); ?>
             </tbody>
         </table>
     </div>
 </section>
+
+<div id="pendientes-pagination">
+    <?php if ($pendientesPaginationUrl !== '' && $totalPages > 1): ?>
+        <?php
+        ui_render_pagination(
+            $currentPage,
+            $totalPages,
+            $pendientesPaginationUrl,
+            'Paginación de pendientes por enlazar',
+            'tabla-pendientes'
+        );
+        ?>
+    <?php endif; ?>
+</div>

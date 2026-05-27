@@ -106,6 +106,30 @@ class Aprendiz
             $params['q_documento'] = $likeQ;
         }
 
+        if (!empty($filters['datos_pendientes'])) {
+            $nullOrEmpty = static fn (string $col): string => "($col IS NULL OR $col = \"\")";
+            $nullOrZero = static fn (string $col): string => "($col IS NULL OR $col = 0)";
+            $where[] = '('
+                . implode(' OR ', [
+                    $nullOrZero('a.empresa_id'),
+                    $nullOrZero('a.programa_id'),
+                    $nullOrZero('a.jefe_id'),
+                    $nullOrEmpty('a.ficha'),
+                    $nullOrEmpty('a.telefono'),
+                    $nullOrEmpty('a.correo_personal'),
+                    $nullOrEmpty('a.correo_institucional'),
+                    $nullOrEmpty('a.direccion_domicilio'),
+                    $nullOrEmpty('a.ciudad_domicilio'),
+                    $nullOrEmpty('a.alternativa_ep'),
+                    $nullOrEmpty('a.nombre_instructor_seguimiento'),
+                    $nullOrEmpty('a.telefono_instructor_seguimiento'),
+                    $nullOrEmpty('a.tipo_asistencia'),
+                    $nullOrEmpty('a.jefe_grupo'),
+                    $nullOrEmpty('a.coordinacion'),
+                ])
+                . ')';
+        }
+
         return ['where' => $where, 'params' => $params];
     }
 
@@ -311,7 +335,10 @@ class Aprendiz
         }
         $pdo = Database::connection();
         $actual = self::findById($id);
-        $pdo->beginTransaction();
+        $alreadyInTx = $pdo->inTransaction();
+        if (!$alreadyInTx) {
+            $pdo->beginTransaction();
+        }
         try {
             $pdo->prepare('UPDATE aprendices SET estado=:estado, updated_at=NOW() WHERE id=:id')
                 ->execute(['estado' => $nuevoEstado, 'id' => $id]);
@@ -322,9 +349,13 @@ class Aprendiz
                     'nuevo' => $nuevoEstado,
                     'motivo' => $motivo,
                 ]);
-            $pdo->commit();
+            if (!$alreadyInTx) {
+                $pdo->commit();
+            }
         } catch (\Throwable $e) {
-            $pdo->rollBack();
+            if (!$alreadyInTx) {
+                $pdo->rollBack();
+            }
             throw $e;
         }
     }

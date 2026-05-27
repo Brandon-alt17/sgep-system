@@ -39,6 +39,8 @@ class AprendicesImport
             'conflict_rows' => [],
         ];
 
+        $seenThisRun = [];
+
         foreach (array_slice($rows, 1) as $index => $row) {
             if ($this->isRowCompletelyEmpty($row)) {
                 // Optimización: ignora filas completamente vacías sin generar advertencias.
@@ -76,6 +78,9 @@ class AprendicesImport
                     $assoc['modalidad_formacion'] ?? null
                 );
                 $programaId = $programaResolution['id'];
+                $existing = $this->findByDocumento($doc);
+                $yaTieneProgramaVinculado = ProgramaEnlacePendiente::aprendizHasValidProgramaVinculo($doc);
+
                 $empresaId = $this->findOrCreateEmpresa($assoc);
 
                 $jefeId = null;
@@ -93,44 +98,84 @@ class AprendicesImport
                 $payload = $this->buildAprendizPayload($assoc, $doc, $programaId, $empresaId, $jefeId);
                 $rowSummary = $this->rowSummary($assoc, $doc);
 
-                if (($programaResolution['ambiguous'] ?? false) === true) {
+                if ($yaTieneProgramaVinculado) {
+                    ProgramaEnlacePendiente::closePendingIfAprendizVinculado($doc);
+                } elseif (($programaResolution['ambiguous'] ?? false) === true) {
                     $results['warnings'][] = $usuarioLabel . ': programa ambiguo sin nivel (' . ($programaResolution['normalized_name'] ?? 'N/D') . ').';
                     $this->queueProgramaPending($results, $assoc, $doc, $nombre, $rowSummary, $programaResolution, 'ambiguous');
-                }
-
-                if ($programaId === null && ($programaResolution['ambiguous'] ?? false) !== true) {
+                } elseif ($programaId === null) {
                     $results['warnings'][] = $usuarioLabel . ': programa no encontrado en catálogo (' . ($programaResolution['normalized_name'] ?? 'N/D') . ').';
                     $this->queueProgramaPending($results, $assoc, $doc, $nombre, $rowSummary, $programaResolution, 'not_found');
                 }
-
-                $existing = $this->findByDocumento($doc);
                 if ($existing) {
                     $aprendizId = (int) $existing['id'];
-                    $comparison = $this->compareExistingWithPayload($existing, $payload, $assoc, $jefeId, $empresaId);
-                    $results['duplicates']++;
-                    $results['duplicate_rows'][] = $rowSummary;
-                    if ($comparison['conflicts'] !== []) {
-                        $results['conflicts']++;
-                        $results['conflict_rows'][] = [
-                            'aprendiz_id' => $aprendizId,
-                            'nombre' => $rowSummary['nombre'],
-                            'identificacion' => $rowSummary['identificacion'],
-                            'incoming_jefe_id' => $jefeId !== null && $jefeId > 0 ? $jefeId : null,
-                            'empresa_id' => $empresaId !== null && $empresaId > 0 ? $empresaId : null,
-                            'file_supervisor' => $this->fileSupervisorSnapshot($assoc),
-                            'file_correo_org' => $this->stringOrNull($assoc['correo_organizacional'] ?? null),
-                            'conflicts' => $comparison['conflicts'],
-                        ];
-                    } elseif ($comparison['fillable_payload'] !== []) {
-                        $this->updateAprendizPartial($aprendizId, $comparison['fillable_payload']);
-                        $results['updated']++;
-                        $results['updated_rows'][] = $rowSummary;
+                    $isIntraFileDuplicate = isset($seenThisRun[$doc]);
+
+                    if ($isIntraFileDuplicate) {
+                        $this->removePreviousConflict($results, $aprendizId);
+
+                        $refreshed = $this->findByDocumento($doc);
+                        if ($refreshed) {
+                            $comparison = $this->compareExistingWithPayload($refreshed, $payload, $assoc, $jefeId, $empresaId);
+
+                            $autoFillable = $comparison['auto_accept'] ?? [];
+                            if ($autoFillable !== []) {
+                                $this->updateAprendizPartial($aprendizId, $autoFillable);
+                            }
+
+                            if ($comparison['conflicts'] !== []) {
+                                $results['conflicts']++;
+                                $results['conflict_rows'][] = [
+                                    'aprendiz_id' => $aprendizId,
+                                    'nombre' => $rowSummary['nombre'],
+                                    'identificacion' => $rowSummary['identificacion'],
+                                    'incoming_jefe_id' => $jefeId !== null && $jefeId > 0 ? $jefeId : null,
+                                    'empresa_id' => $empresaId !== null && $empresaId > 0 ? $empresaId : null,
+                                    'file_supervisor' => $this->fileSupervisorSnapshot($assoc),
+                                    'file_correo_org' => $this->stringOrNull($assoc['correo_organizacional'] ?? null),
+                                    'conflicts' => $comparison['conflicts'],
+                                ];
+                            } elseif ($comparison['fillable_payload'] !== []) {
+                                $this->updateAprendizPartial($aprendizId, $comparison['fillable_payload']);
+                                $results['updated']++;
+                                $results['updated_rows'][] = $rowSummary;
+                            }
+                        }
+                    } else {
+                        $seenThisRun[$doc] = true;
+                        $comparison = $this->compareExistingWithPayload($existing, $payload, $assoc, $jefeId, $empresaId);
+                        $results['duplicates']++;
+                        $results['duplicate_rows'][] = $rowSummary;
+
+                        $autoFillable = $comparison['auto_accept'] ?? [];
+                        if ($autoFillable !== []) {
+                            $this->updateAprendizPartial($aprendizId, $autoFillable);
+                        }
+
+                        if ($comparison['conflicts'] !== []) {
+                            $results['conflicts']++;
+                            $results['conflict_rows'][] = [
+                                'aprendiz_id' => $aprendizId,
+                                'nombre' => $rowSummary['nombre'],
+                                'identificacion' => $rowSummary['identificacion'],
+                                'incoming_jefe_id' => $jefeId !== null && $jefeId > 0 ? $jefeId : null,
+                                'empresa_id' => $empresaId !== null && $empresaId > 0 ? $empresaId : null,
+                                'file_supervisor' => $this->fileSupervisorSnapshot($assoc),
+                                'file_correo_org' => $this->stringOrNull($assoc['correo_organizacional'] ?? null),
+                                'conflicts' => $comparison['conflicts'],
+                            ];
+                        } elseif ($comparison['fillable_payload'] !== []) {
+                            $this->updateAprendizPartial($aprendizId, $comparison['fillable_payload']);
+                            $results['updated']++;
+                            $results['updated_rows'][] = $rowSummary;
+                        }
                     }
                 } else {
                     if ($this->isEmptyValue($payload['tipo_documento'] ?? null)) {
                         $payload['tipo_documento'] = 'CC';
                     }
                     $aprendizId = $this->insertAprendiz($payload);
+                    $seenThisRun[$doc] = true;
                     $results['inserted']++;
                     $results['inserted_rows'][] = $rowSummary;
                 }
@@ -150,6 +195,19 @@ class AprendicesImport
         }
 
         return $results;
+    }
+
+    /** @param array<string, mixed> $results */
+    private function removePreviousConflict(array &$results, int $aprendizId): void
+    {
+        foreach ($results['conflict_rows'] as $i => $entry) {
+            if ((int) ($entry['aprendiz_id'] ?? 0) === $aprendizId) {
+                unset($results['conflict_rows'][$i]);
+                $results['conflicts'] = max(0, $results['conflicts'] - 1);
+                break;
+            }
+        }
+        $results['conflict_rows'] = array_values($results['conflict_rows']);
     }
 
     private function isRowCompletelyEmpty(array $row): bool
@@ -209,7 +267,7 @@ class AprendicesImport
 
     /**
      * @param array<string, mixed> $importAssoc Fila del archivo (para etiquetas legibles en conflictos).
-     * @return array{fillable_payload: array<string, mixed>, conflicts: array<int, array<string, string>>}
+     * @return array{fillable_payload: array<string, mixed>, auto_accept: array<string, mixed>, conflicts: array<int, array<string, string>>}
      */
     private function compareExistingWithPayload(
         array $existing,
@@ -228,7 +286,6 @@ class AprendicesImport
             'programa_id',
             'empresa_id',
             'jefe_id',
-            'fecha_hora_formulario',
             'direccion_domicilio',
             'ciudad_domicilio',
             'alternativa_ep',
@@ -240,8 +297,18 @@ class AprendicesImport
             'coordinacion',
         ];
 
+        $autoAcceptFields = ['fecha_hora_formulario'];
+
+        $autoAccept = [];
         $fillable = [];
         $conflicts = [];
+
+        foreach ($autoAcceptFields as $autoField) {
+            $incoming = $payload[$autoField] ?? null;
+            if (!$this->isEmptyValue($incoming)) {
+                $autoAccept[$autoField] = $incoming;
+            }
+        }
 
         foreach ($fields as $field) {
             $incoming = $payload[$field] ?? null;
@@ -267,7 +334,11 @@ class AprendicesImport
                 if ($currentInt <= 0) {
                     $fillable[$field] = $incomingJefe;
                 } elseif ($currentInt !== $incomingJefe) {
-                    $conflicts[] = $this->buildConflictEntry($field, $current, $incoming, $importAssoc);
+                    if ($this->areEquivalentJefesByName($currentInt, $incomingJefe)) {
+                        $fillable[$field] = $incomingJefe;
+                    } else {
+                        $conflicts[] = $this->buildConflictEntry($field, $current, $incoming, $importAssoc);
+                    }
                 }
                 continue;
             }
@@ -275,6 +346,19 @@ class AprendicesImport
             if ($this->isEmptyValue($current)) {
                 $fillable[$field] = $incoming;
                 continue;
+            }
+
+            if ($field === 'empresa_id') {
+                $currentEmpId = (int) $current;
+                $incomingEmpId = (int) $incoming;
+                if ($currentEmpId > 0 && $incomingEmpId > 0 && $currentEmpId !== $incomingEmpId) {
+                    if ($this->areEquivalentEmpresasByName($currentEmpId, $incomingEmpId)) {
+                        $fillable[$field] = $incomingEmpId;
+                    } else {
+                        $conflicts[] = $this->buildConflictEntry($field, $current, $incoming, $importAssoc);
+                    }
+                    continue;
+                }
             }
 
             if ($this->areEquivalentValues($current, $incoming, $field)) {
@@ -295,6 +379,7 @@ class AprendicesImport
 
         return [
             'fillable_payload' => $fillable,
+            'auto_accept' => $autoAccept,
             'conflicts' => $conflicts,
         ];
     }
@@ -389,6 +474,32 @@ class AprendicesImport
         }
 
         return false;
+    }
+
+    private function areEquivalentEmpresasByName(int $currentId, int $incomingId): bool
+    {
+        $currentEmpresa = Empresa::findById($currentId);
+        $incomingEmpresa = Empresa::findById($incomingId);
+        $currentName = $this->normalizeComparableValue(trim((string) ($currentEmpresa['nombre'] ?? '')), 'empresa_nombre');
+        $incomingName = $this->normalizeComparableValue(trim((string) ($incomingEmpresa['nombre'] ?? '')), 'empresa_nombre');
+        if ($currentName === '' || $incomingName === '') {
+            return false;
+        }
+
+        return $currentName === $incomingName;
+    }
+
+    private function areEquivalentJefesByName(int $currentId, int $incomingId): bool
+    {
+        $currentJefe = EmpresaJefe::findById($currentId);
+        $incomingJefe = EmpresaJefe::findById($incomingId);
+        $currentName = $this->normalizeComparableValue(trim((string) ($currentJefe['nombre'] ?? '')), 'jefe_nombre');
+        $incomingName = $this->normalizeComparableValue(trim((string) ($incomingJefe['nombre'] ?? '')), 'jefe_nombre');
+        if ($currentName === '' || $incomingName === '') {
+            return false;
+        }
+
+        return $currentName === $incomingName;
     }
 
     private function areEquivalentValues(mixed $current, mixed $incoming, string $field = ''): bool

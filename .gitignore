@@ -26,6 +26,7 @@ Homestead.yaml
 !/storage/templates/m2.docx
 !/storage/templates/m3_p1.docx
 !/storage/templates/m3_p2.docx
+!/storage/templates/Reporte Maestro.xlsx
 /storage/templates/.~lock.*
 
 # --- Node / Vite / frontend ---

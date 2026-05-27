@@ -49,13 +49,7 @@ $activeRowsPage = min(max(1, $activeRowsPage), $activeRowsTotalPages);
 $activeRowsOffset = ($activeRowsPage - 1) * $perPage;
 $activeRowsPageItems = array_slice($activeRows, $activeRowsOffset, $perPage);
 
-$pendingTotalPages = max(1, (int) ceil(count($pendingRows) / $perPage));
-$pendingPage = (int) ($_GET['pending_page'] ?? 1);
-$pendingPage = min(max(1, $pendingPage), $pendingTotalPages);
-$pendingOffset = ($pendingPage - 1) * $perPage;
-$pendingPageItems = array_slice($pendingRows, $pendingOffset, $perPage);
-
-$pendingFieldLabels = (array) require base_path('config/import_field_labels.php');
+$pendingCount = (int) ($datosPendientesCount ?? count($pendingRows));
 $importId = (string) ($entry['id'] ?? '');
 $conflictsManageUrl = import_conflicts_url($importId, true);
 ?>
@@ -109,28 +103,66 @@ $conflictsManageUrl = import_conflicts_url($importId, true);
     </article>
 </section>
 
-<?php if ($conflictRows !== []): ?>
-    <?php partial('components/alerts/pending_link', [
+<?php
+$pendingAprendicesUrl = APP_BASE_PATH . '/aprendices?datos_pendientes=1';
+if ($importId !== '') {
+    $pendingAprendicesUrl .= '&from=import&import_id=' . urlencode($importId);
+}
+$actionItems = [];
+if ($conflictRows !== []) {
+    $actionItems[] = [
+        'icon' => 'triangle-alert',
+        'iconBg' => 'bg-rose-50 text-rose-600',
         'count' => count($conflictRows),
-        'manageUrl' => $conflictsManageUrl,
-        'subjectPlural' => 'aprendices con conflictos',
-        'messageTail' => 'sin resolver en esta importación.',
-        'ctaText' => 'Gestionar ahora',
-        'extraClasses' => 'mt-4',
-    ]); ?>
-<?php endif; ?>
-
-<?php if ($programaPendingRows !== []): ?>
-    <?php partial('components/alerts/pending_link', [
+        'label' => 'aprendices con conflictos sin resolver.',
+        'url' => $conflictsManageUrl,
+        'cta' => 'Gestionar',
+    ];
+}
+if ($programaPendingRows !== []) {
+    $actionItems[] = [
+        'icon' => 'link',
+        'iconBg' => 'bg-violet-50 text-violet-600',
         'count' => (int) ($pendientesEnlaceCount ?? count($programaPendingRows)),
-        'manageUrl' => APP_BASE_PATH . '/catalogo/programas/pendientes' . import_nav_query_suffix($importId),
-        'subjectPlural' => 'aprendices con programas',
-        'messageTail' => 'pendientes de enlazar.',
-        'ctaText' => 'Gestionar ahora',
-        'extraClasses' => 'mt-4',
-    ]); ?>
+        'label' => 'aprendices con programas pendientes de enlazar.',
+        'url' => APP_BASE_PATH . '/catalogo/programas/pendientes' . import_nav_query_suffix($importId),
+        'cta' => 'Gestionar',
+    ];
+}
+if ($pendingCount > 0) {
+    $actionItems[] = [
+        'icon' => 'circle-alert',
+        'iconBg' => 'bg-amber-50 text-amber-600',
+        'count' => $pendingCount,
+        'label' => 'aprendices con datos pendientes por completar.',
+        'url' => $pendingAprendicesUrl,
+        'cta' => 'Ver aprendices',
+    ];
+}
+?>
+<?php if ($actionItems !== []): ?>
+<section class="mt-4 rounded-xl border border-gray-200 bg-white p-6">
+    <h3 class="m-0 mb-4 text-sm font-semibold text-gray-900">Acciones pendientes de la importación</h3>
+    <ul class="m-0 list-none divide-y divide-gray-100 p-0">
+        <?php foreach ($actionItems as $item): ?>
+            <li class="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0">
+                <div class="flex items-center gap-3">
+                    <span class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg <?= e($item['iconBg']) ?> [&_svg]:h-4 [&_svg]:w-4"><?= ui_icon($item['icon']) ?></span>
+                    <p class="m-0 text-sm text-gray-700">
+                        <strong class="font-semibold text-gray-900"><?= e((string) $item['count']) ?></strong>
+                        <?= e($item['label']) ?>
+                    </p>
+                </div>
+                <a class="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 no-underline transition-colors hover:bg-gray-50 hover:text-gray-900"
+                   href="<?= e($item['url']) ?>">
+                    <?= e($item['cta']) ?>
+                    <span class="inline-flex h-3.5 w-3.5 [&_svg]:h-3.5 [&_svg]:w-3.5"><?= ui_icon('chevron-right') ?></span>
+                </a>
+            </li>
+        <?php endforeach; ?>
+    </ul>
+</section>
 <?php endif; ?>
-
 <!-- Tablas de importación -->
 <section class="mt-4 <?= e(ui_card_classes()) ?>">
     <div class="mb-5 inline-flex rounded-md border border-app-border bg-app-panelSubtle p-1 text-sm">
@@ -138,7 +170,7 @@ $conflictsManageUrl = import_conflicts_url($importId, true);
             <?php $isActive = $activeTab === $key; ?>
             <a
                 class="<?= e('inline-flex items-center gap-1.5 rounded px-3 py-1.5 font-medium no-underline transition-colors duration-200 ' . ($isActive ? $tab['active'] : 'text-app-muted hover:bg-app-panel hover:text-app-text')) ?>"
-                href="<?= e($detailBaseUrl . '&tab=' . urlencode((string) $key) . '&rows_page=1&pending_page=' . urlencode((string) $pendingPage)) ?>"
+                href="<?= e($detailBaseUrl . '&tab=' . urlencode((string) $key) . '&rows_page=1') ?>"
             >
                 <span class="<?= e('inline-flex h-4 w-4 [&_svg]:h-4 [&_svg]:w-4 ' . ($isActive ? '' : $tab['iconColor'])) ?>"><?= ui_icon((string) $tab['icon']) ?></span>
                 <?= e((string) $tab['label']) ?> (<?= e((string) $tab['count']) ?>)
@@ -182,111 +214,13 @@ $conflictsManageUrl = import_conflicts_url($importId, true);
         ui_render_pagination(
             $activeRowsPage,
             $activeRowsTotalPages,
-            $detailBaseUrl . '&tab=' . urlencode((string) $activeTab) . '&rows_page=%d&pending_page=' . urlencode((string) $pendingPage),
+            $detailBaseUrl . '&tab=' . urlencode((string) $activeTab) . '&rows_page=%d',
             'Paginación de tabla de importación',
             'tabla-importacion-' . $activeTab
         );
         ?>
     </div>
 </section>
-
-<!-- Pendientes -->
-<?php if ($pendingRows !== []): ?>
-    <section id="tabla-pendientes" class="mt-4 <?= e(ui_card_classes()) ?>">
-        <div class="mb-2 flex items-center gap-2">
-            <span class="inline-flex h-4 w-4 shrink-0 items-center justify-center text-amber-600 leading-none [&_svg]:h-4 [&_svg]:w-4" style="transform: translateY(-1px);"><?= ui_icon('clock') ?></span>
-            <h3 class="<?= e(ui_heading_sm_classes()) ?> m-0 text-amber-600">Pendientes</h3>
-        </div>
-        <p class="mb-3 mt-0 text-sm text-app-muted">Aprendices con datos faltantes para completar el perfil en esta importación.</p>
-        <table class="<?= e(ui_table_classes()) ?> table-fixed">
-            <colgroup>
-                <col class="w-[34%]">
-                <col class="w-[18%]">
-                <col class="w-[48%]">
-            </colgroup>
-            <thead>
-            <tr>
-                <th class="<?= e(ui_th_classes()) ?> px-1">Nombre</th>
-                <th class="<?= e(ui_th_classes()) ?> px-1">Identificación</th>
-                <th class="<?= e(ui_th_classes()) ?> px-1">Campos faltantes</th>
-            </tr>
-            </thead>
-            <tbody>
-            <?php foreach ($pendingPageItems as $pending): ?>
-                <?php
-                $aprendizId = (int) ($pending['aprendiz_id'] ?? 0);
-                $faltantes = (array) ($pending['faltantes'] ?? []);
-                $pendingCount = count($faltantes);
-                $badgeClasses = 'bg-amber-100 text-amber-700 border-amber-200';
-                ?>
-                <tr
-                    class="cursor-pointer hover:bg-app-panelSubtle"
-                    data-modal-open="<?= e((string) $aprendizId) ?>"
-                    tabindex="0"
-                    role="button"
-                    onkeydown="if(event.key==='Enter' || event.key===' '){event.preventDefault();openModal('<?= e((string) $aprendizId) ?>');}"
-                >
-                    <td class="<?= e(ui_td_classes()) ?> px-4"><?= e((string) ($pending['nombre'] ?? '')) ?></td>
-                    <td class="<?= e(ui_td_classes()) ?> px-4"><?= e((string) ($pending['identificacion'] ?? '')) ?></td>
-                    <td class="<?= e(ui_td_classes()) ?> px-4">
-                        <div class="inline-flex items-center gap-2">
-                            <span class="inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold <?= e($badgeClasses) ?>">
-                                <?= e((string) $pendingCount) ?> pendientes
-                            </span>
-                            <span class="inline-flex h-6 w-6 items-center justify-center rounded-full border border-app-border text-xs font-bold text-app-muted">
-                                <span class="inline-flex h-3.5 w-3.5 [&_svg]:h-3.5 [&_svg]:w-3.5"><?= ui_icon('circle-alert') ?></span>
-                            </span>
-                        </div>
-                    </td>
-                </tr>
-            <?php endforeach; ?>
-            </tbody>
-        </table>
-        <?php
-        ui_render_pagination(
-            $pendingPage,
-            $pendingTotalPages,
-            $detailBaseUrl . '&tab=' . urlencode((string) $activeTab) . '&rows_page=' . urlencode((string) $activeRowsPage) . '&pending_page=%d',
-            'Paginación de pendientes',
-            'tabla-pendientes'
-        );
-        ?>
-    </section>
-
-    <?php foreach ($pendingPageItems as $pending): ?>
-        <?php
-        $aprendizId = (int) ($pending['aprendiz_id'] ?? 0);
-        $faltantes = (array) ($pending['faltantes'] ?? []);
-        $editUrl = APP_BASE_PATH . '/aprendices/show?id=' . $aprendizId
-            . ($importId !== '' ? '&from=import&import_id=' . urlencode($importId) : '');
-        ?>
-        <div id="modal-<?= e((string) $aprendizId) ?>" class="modal-overlay hidden" data-modal-overlay="<?= e((string) $aprendizId) ?>">
-            <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="pending-modal-title-<?= e((string) $aprendizId) ?>">
-                <div class="mb-4 flex items-center justify-between gap-3">
-                    <h3 id="pending-modal-title-<?= e((string) $aprendizId) ?>" class="m-0 text-lg font-semibold text-app-text">Campos pendientes — <?= e((string) ($pending['nombre'] ?? 'Aprendiz')) ?></h3>
-                    <button type="button" class="<?= e(ui_button_icon_classes()) ?>" data-modal-close="<?= e((string) $aprendizId) ?>" aria-label="Cerrar modal">
-                        <span class="inline-flex h-4 w-4 [&_svg]:h-4 [&_svg]:w-4"><?= ui_icon('x') ?></span>
-                    </button>
-                </div>
-                <div class="max-h-[55vh] overflow-auto rounded-md border border-app-border">
-                    <ul class="m-0 divide-y divide-app-border p-0">
-                        <?php foreach ($faltantes as $campo): ?>
-                            <?php $campoKey = (string) $campo; ?>
-                            <li class="flex items-center gap-2 px-4 py-2 text-sm text-app-text">
-                                <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-amber-100 text-[11px] font-bold text-amber-700">!</span>
-                                <span><?= e((string) ($pendingFieldLabels[$campoKey] ?? $campoKey)) ?></span>
-                            </li>
-                        <?php endforeach; ?>
-                    </ul>
-                </div>
-                <div class="mt-4 flex justify-end gap-2">
-                    <a class="<?= e(ui_button_small_classes()) ?>" href="<?= e($editUrl) ?>">Completar campos</a>
-                    <button type="button" class="<?= e(ui_button_small_classes()) ?>" data-modal-close="<?= e((string) $aprendizId) ?>">Cerrar</button>
-                </div>
-            </div>
-        </div>
-    <?php endforeach; ?>
-<?php endif; ?>
 
 <?php if (!empty($resultado['errors'])): ?>
     <section class="mt-4 <?= e(ui_card_classes()) ?>">

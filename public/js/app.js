@@ -387,12 +387,20 @@ initComboboxes(document);
 // Listados: actualiza solo tbody (o nodo destino) por GET + JSON; debounce en texto; replaceState sin perder foco.
 document.querySelectorAll("[data-remote-table-filter-form]").forEach(function (form) {
   var targetSelector = form.getAttribute("data-remote-table-filter-target") || "";
+  var paginationSelector = form.getAttribute("data-remote-table-filter-pagination") || "";
+  var counterSelector = form.getAttribute("data-remote-table-filter-counter") || "";
   var debounceMs = parseInt(form.getAttribute("data-remote-table-filter-debounce") || "350", 10);
   if (isNaN(debounceMs) || debounceMs < 0) debounceMs = 350;
 
   var qInput = form.querySelector("[data-remote-table-filter-q]");
   var clearButton = form.querySelector("[data-remote-table-filter-clear]");
   var target = document.querySelector(targetSelector);
+  var paginationTarget = paginationSelector
+    ? document.querySelector(paginationSelector)
+    : null;
+  var counterTarget = counterSelector
+    ? document.querySelector(counterSelector)
+    : null;
 
   if (!qInput || !target) return;
 
@@ -404,39 +412,44 @@ document.querySelectorAll("[data-remote-table-filter-form]").forEach(function (f
     clearButton.classList.toggle("hidden", (qInput.value || "").trim() === "");
   };
 
-  // Usa la URL actual del documento (pathname + prefijo de app) para no depender de que `action` del form coincida con dónde está montada la app.
-  var buildFetchUrl = function () {
-    var url = new URL(window.location.href);
-    var params = new URLSearchParams();
-    var formData = new FormData(form);
+  var appendFormParams = function (params, formData) {
     formData.forEach(function (value, key) {
-      if (typeof value === "string") params.append(key, value);
+      if (typeof value !== "string") return;
+      if (key === "page") return;
+      var trimmed = value.trim();
+      if (trimmed === "") return;
+      if (key === "datos_pendientes" && trimmed === "0") return;
+      params.set(key, trimmed);
     });
-    params.set("ajax", "1");
+  };
+
+  var buildFormActionUrl = function (includeAjax) {
+    var action = form.getAttribute("action") || window.location.pathname;
+    var url = new URL(action, window.location.origin);
+    var params = new URLSearchParams();
+    appendFormParams(params, new FormData(form));
+    if (includeAjax) {
+      params.set("ajax", "1");
+    }
     url.search = params.toString();
-    return url.toString();
+    return url;
+  };
+
+  var buildFetchUrl = function () {
+    return buildFormActionUrl(true).toString();
   };
 
   var buildBrowserUrl = function () {
-    var url = new URL(window.location.origin + window.location.pathname);
-    var params = new URLSearchParams();
-    var formData = new FormData(form);
-    formData.forEach(function (value, key) {
-      if (typeof value !== "string" || value.trim() === "") return;
-      params.set(key, value);
-    });
-    var keep = new URLSearchParams(window.location.search);
-    keep.forEach(function (val, key) {
-      if (key === "ajax" || key === "q" || key === "nivel") return;
-      if (!params.has(key)) params.set(key, val);
-    });
-    var qs = params.toString();
-    return url.pathname + (qs ? "?" + qs : "");
+    var url = buildFormActionUrl(false);
+    return url.pathname + url.search;
   };
 
   var runFetch = function () {
     if (activeController) activeController.abort();
     activeController = new AbortController();
+
+    var cursorPos = qInput.selectionStart;
+    var cursorEnd = qInput.selectionEnd;
 
     form.setAttribute("aria-busy", "true");
 
@@ -457,11 +470,26 @@ document.querySelectorAll("[data-remote-table-filter-form]").forEach(function (f
           throw new Error("Respuesta invalida");
         }
         target.innerHTML = payload.rowsHtml;
-        initComboboxes(target);
+        if (paginationTarget && typeof payload.paginationHtml === "string") {
+          paginationTarget.innerHTML = payload.paginationHtml;
+        }
+        if (counterTarget && typeof payload.total === "number") {
+          counterTarget.textContent =
+            payload.total + " " + (payload.total === 1 ? "aprendiz" : "aprendices");
+        }
         if (window.history && typeof window.history.replaceState === "function") {
           window.history.replaceState(null, "", buildBrowserUrl());
         }
+        initComboboxes(target);
         refreshClearVisibility();
+        qInput.focus();
+        if (typeof cursorPos === "number" && typeof cursorEnd === "number") {
+          try {
+            qInput.setSelectionRange(cursorPos, cursorEnd);
+          } catch (selectionError) {
+            /* input type may not support selection */
+          }
+        }
       })
       .catch(function (error) {
         if (error && error.name === "AbortError") return;
@@ -501,6 +529,16 @@ document.querySelectorAll("[data-remote-table-filter-form]").forEach(function (f
       if (debounceTimer) window.clearTimeout(debounceTimer);
       runFetch();
       qInput.focus();
+    });
+  }
+
+  var dpCheckbox = form.querySelector("[data-datos-pendientes-checkbox]");
+  var dpInput = form.querySelector("[data-datos-pendientes-input]");
+  if (dpCheckbox && dpInput) {
+    dpCheckbox.addEventListener("change", function () {
+      dpInput.value = dpCheckbox.checked ? "1" : "0";
+      if (debounceTimer) window.clearTimeout(debounceTimer);
+      runFetch();
     });
   }
 });

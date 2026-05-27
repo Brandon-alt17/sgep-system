@@ -29,15 +29,15 @@ final class F023DocxMerge
 
         $firstXml = self::readZipEntry($docxPaths[0], 'word/document.xml');
         $firstParts = self::splitBody($firstXml);
-        $accum = $firstParts['content'];
+        $accum = self::stripEmbeddedSectionProperties($firstParts['content']);
         $sectPr = $firstParts['sectPr'];
-
-        $pageBreak = '<w:p><w:r><w:br w:type="page"/></w:r></w:p>';
 
         for ($i = 1, $n = count($docxPaths); $i < $n; $i++) {
             $xml = self::readZipEntry($docxPaths[$i], 'word/document.xml');
             $parts = self::splitBody($xml);
-            $accum .= $pageBreak . $parts['content'];
+            $segmentContent = self::stripEmbeddedSectionProperties($parts['content']);
+            $segmentContent = self::trimLeadingEmptyParagraphsBeforeFirstTable($segmentContent);
+            $accum .= self::withPageBreakBefore($segmentContent);
         }
 
         $newInner = $accum . $sectPr;
@@ -71,6 +71,95 @@ final class F023DocxMerge
         }
 
         return $data;
+    }
+
+    /**
+     * Las plantillas de momentos incluyen w:sectPr dentro del cuerpo (p. ej. type nextPage).
+     * Al concatenar bloques solo debe quedar el sectPr final del primer documento.
+     */
+    private static function stripEmbeddedSectionProperties(string $content): string
+    {
+        $stripped = preg_replace('/<w:sectPr\b[^>]*>.*?<\/w:sectPr>/s', '', $content);
+
+        return trim(is_string($stripped) ? $stripped : $content);
+    }
+
+    /**
+     * Evita una hoja en blanco cuando el bloque anterior ya terminó al pie de página:
+     * pageBreakBefore en el siguiente bloque no duplica el salto como w:br al final.
+     */
+    private static function withPageBreakBefore(string $content): string
+    {
+        if ($content === '') {
+            return '';
+        }
+
+        $pos = strpos($content, '<w:p');
+        if ($pos === false) {
+            return '<w:p><w:pPr><w:pageBreakBefore/></w:pPr></w:p>' . $content;
+        }
+
+        $pTagEnd = strpos($content, '>', $pos);
+        if ($pTagEnd === false) {
+            return $content;
+        }
+
+        $afterPOpen = $pTagEnd + 1;
+        if (str_starts_with(substr($content, $afterPOpen, 5), '<w:pP')) {
+            $pPrEnd = strpos($content, '>', $afterPOpen);
+            if ($pPrEnd === false) {
+                return $content;
+            }
+
+            return substr($content, 0, $pPrEnd + 1)
+                . '<w:pageBreakBefore/>'
+                . substr($content, $pPrEnd + 1);
+        }
+
+        return substr($content, 0, $afterPOpen)
+            . '<w:pPr><w:pageBreakBefore/></w:pPr>'
+            . substr($content, $afterPOpen);
+    }
+
+    /**
+     * Las plantillas de momentos suelen traer párrafos vacíos antes de la tabla principal
+     * (restos del sectPr nextPage de la plantilla original).
+     */
+    private static function trimLeadingEmptyParagraphsBeforeFirstTable(string $content): string
+    {
+        $firstTable = strpos($content, '<w:tbl>');
+        if ($firstTable === false || $firstTable === 0) {
+            return $content;
+        }
+
+        $leading = substr($content, 0, $firstTable);
+        $body = substr($content, $firstTable);
+
+        while (preg_match('/^\s*(<w:p\b[^>]*>(?:(?!<\/w:p>).)*<\/w:p>)/s', $leading, $match)) {
+            $paragraph = $match[1];
+            if (
+                str_contains($paragraph, '${')
+                || preg_match('/<w:t[^>]*>[^<\s][^<]*<\/w:t>/', $paragraph)
+            ) {
+                break;
+            }
+
+            $leading = substr($leading, strlen($match[0]));
+        }
+
+        while (preg_match('/(<w:p\b[^>]*>(?:(?!<\/w:p>).)*<\/w:p>)\s*$/s', $leading, $match)) {
+            $paragraph = $match[1];
+            if (
+                str_contains($paragraph, '${')
+                || preg_match('/<w:t[^>]*>[^<\s][^<]*<\/w:t>/', $paragraph)
+            ) {
+                break;
+            }
+
+            $leading = substr($leading, 0, -strlen($match[0]));
+        }
+
+        return ltrim($leading) . $body;
     }
 
     /**

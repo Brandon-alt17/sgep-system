@@ -80,7 +80,7 @@ function applyImportConflictsRemaining(remaining) {
       alertSection.classList.remove("hidden");
     }
   }
-  var searchCard = document.querySelector("[data-import-conflicts-root] [data-live-filter-root]");
+  var searchCard = document.querySelector("[data-import-conflicts-root] form");
   var tableSection = document.getElementById("tabla-conflictos");
   var tbody = document.getElementById("import-conflicts-tbody");
   var rowsOnPage = tbody
@@ -359,7 +359,9 @@ function afterConflictRowsResolved(modalId) {
       var action = mode === "new" ? "new" : "current";
       var rows = Array.prototype.slice.call(
         modal.querySelectorAll('[data-conflict-row][data-conflict-modal="' + modalId + '"]')
-      );
+      ).filter(function (row) {
+        return !row.hasAttribute("data-conflict-selected");
+      });
       rows.forEach(function (row) {
         setConflictRowState(row, action);
       });

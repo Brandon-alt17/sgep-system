@@ -95,18 +95,39 @@ class ImportHistory
         return true;
     }
 
+    /**
+     * Vacía el historial. Si el archivo fue creado por el servidor web y no es escribible,
+     * intenta borrarlo y recrearlo (requiere permiso de escritura en el directorio).
+     */
+    public static function clear(): bool
+    {
+        $empty = json_encode([], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+
+        return $empty !== false && self::persistFile($empty);
+    }
+
     /** @param array<int, array<string, mixed>> $items */
     private static function write(array $items): void
     {
-        $dir = dirname(self::filePath());
-        if (!is_dir($dir)) {
-            mkdir($dir, 0777, true);
+        $encoded = json_encode($items, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+        if ($encoded === false || !self::persistFile($encoded)) {
+            return;
+        }
+    }
+
+    private static function persistFile(string $contents): bool
+    {
+        $path = self::filePath();
+        $dir = dirname($path);
+        if (!is_dir($dir) && !mkdir($dir, 0777, true) && !is_dir($dir)) {
+            return false;
         }
 
-        file_put_contents(
-            self::filePath(),
-            json_encode($items, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT)
-        );
+        if (is_file($path) && !is_writable($path) && !unlink($path)) {
+            return false;
+        }
+
+        return file_put_contents($path, $contents, LOCK_EX) !== false;
     }
 
     public static function findById(string $id): ?array

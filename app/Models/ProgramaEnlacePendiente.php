@@ -9,12 +9,69 @@ use App\Services\ProgramaCatalogMatcher;
 
 class ProgramaEnlacePendiente
 {
+    public static function aprendizHasValidProgramaVinculo(string $numeroDocumento): bool
+    {
+        $doc = trim($numeroDocumento);
+        if ($doc === '') {
+            return false;
+        }
+
+        $stmt = Database::connection()->prepare(
+            'SELECT a.programa_id
+             FROM aprendices a
+             INNER JOIN programas p ON p.id = a.programa_id
+             WHERE a.numero_documento = :doc
+             LIMIT 1'
+        );
+        $stmt->execute(['doc' => $doc]);
+        $row = $stmt->fetch();
+
+        return is_array($row) && (int) ($row['programa_id'] ?? 0) > 0;
+    }
+
+    /**
+     * Cierra pendientes abiertos cuando el aprendiz ya tiene programa_id válido en catálogo.
+     */
+    public static function closePendingIfAprendizVinculado(string $numeroDocumento): void
+    {
+        $doc = trim($numeroDocumento);
+        if ($doc === '' || !self::aprendizHasValidProgramaVinculo($doc)) {
+            return;
+        }
+
+        $pdo = Database::connection();
+        $stmt = $pdo->prepare(
+            'SELECT programa_id FROM aprendices WHERE numero_documento = :doc LIMIT 1'
+        );
+        $stmt->execute(['doc' => $doc]);
+        $row = $stmt->fetch();
+        $programaId = is_array($row) ? (int) ($row['programa_id'] ?? 0) : 0;
+        if ($programaId <= 0) {
+            return;
+        }
+
+        $pdo->prepare(
+            'UPDATE programa_enlaces_pendientes
+             SET estado = "resuelto",
+                 programa_id_destino = :programa_id,
+                 resolved_at = NOW(),
+                 updated_at = NOW()
+             WHERE numero_documento = :doc AND estado = "pendiente"'
+        )->execute(['programa_id' => $programaId, 'doc' => $doc]);
+    }
+
     /** @param array<string,mixed> $data */
     public static function createOrIgnorePending(array $data): void
     {
         $doc = trim((string) ($data['numero_documento'] ?? ''));
         $programaFuente = trim((string) ($data['programa_fuente'] ?? ''));
         if ($doc === '' || $programaFuente === '') {
+            return;
+        }
+
+        if (self::aprendizHasValidProgramaVinculo($doc)) {
+            self::closePendingIfAprendizVinculado($doc);
+
             return;
         }
 
@@ -241,6 +298,7 @@ class ProgramaEnlacePendiente
                 ->execute(['programa_id' => $programaId, 'id' => $pendingId]);
 
             $pdo->commit();
+            self::closePendingIfAprendizVinculado($doc);
 
             return true;
         } catch (\Throwable $e) {

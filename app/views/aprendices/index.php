@@ -16,6 +16,7 @@ $initialEstado = trim((string) ($activeFilters['estado'] ?? ($initialEstado ?? '
 $initialQ = trim((string) ($activeFilters['q'] ?? ($initialQ ?? '')));
 $initialEmpresaId = (int) ($activeFilters['empresa_id'] ?? 0);
 $initialProgramaId = (int) ($activeFilters['programa_id'] ?? 0);
+$initialDatosPendientes = !empty($activeFilters['datos_pendientes']);
 $source = trim((string) ($activeFilters['from'] ?? ''));
 $importId = trim((string) ($activeFilters['import_id'] ?? ''));
 $importReturnUrl = trim((string) ($importReturnUrl ?? ''));
@@ -28,6 +29,7 @@ $activeQuery = array_filter([
     'estado' => $initialEstado,
     'empresa_id' => $initialEmpresaId > 0 ? (string) $initialEmpresaId : '',
     'programa_id' => $initialProgramaId > 0 ? (string) $initialProgramaId : '',
+    'datos_pendientes' => $initialDatosPendientes ? '1' : '',
     'from' => in_array($source, ['grupos', 'empresas', 'import'], true) ? $source : '',
     'import_id' => $source === 'import' && $importId !== '' ? $importId : '',
 ], static fn ($v): bool => (string) $v !== '');
@@ -141,6 +143,7 @@ partial('components/page_header', [
         class="flex w-full flex-wrap items-center gap-3"
         data-remote-table-filter-form
         data-remote-table-filter-target="#aprendices-table tbody"
+        data-remote-table-filter-counter="#aprendices-counter"
         data-remote-table-filter-debounce="350"
     >
         <?php if ($source !== ''): ?>
@@ -149,8 +152,9 @@ partial('components/page_header', [
         <?php if ($source === 'import' && $importId !== ''): ?>
             <input type="hidden" name="import_id" value="<?= e($importId) ?>">
         <?php endif; ?>
+        <input type="hidden" name="datos_pendientes" value="<?= $initialDatosPendientes ? '1' : '0' ?>" data-datos-pendientes-input>
 
-        <div class="relative w-full min-w-0 md:flex-1">
+        <div class="relative w-full min-w-0 lg:min-w-[460px] lg:flex-1">
             <span class="pointer-events-none absolute inset-y-0 left-3 flex items-center text-app-muted [&_svg]:h-4 [&_svg]:w-4">
                 <?= ui_icon('search') ?>
             </span>
@@ -165,8 +169,8 @@ partial('components/page_header', [
             >
             <button type="button" class="<?= $initialQ !== '' ? '' : 'hidden' ?> absolute right-2 top-1/2 -translate-y-1/2 rounded-md px-2 py-1 text-sm text-app-muted hover:bg-app-panelSubtle hover:text-app-text" aria-label="Limpiar búsqueda" data-remote-table-filter-clear>&times;</button>
         </div>
-        <div class="relative w-full min-w-[220px] md:w-72 md:flex-none">
-                <button type="button" id="open-filters-popover" class="<?= e(ui_button_small_classes()) ?> inline-flex w-full items-center justify-center gap-2 bg-white border-app-borderControlStrong text-app-muted hover:bg-white hover:text-app-text" aria-expanded="false" aria-controls="aprendices-filters-popover" data-filter-popover-trigger>
+        <div class="relative w-[calc(50%-0.375rem)] shrink-0 sm:w-48 md:w-56">
+                <button type="button" id="open-filters-popover" class="<?= e(ui_button_small_classes()) ?> inline-flex w-full items-center justify-center gap-2 bg-white border-app-borderControlStrong text-app-muted hover:bg-app-panelSubtle hover:text-app-text hover:border-gray-400" aria-expanded="false" aria-controls="aprendices-filters-popover" data-filter-popover-trigger>
                     <span class="inline-flex h-4 w-4 items-center justify-center text-app-muted" aria-hidden="true">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-4 w-4">
                             <path d="M3 5h18l-7 8v6l-4-2v-4L3 5z"></path>
@@ -175,7 +179,7 @@ partial('components/page_header', [
                     Filtros
                 </button>
 
-                <div id="aprendices-filters-popover" class="absolute right-0 top-full z-40 mt-2 hidden w-full rounded-[10px] border border-app-border bg-app-panel p-4 shadow-xsSoft">
+                <div id="aprendices-filters-popover" class="absolute left-0 top-full z-40 mt-2 hidden w-[min(calc(100vw-2rem),20rem)] rounded-[10px] border border-app-border bg-app-panel p-4 shadow-xsSoft sm:w-80">
                     <div class="space-y-3">
                         <div class="<?= e(ui_label_classes()) ?>">
                             <span>Ficha</span>
@@ -210,13 +214,16 @@ partial('components/page_header', [
                             ]); ?>
                         </div>
 
-                        <div class="flex items-center justify-end gap-2 pt-1">
-                            <button type="submit" class="<?= e(ui_button_primary_classes()) ?> text-white">Aplicar</button>
-                        </div>
+                        <label class="flex cursor-pointer items-center gap-2 rounded-md border border-app-borderSoft px-3 py-2 text-sm text-app-text transition-colors hover:bg-app-panelSubtle" data-datos-pendientes-toggle>
+                            <input type="checkbox" class="h-4 w-4 rounded border-gray-300 text-app-accent focus:ring-app-accent" <?= $initialDatosPendientes ? 'checked' : '' ?> data-datos-pendientes-checkbox>
+                            <span class="inline-flex h-4 w-4 shrink-0 items-center justify-center text-amber-500 [&_svg]:h-4 [&_svg]:w-4" aria-hidden="true"><?= ui_icon('circle-alert') ?></span>
+                            Solo datos pendientes
+                        </label>
+
                     </div>
                 </div>
             </div>
-        <div class="<?= e(ui_select_wrapper_classes()) ?> w-full min-w-[220px] shrink-0 md:w-64">
+        <div class="<?= e(ui_select_wrapper_classes()) ?> w-[calc(50%-0.375rem)] min-w-0 shrink-0 sm:w-48 md:w-56">
             <select name="estado" class="<?= e(ui_select_classes()) ?>" data-remote-table-filter-change aria-label="Filtrar por estado">
                 <option value="">Todos los estados</option>
                 <?php foreach ($estadosOptions as $st): ?>
@@ -228,12 +235,16 @@ partial('components/page_header', [
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-4 w-4"><path d="m6 9 6 6 6-6"></path></svg>
             </span>
         </div>
-        <a class="<?= e(ui_button_primary_classes()) ?> inline-flex items-center gap-2 text-white" href="<?= e($clearFiltersUrl) ?>">
+        <a class="<?= e(ui_button_primary_classes()) ?> inline-flex w-full items-center justify-center gap-2 text-white sm:w-auto" href="<?= e($clearFiltersUrl) ?>">
                 <span class="inline-flex h-4 w-4 items-center justify-center [&_svg]:h-4 [&_svg]:w-4" aria-hidden="true"><?= ui_icon('brush-cleaning') ?></span>
                 Limpiar filtros
         </a>
     </form>
 </section>
+
+<p class="mb-2 text-sm text-app-muted" id="aprendices-counter">
+    <?= $totalItems ?> <?= $totalItems === 1 ? 'aprendiz' : 'aprendices' ?>
+</p>
 
 <section class="<?= e(ui_card_classes()) ?> !p-0 overflow-hidden">
     <div class="overflow-x-auto">
@@ -272,5 +283,6 @@ ui_render_pagination(
     'aprendices-table'
 );
 ?>
+
 
 <?php partial('components/filter_popover_script'); ?>

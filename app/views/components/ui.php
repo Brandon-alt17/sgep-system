@@ -6,6 +6,10 @@ declare(strict_types=1);
  * Utilidades visuales centralizadas para reducir repeticion de clases Tailwind
  * y mantener consistencia entre todos los modulos.
  */
+if (!function_exists('ui_icon')) {
+    partial('components/icons');
+}
+
 if (!function_exists('ui_card_classes')) {
     function ui_card_classes(): string
     {

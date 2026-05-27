@@ -176,7 +176,7 @@ $f023SectionHeading = static function (string $icon, string $title): void {
             <?php $fieldLabel('nivel_formativo', 'Nivel formativo'); ?>
             <?php $fieldLabel('programa_formacion', 'Programa de formación'); ?>
             <?php $fieldLabel('numero_grupo', 'No. grupo'); ?>
-            <?php $fieldLabel('modalidad_formacion', 'Modalidad de formación'); ?>
+            <?php $fieldLabel('modalidad_formacion', 'Modalidad de formación', true); ?>
             <?php $fieldLabel('estrategia_formativa', 'Estrategia formativa', true, 'textarea'); ?>
             <?php $fieldLabel('fecha_fin_etapa_lectiva', 'Fecha fin etapa lectiva', true, 'date'); ?>
             <?php $fieldLabel('fecha_registro_sofiaplus', 'Fecha de registro en SofiaPlus', true, 'date'); ?>
@@ -186,9 +186,9 @@ $f023SectionHeading = static function (string $icon, string $title): void {
     <section class="<?= e(ui_card_classes()) ?> !p-6">
         <?php $f023SectionHeading('user-check', 'Instructor de seguimiento'); ?>
         <div class="grid gap-5 md:grid-cols-3 md:gap-x-6 md:gap-y-6">
-            <?php $fieldLabel('nombre_instructor_seguimiento', 'Nombre'); ?>
-            <?php $fieldLabel('telefono_instructor_seguimiento', 'Contacto telefónico'); ?>
-            <?php $fieldLabel('correo_instructor_seguimiento', 'Correo institucional'); ?>
+            <?php $fieldLabel('nombre_instructor_seguimiento', 'Nombre', true); ?>
+            <?php $fieldLabel('telefono_instructor_seguimiento', 'Contacto telefónico', true); ?>
+            <?php $fieldLabel('correo_instructor_seguimiento', 'Correo institucional', true); ?>
         </div>
     </section>
 
