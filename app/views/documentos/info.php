@@ -176,7 +176,7 @@ $f023SectionHeading = static function (string $icon, string $title): void {
             <?php $fieldLabel('nivel_formativo', 'Nivel formativo'); ?>
             <?php $fieldLabel('programa_formacion', 'Programa de formación'); ?>
             <?php $fieldLabel('numero_grupo', 'No. grupo'); ?>
-            <?php $fieldLabel('modalidad_formacion', 'Modalidad de formación'); ?>
+            <?php $fieldLabel('modalidad_formacion', 'Modalidad de formación', true); ?>
             <?php $fieldLabel('estrategia_formativa', 'Estrategia formativa', true, 'textarea'); ?>
             <?php $fieldLabel('fecha_fin_etapa_lectiva', 'Fecha fin etapa lectiva', true, 'date'); ?>
             <?php $fieldLabel('fecha_registro_sofiaplus', 'Fecha de registro en SofiaPlus', true, 'date'); ?>

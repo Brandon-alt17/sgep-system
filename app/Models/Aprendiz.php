@@ -335,7 +335,10 @@ class Aprendiz
         }
         $pdo = Database::connection();
         $actual = self::findById($id);
-        $pdo->beginTransaction();
+        $alreadyInTx = $pdo->inTransaction();
+        if (!$alreadyInTx) {
+            $pdo->beginTransaction();
+        }
         try {
             $pdo->prepare('UPDATE aprendices SET estado=:estado, updated_at=NOW() WHERE id=:id')
                 ->execute(['estado' => $nuevoEstado, 'id' => $id]);
@@ -346,9 +349,13 @@ class Aprendiz
                     'nuevo' => $nuevoEstado,
                     'motivo' => $motivo,
                 ]);
-            $pdo->commit();
+            if (!$alreadyInTx) {
+                $pdo->commit();
+            }
         } catch (\Throwable $e) {
-            $pdo->rollBack();
+            if (!$alreadyInTx) {
+                $pdo->rollBack();
+            }
             throw $e;
         }
     }

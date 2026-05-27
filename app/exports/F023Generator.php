@@ -236,6 +236,19 @@ class F023Generator
             }
         }
 
+        if (($out['tipo'] ?? '') === 'M1') {
+            if (($out['fecha_diligenciamiento'] ?? '') === '') {
+                $out['fecha_diligenciamiento'] = date('d/m/Y');
+            }
+
+            if (($out['modalidad_diligenciamiento'] ?? '') === '') {
+                $fallbackModalidad = trim((string) ($momento['modalidad'] ?? ''));
+                if ($fallbackModalidad !== '') {
+                    $out['modalidad_diligenciamiento'] = $fallbackModalidad;
+                }
+            }
+        }
+
         return $out;
     }
 
@@ -252,10 +265,16 @@ class F023Generator
         }
 
         $modalidad = trim((string) ($momento['modalidad_diligenciamiento'] ?? ''));
+        if ($modalidad === '') {
+            $modalidad = trim((string) ($momento['modalidad'] ?? ''));
+        }
+
+        $isPresencial = strcasecmp($modalidad, 'Presencial') === 0;
+        $isVirtual = strcasecmp($modalidad, 'Virtual') === 0;
 
         return [
-            'm1_marca_presencial' => strcasecmp($modalidad, 'Presencial') === 0 ? 'X' : '',
-            'm1_marca_virtual' => strcasecmp($modalidad, 'Virtual') === 0 ? 'X' : '',
+            'm1_marca_presencial' => $isPresencial ? 'X' : '___',
+            'm1_marca_virtual' => $isVirtual ? 'X' : '___',
         ];
     }
 
