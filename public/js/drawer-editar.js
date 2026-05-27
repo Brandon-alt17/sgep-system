@@ -1,19 +1,18 @@
 // js/drawer-editar.js
 (function() {
     'use strict';
-    
     let currentAprendizId = null;
-    
+
     function init() {
         console.log('Inicializando popup...');
         setupEventListeners();
         setupRowClicks();
     }
-    
+
     function setupEventListeners() {
         const closeBtn = document.getElementById('closePopupBtn');
         const cancelBtn = document.getElementById('cancelPopupBtn');
-        const saveBtn = document.getElementById('saveDocsBtn');
+        const saveBtn = document.getElementById('saveDocsBtn'); // Corregido ID
         const overlay = document.getElementById('popupOverlay');
         
         if (closeBtn) {
@@ -38,9 +37,22 @@
         }
         
         if (overlay) {
-            overlay.onclick = function() {
-                closePopup();
+            overlay.onclick = function(e) {
+                // Solo cierra si el click es directamente en el overlay (fondo oscuro)
+                if (e.target === overlay) {
+                    closePopup();
+                }
             };
+        }
+
+        const popup = document.getElementById('documentPopup');
+
+        if (popup) {
+            // Evita que los clicks dentro del popup lleguen al overlay o a la tabla
+            popup.addEventListener('click', function(e) {
+                e.stopPropagation();
+            });
+            // Eliminado stopPropagation en 'wheel' para permitir el scroll interno
         }
         
         document.onkeydown = function(e) {
@@ -52,37 +64,34 @@
             }
         };
     }
-    
+
     function setupRowClicks() {
-        const table = document.querySelector('table');
-        if (!table) return;
-        
-        table.onclick = function(e) {
-            const popup = document.getElementById('documentPopup');
-            if (popup && popup.style.transform === 'translateX(0%)') {
-                return;
-            }
-            
-            const row = e.target.closest('tr');
+        document.addEventListener('click', function(e) {
+            // Ignorar popup
+            if (e.target.closest('#documentPopup')) return;
+            // Ignorar overlay
+            if (e.target.closest('#popupOverlay')) return;
+
+            // Buscar fila
+            const row = e.target.closest('tr[data-id]');
             if (!row) return;
-            
-            if (row.closest('thead')) return;
-            
+
+            // Ignorar elementos interactivos
             if (e.target.closest('button') || e.target.closest('input') || 
-                e.target.closest('textarea') || e.target.closest('select')) {
+                e.target.closest('textarea') || e.target.closest('select') || 
+                e.target.closest('label') || e.target.closest('a')) {
                 return;
             }
-            
-            const aprendizId = row.getAttribute('data-id');
-            const aprendizNombre = row.getAttribute('data-nombre');
-            
-            if (aprendizId) {
-                e.preventDefault();
-                openPopup(aprendizId, aprendizNombre || 'Aprendiz');
-            }
-        };
+
+            const aprendizId = row.dataset.id;
+            const aprendizNombre = row.dataset.nombre;
+
+            if (!aprendizId) return;
+
+            openPopup(aprendizId, aprendizNombre || 'Aprendiz');
+        });
     }
-    
+
     function openPopup(aprendizId, aprendizNombre) {
         const popup = document.getElementById('documentPopup');
         const overlay = document.getElementById('popupOverlay');
@@ -95,11 +104,17 @@
         
         loadSavedData(aprendizId);
         
+        // Mostrar popup y overlay con transición
         popup.style.transform = 'translateX(0%)';
         overlay.style.display = 'block';
+        // Forzar reflow para que la transición de opacidad funcione
+        requestAnimationFrame(() => {
+            overlay.style.opacity = '1';
+            overlay.style.pointerEvents = 'auto';
+        });
         document.body.style.overflow = 'hidden';
     }
-    
+
     function closePopup() {
         const popup = document.getElementById('documentPopup');
         const overlay = document.getElementById('popupOverlay');
@@ -107,10 +122,15 @@
         if (!popup || !overlay) return;
         
         popup.style.transform = 'translateX(100%)';
-        overlay.style.display = 'none';
+        overlay.style.opacity = '0';
+        overlay.style.pointerEvents = 'none';
+        
+        setTimeout(() => {
+            overlay.style.display = 'none';
+        }, 300); // Coincide con la duración de la transición
         document.body.style.overflow = '';
     }
-    
+
     function loadSavedData(aprendizId) {
         const saved = localStorage.getItem(`formulario_${aprendizId}`);
         if (saved) {
@@ -121,8 +141,7 @@
                     if (element) {
                         if (element.type === 'checkbox') {
                             element.checked = value;
-                            // Actualizar visual del checkbox
-                            const toggleDiv = element.nextElementSibling;
+                            const toggleDiv = element.nextElementSibling; 
                             if (toggleDiv) {
                                 if (value) {
                                     toggleDiv.style.backgroundColor = '#059669';
@@ -145,7 +164,7 @@
             clearForm();
         }
     }
-    
+
     function clearForm() {
         document.querySelectorAll('#documentPopup .doc-checkbox').forEach(cb => {
             cb.checked = false;
@@ -157,25 +176,22 @@
             }
         });
         
-        const fechaEntrega = document.getElementById('fecha_entrega');
-        if (fechaEntrega) fechaEntrega.value = '';
+        const ids = ['fecha_entrega', 'observaciones', 'observaciones_novedad'];
+        ids.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.value = '';
+        });
         
-        const observaciones = document.getElementById('observaciones');
-        if (observaciones) observaciones.value = '';
-        
-        const observacionesNovedad = document.getElementById('observaciones_novedad');
-        if (observacionesNovedad) observacionesNovedad.value = '';
-        
-        const estadoAprendiz = document.getElementById('estado_aprendiz');
-        if (estadoAprendiz) estadoAprendiz.selectedIndex = 0;
-        
-        const cambioModalidad = document.getElementById('cambio_modalidad');
-        if (cambioModalidad) cambioModalidad.selectedIndex = 0;
+        const selects = ['estado_aprendiz', 'cambio_modalidad'];
+        selects.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.selectedIndex = 0;
+        });
         
         const reingreso = document.getElementById('reingreso');
         if (reingreso) reingreso.checked = false;
     }
-    
+
     function saveData() {
         if (!currentAprendizId) {
             showNotification('Error: No hay aprendiz seleccionado', 'error');
@@ -188,20 +204,11 @@
             if (cb.id) formData[cb.id] = cb.checked;
         });
         
-        const fechaEntrega = document.getElementById('fecha_entrega');
-        if (fechaEntrega) formData.fecha_entrega = fechaEntrega.value;
-        
-        const estadoAprendiz = document.getElementById('estado_aprendiz');
-        if (estadoAprendiz) formData.estado_aprendiz = estadoAprendiz.value;
-        
-        const observaciones = document.getElementById('observaciones');
-        if (observaciones) formData.observaciones = observaciones.value;
-        
-        const observacionesNovedad = document.getElementById('observaciones_novedad');
-        if (observacionesNovedad) formData.observaciones_novedad = observacionesNovedad.value;
-        
-        const cambioModalidad = document.getElementById('cambio_modalidad');
-        if (cambioModalidad) formData.cambio_modalidad = cambioModalidad.value;
+        const ids = ['fecha_entrega', 'estado_aprendiz', 'observaciones', 'observaciones_novedad', 'cambio_modalidad'];
+        ids.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) formData[id] = el.value;
+        });
         
         const reingreso = document.getElementById('reingreso');
         if (reingreso) formData.reingreso = reingreso.checked;
@@ -210,30 +217,25 @@
         showNotification('Datos guardados correctamente', 'success');
         closePopup();
     }
-    
+
     function showNotification(message, type = 'success') {
         const notification = document.createElement('div');
         notification.textContent = message;
         notification.style.cssText = `
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            padding: 12px 24px;
+            position: fixed; bottom: 20px; right: 20px; padding: 12px 24px;
             background-color: ${type === 'success' ? '#059669' : '#dc2626'};
-            color: white;
-            border-radius: 8px;
-            z-index: 10001;
-            font-size: 14px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            color: white; border-radius: 8px; z-index: 10001; font-size: 14px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1); transition: opacity 0.3s ease; opacity: 0;
         `;
         document.body.appendChild(notification);
         
+        setTimeout(() => { notification.style.opacity = '1'; }, 10);
         setTimeout(() => {
             notification.style.opacity = '0';
             setTimeout(() => notification.remove(), 300);
         }, 2000);
     }
-    
+
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', init);
     } else {
