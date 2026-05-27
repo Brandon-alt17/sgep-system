@@ -37,7 +37,10 @@ final class F023DocxMerge
             $parts = self::splitBody($xml);
             $segmentContent = self::stripEmbeddedSectionProperties($parts['content']);
             $segmentContent = self::trimLeadingEmptyParagraphsBeforeFirstTable($segmentContent);
-            $accum .= self::withPageBreakBefore($segmentContent);
+            // Al fusionar, el preámbulo del segmento (ej. párrafo de privacidad del M1) queda suelto
+            // sin el sectPr nextPage de la plantilla individual y deja una hoja casi vacía.
+            // Se usa el contenido desde la primera tabla del segmento.
+            $accum .= self::contentFromFirstTable($segmentContent);
         }
 
         $newInner = $accum . $sectPr;
@@ -85,43 +88,6 @@ final class F023DocxMerge
     }
 
     /**
-     * Evita una hoja en blanco cuando el bloque anterior ya terminó al pie de página:
-     * pageBreakBefore en el siguiente bloque no duplica el salto como w:br al final.
-     */
-    private static function withPageBreakBefore(string $content): string
-    {
-        if ($content === '') {
-            return '';
-        }
-
-        $pos = strpos($content, '<w:p');
-        if ($pos === false) {
-            return '<w:p><w:pPr><w:pageBreakBefore/></w:pPr></w:p>' . $content;
-        }
-
-        $pTagEnd = strpos($content, '>', $pos);
-        if ($pTagEnd === false) {
-            return $content;
-        }
-
-        $afterPOpen = $pTagEnd + 1;
-        if (str_starts_with(substr($content, $afterPOpen, 5), '<w:pP')) {
-            $pPrEnd = strpos($content, '>', $afterPOpen);
-            if ($pPrEnd === false) {
-                return $content;
-            }
-
-            return substr($content, 0, $pPrEnd + 1)
-                . '<w:pageBreakBefore/>'
-                . substr($content, $pPrEnd + 1);
-        }
-
-        return substr($content, 0, $afterPOpen)
-            . '<w:pPr><w:pageBreakBefore/></w:pPr>'
-            . substr($content, $afterPOpen);
-    }
-
-    /**
      * Las plantillas de momentos suelen traer párrafos vacíos antes de la tabla principal
      * (restos del sectPr nextPage de la plantilla original).
      */
@@ -160,6 +126,19 @@ final class F023DocxMerge
         }
 
         return ltrim($leading) . $body;
+    }
+
+    /**
+     * Al fusionar, el cuerpo del segmento debe empezar en su tabla principal (sin preámbulo suelto).
+     */
+    private static function contentFromFirstTable(string $content): string
+    {
+        $firstTable = strpos($content, '<w:tbl>');
+        if ($firstTable === false) {
+            return $content;
+        }
+
+        return substr($content, $firstTable);
     }
 
     /**
