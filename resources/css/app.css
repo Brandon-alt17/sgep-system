@@ -5,6 +5,12 @@
 @tailwind utilities;
 
 @layer base {
+  html,
+  body,
+  body * {
+    caret-color: transparent;
+  }
+
   body {
     @apply m-0 bg-app-bg font-sans text-app-text;
     font-family: "Inter", system-ui, sans-serif;

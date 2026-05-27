@@ -44,18 +44,17 @@ $titles = [
     '/catalogo/empresas/nuevo' => 'Catálogo',
     '/catalogo/empresas/ver' => 'Catálogo',
     '/catalogo/empresas/editar' => 'Catálogo',
-    '/documentos/generar' => 'Configuración',
+    '/documentos/generar' => 'Generar F-023',
     '/momentos/create' => 'Momento F-023',
 ];
 $pageTitle = $titles[$pathForTitle] ?? $titles[$currentPath] ?? 'SGEP';
-$currentUserName = (string) ($_SESSION['user_name'] ?? 'Usuario no registrado');
 ?>
 <?php partial('components/icons'); ?>
 <?php partial('components/ui'); ?>
 <div class="min-h-screen md:pl-[260px]">
     <?php partial('components/sidebar', ['currentPath' => $currentPath]); ?>
     <div class="grid h-screen min-h-0 grid-rows-[56px_minmax(0,1fr)]">
-        <?php partial('components/topbar', ['title' => $pageTitle, 'userName' => $currentUserName]); ?>
+        <?php partial('components/topbar', ['title' => $pageTitle]); ?>
         <main class="min-h-0 overflow-y-auto p-6">
             <?php require $viewPath; ?>
         </main>

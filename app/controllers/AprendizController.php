@@ -163,6 +163,8 @@ class AprendizController
     {
         $map = [
             'info_f023_guardada' => ['message' => 'Información general F-023 guardada correctamente.', 'variant' => 'success'],
+            'momento_guardado' => ['message' => 'Momento guardado correctamente.', 'variant' => 'success'],
+            'momento_actualizado' => ['message' => 'Momento actualizado correctamente.', 'variant' => 'success'],
         ];
 
         return $map[$key] ?? null;

@@ -19,14 +19,7 @@ class DocumentoController
     {
         $aprendizId = (int) ($_GET['aprendiz_id'] ?? 0);
         if ($aprendizId <= 0) {
-            view('documents/generate', [
-                'aprendiz' => null,
-                'aprendiz_id' => 0,
-                'info' => [],
-                'export_momentos' => [],
-                'info_faltantes_count' => 0,
-                'error' => (string) ($_GET['error'] ?? ''),
-            ]);
+            redirect(APP_BASE_PATH . '/aprendices');
 
             return;
         }
@@ -72,7 +65,8 @@ class DocumentoController
         }
 
         if ($aprendizId <= 0) {
-            redirect(APP_BASE_PATH . '/documentos/generar?error=id_aprendiz');
+            redirect(APP_BASE_PATH . '/aprendices');
+
             return;
         }
 
