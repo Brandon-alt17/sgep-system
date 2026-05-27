@@ -1,3 +1,6 @@
+
+<script src="<?= e(APP_BASE_PATH) ?>/js/drawer-editar.js"></script>
+<?php require __DIR__ . '/drawer-editar.php'; ?>
 <!-- CONTENEDOR PRINCIPAL CON ANCHO FIJO Y OVERFLOW ESCONDIDO -->
 <div class="w-full overflow-x-hidden" style="max-width: 100vw;">
 
@@ -162,7 +165,11 @@
 
                 <tbody>
                     <?php foreach ($rows as $a): ?>
-                        <tr style="border-bottom: 1px solid #f1f5f9;">
+                        <tr 
+                            class="cursor-pointer hover:bg-gray-50 transition apprentice-row" 
+                            data-id="<?= $a['identificacion'] ?? $a['num_aprendiz'] ?? '' ?>"
+                            data-nombre="<?= htmlspecialchars($a['nombre'] ?? '') ?>"
+                        >                        
                             <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;"><?= $a['num_aprendiz'] ?? '' ?></td>
                             <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;"><?= $a['num_por_grupo'] ?? '' ?></td>
                             <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;"><?= $a['ficha'] ?? '' ?></td>
