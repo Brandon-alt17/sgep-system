@@ -532,22 +532,11 @@ document.querySelectorAll("[data-remote-table-filter-form]").forEach(function (f
     });
   }
 
-  var dpToggle = form.querySelector("[data-datos-pendientes-toggle]");
+  var dpCheckbox = form.querySelector("[data-datos-pendientes-checkbox]");
   var dpInput = form.querySelector("[data-datos-pendientes-input]");
-  if (dpToggle && dpInput) {
-    dpToggle.addEventListener("click", function () {
-      var active = dpInput.value === "1";
-      dpInput.value = active ? "0" : "1";
-      dpToggle.setAttribute("aria-pressed", active ? "false" : "true");
-      dpToggle.classList.toggle("bg-amber-100", !active);
-      dpToggle.classList.toggle("border-amber-300", !active);
-      dpToggle.classList.toggle("text-amber-800", !active);
-      dpToggle.classList.toggle("hover:bg-amber-200", !active);
-      dpToggle.classList.toggle("bg-white", active);
-      dpToggle.classList.toggle("border-app-borderControlStrong", active);
-      dpToggle.classList.toggle("text-app-muted", active);
-      dpToggle.classList.toggle("hover:bg-white", active);
-      dpToggle.classList.toggle("hover:text-app-text", active);
+  if (dpCheckbox && dpInput) {
+    dpCheckbox.addEventListener("change", function () {
+      dpInput.value = dpCheckbox.checked ? "1" : "0";
       if (debounceTimer) window.clearTimeout(debounceTimer);
       runFetch();
     });

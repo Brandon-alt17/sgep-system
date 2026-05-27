@@ -56,6 +56,12 @@
     @apply underline;
   }
 
+  a[class*="rounded"]:hover,
+  a[class*="btn"]:hover,
+  a[class*="font-app"]:hover {
+    text-decoration: none;
+  }
+
   /* @tailwindcss/forms añade anillo de foco a casillas; lo quitamos en toda la app */
   input[type="checkbox"]:focus,
   input[type="checkbox"]:focus-visible,
@@ -114,7 +120,7 @@
   }
 
   .modal-panel {
-    @apply relative max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-xl border border-app-border bg-app-panel p-6 shadow-lg;
+    @apply relative flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-xl border border-app-border bg-app-panel p-6 shadow-lg;
   }
 
   .modal-panel--conflict {

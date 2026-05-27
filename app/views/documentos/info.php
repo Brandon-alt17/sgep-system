@@ -186,9 +186,9 @@ $f023SectionHeading = static function (string $icon, string $title): void {
     <section class="<?= e(ui_card_classes()) ?> !p-6">
         <?php $f023SectionHeading('user-check', 'Instructor de seguimiento'); ?>
         <div class="grid gap-5 md:grid-cols-3 md:gap-x-6 md:gap-y-6">
-            <?php $fieldLabel('nombre_instructor_seguimiento', 'Nombre'); ?>
-            <?php $fieldLabel('telefono_instructor_seguimiento', 'Contacto telefónico'); ?>
-            <?php $fieldLabel('correo_instructor_seguimiento', 'Correo institucional'); ?>
+            <?php $fieldLabel('nombre_instructor_seguimiento', 'Nombre', true); ?>
+            <?php $fieldLabel('telefono_instructor_seguimiento', 'Contacto telefónico', true); ?>
+            <?php $fieldLabel('correo_instructor_seguimiento', 'Correo institucional', true); ?>
         </div>
     </section>
 

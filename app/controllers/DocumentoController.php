@@ -158,6 +158,27 @@ class DocumentoController
         }
 
         AprendizInfoGeneral::upsertByAprendizId($aprendizId, $_POST);
+        // El formulario F-023 también puede editar algunos campos del aprendiz (ej. instructor de seguimiento).
+        // Esos campos viven en la tabla `aprendices`, por eso se persisten aquí sin tocar el resto del payload.
+        $nombreInstructor = trim((string) ($_POST['nombre_instructor_seguimiento'] ?? ''));
+        $telefonoInstructor = trim((string) ($_POST['telefono_instructor_seguimiento'] ?? ''));
+        $correoInstructor = trim((string) ($_POST['correo_instructor_seguimiento'] ?? ''));
+
+        Database::connection()->prepare(
+            'UPDATE aprendices
+             SET
+                nombre_instructor_seguimiento = :nombre_instructor_seguimiento,
+                telefono_instructor_seguimiento = :telefono_instructor_seguimiento,
+                correo_instructor_seguimiento = :correo_instructor_seguimiento,
+                updated_at = NOW()
+             WHERE id = :id'
+        )->execute([
+            'id' => $aprendizId,
+            'nombre_instructor_seguimiento' => $nombreInstructor === '' ? null : $nombreInstructor,
+            'telefono_instructor_seguimiento' => $telefonoInstructor === '' ? null : $telefonoInstructor,
+            'correo_instructor_seguimiento' => $correoInstructor === '' ? null : $correoInstructor,
+        ]);
+
         redirect(APP_BASE_PATH . '/aprendices/show?id=' . $aprendizId . '&toast=info_f023_guardada');
     }
 
