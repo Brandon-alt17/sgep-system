@@ -11,6 +11,7 @@ Los nombres deben coincidir con `config/f023_template_map.php`:
 | `m2.docx`   | Momento 2 y examen (EX)      |
 | `m3_p1.docx`| Momento 3 – parte 1          |
 | `m3_p2.docx`| Momento 3 – parte 2          |
+| `Reporte Maestro.xlsx` | Plantilla del reporte de seguimiento maestro (exportación Excel) |
 
 ## Instalación
 

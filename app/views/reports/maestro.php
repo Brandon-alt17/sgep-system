@@ -41,8 +41,19 @@
 
         <div class="flex-1"></div>
 
+        <?php
+        $exportQuery = [];
+        foreach (['estado', 'ficha', 'programa_id'] as $filterKey) {
+            $v = trim((string) ($_GET[$filterKey] ?? ''));
+            if ($v !== '') {
+                $exportQuery[$filterKey] = $v;
+            }
+        }
+        $exportUrl = APP_BASE_PATH . '/reportes/exportar'
+            . ($exportQuery === [] ? '' : '?' . http_build_query($exportQuery));
+        ?>
         <a
-            href="<?= APP_BASE_PATH ?>/reportes/export"
+            href="<?= e($exportUrl) ?>"
             class="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium px-4 h-10 rounded-lg transition-colors"
         >
             Exportar a Excel
@@ -209,8 +220,27 @@
                             <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;"><?= $a['cambio_modalidad'] ?? '' ?></td>
                             <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap; max-width: 150px; overflow: hidden; text-overflow: ellipsis;"><?= $a['observaciones_novedad'] ?: '—' ?></td>
                             <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: center;"><?= !empty($a['doc_gfpi_165']) ? '✓' : '—' ?></td>
+                            <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: center;"><?= !empty($a['doc_momento_1']) ? '✓' : '—' ?></td>
+                            <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: center;"><?= !empty($a['doc_bitacora_1']) ? '✓' : '—' ?></td>
+                            <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: center;"><?= !empty($a['doc_bitacora_2']) ? '✓' : '—' ?></td>
+                            <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: center;"><?= !empty($a['doc_bitacora_3']) ? '✓' : '—' ?></td>
+                            <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: center;"><?= !empty($a['doc_bitacora_4']) ? '✓' : '—' ?></td>
+                            <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: center;"><?= !empty($a['doc_bitacora_5']) ? '✓' : '—' ?></td>
+                            <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: center;"><?= !empty($a['doc_bitacora_6']) ? '✓' : '—' ?></td>
+                            <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: center;"><?= !empty($a['doc_momento_final']) ? '✓' : '—' ?></td>
+                            <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: center;"><?= !empty($a['cert_doc_identidad']) ? '✓' : '—' ?></td>
+                            <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: center;"><?= !empty($a['cert_paz_salvo']) ? '✓' : '—' ?></td>
+                            <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: center;"><?= !empty($a['cert_gfpi_023']) ? '✓' : '—' ?></td>
+                            <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: center;"><?= !empty($a['cert_bitacoras']) ? '✓' : '—' ?></td>
+                            <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: center;"><?= !empty($a['cert_cumplimiento']) ? '✓' : '—' ?></td>
+                            <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: center;"><?= !empty($a['cert_ape']) ? '✓' : '—' ?></td>
+                            <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: center;"><?= !empty($a['cert_carnet']) ? '✓' : '—' ?></td>
+                            <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: center;"><?= !empty($a['cert_saber_tyt']) ? '✓' : '—' ?></td>
+                            <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;"><?= e((string) ($a['fecha_entrega_admin'] ?? '')) ?></td>
+                            <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;"><?= e((string) ($a['estado_aprendiz'] ?? '')) ?></td>
+                            <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap; max-width: 150px; overflow: hidden; text-overflow: ellipsis;"><?= e((string) ($a['observaciones_cert'] ?? '')) ?: '—' ?></td>
 
-                            <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;"><?= $a['instructor_asignado'] ?? '' ?></td>
+                            <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;"><?= e((string) ($a['instructor_asignado'] ?? '')) ?></td>
                             <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;"><?= $a['telefono_instructor'] ?? '' ?></td>
                             <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap; max-width: 150px; overflow: hidden; text-overflow: ellipsis;"><?= $a['correo_instructor'] ?? '' ?></td>
                         </tr>

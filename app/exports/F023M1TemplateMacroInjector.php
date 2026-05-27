@@ -86,10 +86,11 @@ final class F023M1TemplateMacroInjector
         }
 
         $xml = self::normalizeFooterParagraph($xml);
+        $xml = self::stripEmptyParagraphsBeforeFooter($xml);
         $xml = self::stripExtraEmptyParasFromConcertacionCells($xml);
         $xml = self::shrinkConcertacionEmptyRowHeights($xml);
         $xml = self::shrinkBottomSectionRowHeights($xml);
-        $xml = self::removeTrailingEmptyParagraphAfterFooter($xml);
+        $xml = self::removeTrailingEmptyParagraphsAfterFooter($xml);
 
         if ($zip->locateName(self::DOCUMENT_XML) !== false) {
             $zip->deleteName(self::DOCUMENT_XML);
@@ -190,7 +191,42 @@ final class F023M1TemplateMacroInjector
         return is_string($next) ? $next : $xml;
     }
 
-    private static function removeTrailingEmptyParagraphAfterFooter(string $xml): string
+    private static function stripEmptyParagraphsBeforeFooter(string $xml): string
+    {
+        $footerPos = strpos($xml, '${ciudad_diligenciamiento}');
+        if ($footerPos === false) {
+            $footerPos = strpos($xml, 'Ciudad ');
+        }
+        if ($footerPos === false) {
+            return $xml;
+        }
+
+        $pStart = max(
+            (int) strrpos(substr($xml, 0, $footerPos), '<w:p '),
+            (int) strrpos(substr($xml, 0, $footerPos), '<w:p>')
+        );
+        if ($pStart < 0) {
+            return $xml;
+        }
+
+        $lastTableEnd = strrpos(substr($xml, 0, $pStart), '</w:tbl>');
+        if ($lastTableEnd === false) {
+            return $xml;
+        }
+        $lastTableEnd += strlen('</w:tbl>');
+
+        $offset = $lastTableEnd;
+        while (preg_match('/^\s*(<w:p\b[^>]*>(?:(?!<\/w:p>).)*<\/w:p>)/s', substr($xml, $offset), $match)) {
+            if (!self::isLayoutSpacerParagraph($match[1])) {
+                break;
+            }
+            $offset += strlen($match[0]);
+        }
+
+        return substr($xml, 0, $lastTableEnd) . substr($xml, $offset);
+    }
+
+    private static function removeTrailingEmptyParagraphsAfterFooter(string $xml): string
     {
         $marker = strpos($xml, '${m1_marca_virtual}');
         if ($marker === false) {
@@ -203,16 +239,24 @@ final class F023M1TemplateMacroInjector
         }
         $footerEnd += strlen('</w:p>');
 
-        if (!preg_match('#^(\s*<w:p\b[^>]*>(?:(?!</w:p>).)*</w:p>)#s', substr($xml, $footerEnd), $match)) {
-            return $xml;
+        $offset = $footerEnd;
+        while (preg_match('#^(\s*<w:p\b[^>]*>(?:(?!</w:p>).)*</w:p>)#s', substr($xml, $offset), $match)) {
+            if (!self::isLayoutSpacerParagraph($match[1])) {
+                break;
+            }
+            $offset += strlen($match[0]);
         }
 
-        $nextPara = $match[1];
-        if (preg_match('/<w:t[^>]*>[^<\s][^<]*<\/w:t>/', $nextPara)) {
-            return $xml;
+        return substr($xml, 0, $footerEnd) . substr($xml, $offset);
+    }
+
+    private static function isLayoutSpacerParagraph(string $paragraph): bool
+    {
+        if (str_contains($paragraph, '${')) {
+            return false;
         }
 
-        return substr($xml, 0, $footerEnd) . substr($xml, $footerEnd + strlen($nextPara));
+        return !preg_match('/<w:t[^>]*>[^<\s][^<]*<\/w:t>/', $paragraph);
     }
 
     private static function stripExtraEmptyParasFromConcertacionCells(string $xml): string
