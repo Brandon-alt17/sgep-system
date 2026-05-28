@@ -144,12 +144,19 @@ final class F023InfoTemplateMacroInjector
             $xml = $next;
         }
 
-        $xml = self::stripEmptyParagraphsBetweenFirstTwoTables($xml);
+        // Mantener el párrafo espaciador entre la tabla de encabezado (PROCESO, etc.) y la de
+        // «Información general». Eliminarlo hace que la segunda tabla quede debajo del bloque
+        // flotante del encabezado (solapamiento). Solo quitamos párrafos vacíos extra del hueco.
+        $xml = self::trimRedundantEmptyParagraphsBetweenFirstTwoTables($xml);
 
         return self::removeTrailingEmptyParagraphAfterLastTable($xml);
     }
 
-    private static function stripEmptyParagraphsBetweenFirstTwoTables(string $xml): string
+    /**
+     * Entre la primera y segunda tabla hay un párrafo con w:before (reservaba salto de página).
+     * Tras poner before=0, los dos párrafos vacíos siguientes sobran; el primero se conserva.
+     */
+    private static function trimRedundantEmptyParagraphsBetweenFirstTwoTables(string $xml): string
     {
         $firstTableEnd = strpos($xml, '</w:tbl>');
         if ($firstTableEnd === false) {
@@ -162,14 +169,37 @@ final class F023InfoTemplateMacroInjector
         }
 
         $between = substr($xml, $firstTableEnd, $secondTableStart - $firstTableEnd);
-        if (
-            str_contains($between, '${')
-            || preg_match('/<w:t[^>]*>[^<\s][^<]*<\/w:t>/', $between)
-        ) {
-            return $xml;
+        $trimmed = self::stripTrailingEmptyOuterParagraphsFromGap($between);
+
+        return substr($xml, 0, $firstTableEnd) . $trimmed . substr($xml, $secondTableStart);
+    }
+
+    private static function stripTrailingEmptyOuterParagraphsFromGap(string $gap): string
+    {
+        while (preg_match('/(<w:p\b[^>]*>(?:(?!<\/w:p>).)*<\/w:p>)\s*$/s', $gap, $m)) {
+            $para = $m[1];
+            if (
+                str_contains($para, '${')
+                || preg_match('/<w:t[^>]*>[^<\s][^<]*<\/w:t>/', $para)
+                || str_contains($para, '<w:drawing>')
+                || str_contains($para, '<mc:AlternateContent>')
+                || self::paragraphHasStructuralSpacing($para)
+            ) {
+                break;
+            }
+
+            $gap = substr($gap, 0, -strlen($m[0]));
         }
 
-        return substr($xml, 0, $firstTableEnd) . substr($xml, $secondTableStart);
+        return $gap;
+    }
+
+    private static function paragraphHasStructuralSpacing(string $paragraph): bool
+    {
+        return (bool) preg_match(
+            '/<w:spacing\b[^>]*\bw:(before|after)="([1-9]\d*|\d{3,})"/',
+            $paragraph
+        );
     }
 
     private static function removeTrailingEmptyParagraphAfterLastTable(string $xml): string
