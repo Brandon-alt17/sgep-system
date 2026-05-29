@@ -4,11 +4,13 @@ $filters = (array) ($filters ?? []);
 $programas = (array) ($programas ?? []);
 $q = trim((string) ($filters['q'] ?? ''));
 $programaId = (int) ($filters['programa_id'] ?? 0);
+$currentPage = max(1, (int) ($currentPage ?? 1));
+$totalPages = max(1, (int) ($totalPages ?? 1));
+$paginationUrl = (string) ($paginationUrl ?? '');
 $toastKey = trim((string) ($_GET['toast'] ?? ''));
 $toastMessage = match ($toastKey) {
     default => '',
 };
-$totalRows = count($grupos);
 $programaComboboxOptions = [];
 foreach ($programas as $p) {
     $pid = (int) ($p['id'] ?? 0);
@@ -39,6 +41,7 @@ partial('components/page_header', [
         class="flex w-full flex-wrap items-center gap-3"
         data-remote-table-filter-form
         data-remote-table-filter-target="#tabla-catalogo-grupos tbody"
+        data-remote-table-filter-pagination="#grupos-pagination"
         data-remote-table-filter-debounce="350"
     >
         <div class="relative w-full min-w-0 md:flex-1">
@@ -96,3 +99,17 @@ partial('components/page_header', [
         </tbody>
     </table>
 </section>
+
+<div id="grupos-pagination">
+    <?php if ($paginationUrl !== '' && $totalPages > 1): ?>
+        <?php
+        ui_render_pagination(
+            $currentPage,
+            $totalPages,
+            $paginationUrl,
+            'Paginación de grupos',
+            'tabla-catalogo-grupos'
+        );
+        ?>
+    <?php endif; ?>
+</div>

@@ -50,7 +50,7 @@ final class F023DocxMerge
                 $m3StartOffset = strlen($accum);
             }
 
-            if (self::needsPageBreakBeforeSegment($mask, $i)) {
+            if (self::needsPageBreakBeforeSegment($mask, $i, $docxPaths[$i])) {
                 $segment = self::withPageBreakBefore($segment);
             }
 
@@ -103,13 +103,17 @@ final class F023DocxMerge
     /**
      * @param list<bool> $mask
      */
-    private static function needsPageBreakBeforeSegment(array $mask, int $index): bool
+    private static function needsPageBreakBeforeSegment(array $mask, int $index, string $docxPath): bool
     {
         if ($index <= 0) {
             return false;
         }
 
-        // m3_p1 → m3_p2 continúan en la misma secuencia; info/m1/m2 sí saltan página.
+        // m3_p1 → m3_p2 siempre en página nueva (las rutas temporales no conservan el basename).
+        if ($mask[$index] && $mask[$index - 1]) {
+            return true;
+        }
+
         return !($mask[$index - 1] && $mask[$index]);
     }
 
@@ -167,9 +171,48 @@ final class F023DocxMerge
     /** Normalización mínima para info / M1 / M2 y fusiones mixtas (comportamiento previo al fix M3). */
     private static function normalizeSegmentContentLight(string $content): string
     {
-        return self::trimLeadingEmptyParagraphsBeforeFirstTable(
-            self::stripEmbeddedSectionProperties($content)
-        );
+        $content = self::stripEmbeddedSectionProperties($content);
+        $content = self::normalizeImplicitSpacing($content);
+        $content = self::trimLeadingEmptyParagraphsBeforeFirstTable($content);
+        $content = self::trimTrailingEmptyParagraphsAfterLastTable($content);
+        $content = self::collapseRedundantParagraphsBeforeFooter($content);
+
+        return $content;
+    }
+
+    /** Quita bloques de párrafos vacíos antes del pie estático (M2 sin inyector; evita hoja en blanco). */
+    private static function collapseRedundantParagraphsBeforeFooter(string $content): string
+    {
+        if (str_contains($content, '${ciudad_diligenciamiento}') || str_contains($content, '${m3_marca_virtual}')) {
+            return $content;
+        }
+
+        foreach (['Ciudad', 'El momento 3'] as $anchor) {
+            $pos = strpos($content, $anchor);
+            if ($pos === false) {
+                continue;
+            }
+
+            $pStart = max(
+                (int) strrpos(substr($content, 0, $pos), '<w:p '),
+                (int) strrpos(substr($content, 0, $pos), '<w:p>')
+            );
+            if ($pStart < 0) {
+                continue;
+            }
+
+            $lastTableEnd = strrpos(substr($content, 0, $pStart), '</w:tbl>');
+            if ($lastTableEnd === false) {
+                continue;
+            }
+            $lastTableEnd += strlen('</w:tbl>');
+
+            $between = substr($content, $lastTableEnd, $pStart - $lastTableEnd);
+            $collapsed = preg_replace('/<w:p\b[^>]*>(?:(?!<\/w:p>).)*<\/w:p>/s', '', $between) ?? $between;
+            $content = substr($content, 0, $lastTableEnd) . $collapsed . substr($content, $pStart);
+        }
+
+        return $content;
     }
 
     /** Normalización completa solo para segmentos M3 (m3_p1 + m3_p2). */
@@ -517,8 +560,9 @@ final class F023DocxMerge
             || str_contains($gap, '<w:pict>');
         $hasText = str_contains($gap, '${')
             || preg_match('/<w:t[^>]*>[^<\s][^<]*<\/w:t>/', $gap);
+        $hasPageBreak = str_contains($gap, '<w:pageBreakBefore');
 
-        if (!$hasDrawing && !$hasText && !self::gapHasStructuralSpacing($gap)) {
+        if (!$hasDrawing && !$hasText && !$hasPageBreak && !self::gapHasStructuralSpacing($gap)) {
             return '';
         }
 
@@ -578,6 +622,7 @@ final class F023DocxMerge
                 || str_contains($para, '<w:drawing>')
                 || str_contains($para, '<mc:AlternateContent>')
                 || str_contains($para, '<w:pict>')
+                || str_contains($para, '<w:pageBreakBefore')
             ) {
                 break;
             }
@@ -667,6 +712,7 @@ final class F023DocxMerge
             if (
                 str_contains($paragraph, '${')
                 || preg_match('/<w:t[^>]*>[^<\s][^<]*<\/w:t>/', $paragraph)
+                || str_contains($paragraph, '<w:pageBreakBefore')
             ) {
                 break;
             }
@@ -679,6 +725,7 @@ final class F023DocxMerge
             if (
                 str_contains($paragraph, '${')
                 || preg_match('/<w:t[^>]*>[^<\s][^<]*<\/w:t>/', $paragraph)
+                || str_contains($paragraph, '<w:pageBreakBefore')
             ) {
                 break;
             }

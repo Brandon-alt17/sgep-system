@@ -232,7 +232,9 @@ Formulario aparte (**documentos/info**) para campos de la sección de informaci�
 
 ### 8.3 PDF
 
-El PDF intenta generarse con LibreOffice en el servidor si está instalado; si no, se usa un motor alternativo. Puede haber diferencias menores de márgenes respecto a Word.
+El PDF se genera con **LibreOffice** en el mismo equipo donde corre el SGEP (no viene incluido en WAMP/MAMP). Debe instalarse aparte o configurarse en `.env` la ruta a `soffice.exe` / `libreoffice`.
+
+Si LibreOffice no está disponible, use **Word (.docx)**. El administrador puede comprobar la instalación con `php scripts/check_pdf_converter.php`.
 
 ---
 

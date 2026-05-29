@@ -23,8 +23,12 @@ class CatalogoController
             'q' => trim((string) ($_GET['q'] ?? '')),
             'nivel' => trim((string) ($_GET['nivel'] ?? '')),
         ];
-        $programas = Programa::catalogo($filters);
         $pendientesCount = Programa::countPendientesEnlace();
+        $perPage = 10;
+        $totalItems = Programa::countCatalogo($filters);
+        $pagination = $this->catalogoPaginationState($totalItems, $perPage);
+        $programas = Programa::catalogo($filters, $perPage, $pagination['offset']);
+        $paginationUrl = $this->catalogoPaginationUrl('/catalogo/programas', $this->catalogoPaginationQuery($filters));
 
         if ($this->isAjaxFilterRequest()) {
             partial('components/ui');
@@ -35,12 +39,24 @@ class CatalogoController
                 'tdClasses' => $tdClasses,
             ]);
             $rowsHtml = (string) ob_get_clean();
+            ob_start();
+            if ($pagination['totalPages'] > 1) {
+                ui_render_pagination(
+                    $pagination['currentPage'],
+                    $pagination['totalPages'],
+                    $paginationUrl,
+                    'Paginación de programas',
+                    'tabla-catalogo-programas'
+                );
+            }
+            $paginationHtml = (string) ob_get_clean();
 
             header('Content-Type: application/json; charset=utf-8');
             echo json_encode([
                 'ok' => true,
                 'rowsHtml' => $rowsHtml,
-                'total' => count($programas),
+                'paginationHtml' => $paginationHtml,
+                'total' => $totalItems,
                 'pendientesCount' => $pendientesCount,
             ], JSON_UNESCAPED_UNICODE);
             return;
@@ -50,6 +66,10 @@ class CatalogoController
             'programas' => $programas,
             'filters' => $filters,
             'pendientesCount' => $pendientesCount,
+            'currentPage' => $pagination['currentPage'],
+            'totalPages' => $pagination['totalPages'],
+            'paginationUrl' => $paginationUrl,
+            'totalFiltered' => $totalItems,
         ]);
     }
 
@@ -59,8 +79,12 @@ class CatalogoController
             'q' => trim((string) ($_GET['q'] ?? '')),
             'programa_id' => (int) ($_GET['programa_id'] ?? 0),
         ];
-        $grupos = Grupo::catalogo($filters);
         $programas = Programa::all();
+        $perPage = 10;
+        $totalItems = Grupo::countCatalogo($filters);
+        $pagination = $this->catalogoPaginationState($totalItems, $perPage);
+        $grupos = Grupo::catalogo($filters, $perPage, $pagination['offset']);
+        $paginationUrl = $this->catalogoPaginationUrl('/catalogo/grupos', $this->catalogoPaginationQuery($filters));
 
         if ($this->isAjaxFilterRequest()) {
             partial('components/ui');
@@ -68,12 +92,24 @@ class CatalogoController
             ob_start();
             partial('catalogo/grupos/_rows', ['grupos' => $grupos, 'tdClasses' => $tdClasses]);
             $rowsHtml = (string) ob_get_clean();
+            ob_start();
+            if ($pagination['totalPages'] > 1) {
+                ui_render_pagination(
+                    $pagination['currentPage'],
+                    $pagination['totalPages'],
+                    $paginationUrl,
+                    'Paginación de grupos',
+                    'tabla-catalogo-grupos'
+                );
+            }
+            $paginationHtml = (string) ob_get_clean();
 
             header('Content-Type: application/json; charset=utf-8');
             echo json_encode([
                 'ok' => true,
                 'rowsHtml' => $rowsHtml,
-                'total' => count($grupos),
+                'paginationHtml' => $paginationHtml,
+                'total' => $totalItems,
             ], JSON_UNESCAPED_UNICODE);
             return;
         }
@@ -82,13 +118,21 @@ class CatalogoController
             'grupos' => $grupos,
             'filters' => $filters,
             'programas' => $programas,
+            'currentPage' => $pagination['currentPage'],
+            'totalPages' => $pagination['totalPages'],
+            'paginationUrl' => $paginationUrl,
+            'totalFiltered' => $totalItems,
         ]);
     }
 
     public function empresas(): void
     {
         $filters = ['q' => trim((string) ($_GET['q'] ?? ''))];
-        $empresas = Empresa::catalogo($filters);
+        $perPage = 10;
+        $totalItems = Empresa::countCatalogo($filters);
+        $pagination = $this->catalogoPaginationState($totalItems, $perPage);
+        $empresas = Empresa::catalogo($filters, $perPage, $pagination['offset']);
+        $paginationUrl = $this->catalogoPaginationUrl('/catalogo/empresas', $this->catalogoPaginationQuery($filters));
 
         if ($this->isAjaxFilterRequest()) {
             partial('components/ui');
@@ -96,12 +140,24 @@ class CatalogoController
             ob_start();
             partial('catalogo/empresas/_rows', ['empresas' => $empresas, 'tdClasses' => $tdClasses]);
             $rowsHtml = (string) ob_get_clean();
+            ob_start();
+            if ($pagination['totalPages'] > 1) {
+                ui_render_pagination(
+                    $pagination['currentPage'],
+                    $pagination['totalPages'],
+                    $paginationUrl,
+                    'Paginación de empresas',
+                    'tabla-catalogo-empresas'
+                );
+            }
+            $paginationHtml = (string) ob_get_clean();
 
             header('Content-Type: application/json; charset=utf-8');
             echo json_encode([
                 'ok' => true,
                 'rowsHtml' => $rowsHtml,
-                'total' => count($empresas),
+                'paginationHtml' => $paginationHtml,
+                'total' => $totalItems,
             ], JSON_UNESCAPED_UNICODE);
             return;
         }
@@ -109,6 +165,10 @@ class CatalogoController
         view('catalogo/empresas/index', [
             'empresas' => $empresas,
             'filters' => $filters,
+            'currentPage' => $pagination['currentPage'],
+            'totalPages' => $pagination['totalPages'],
+            'paginationUrl' => $paginationUrl,
+            'totalFiltered' => $totalItems,
         ]);
     }
 
@@ -161,6 +221,8 @@ class CatalogoController
             'aprendicesCount' => Empresa::countAprendices($id),
             'editing' => $editing,
             'jefes' => $jefes,
+            'newJefeDraft' => !$editing && ((string) ($_GET['new_jefe'] ?? '')) === '1',
+            'autoEditJefeId' => !$editing ? (int) ($_GET['edit_jefe'] ?? 0) : 0,
         ]);
     }
 
@@ -181,11 +243,9 @@ class CatalogoController
             return;
         }
         $data = $this->postedEmpresaPayload();
-        $jefesPosted = $this->postedJefesForView($id);
         $errors = Validator::required($_POST, ['nombre']);
         if ($errors === []
             && !$this->hasEmpresaMainDataChanges($empresa, $data)
-            && !$this->hasJefesChanges($id, $jefesPosted)
         ) {
             redirect(APP_BASE_PATH . '/catalogo/empresas/ver?id=' . $id . '&edit=1&toast=empresa_sin_cambios');
         }
@@ -196,12 +256,11 @@ class CatalogoController
                 'errors' => array_values($errors),
                 'aprendicesCount' => Empresa::countAprendices($id),
                 'editing' => true,
-                'jefes' => $jefesPosted,
+                'jefes' => EmpresaJefe::listByEmpresa($id),
             ]);
             return;
         }
         Empresa::update($id, $data);
-        $this->savePostedJefes($id);
         redirect(APP_BASE_PATH . '/catalogo/empresas/ver?id=' . $id . '&toast=empresa_actualizada');
     }
 
@@ -223,6 +282,76 @@ class CatalogoController
         redirect(APP_BASE_PATH . '/catalogo/empresas?toast=empresa_no_encontrada');
     }
 
+    public function agregarEmpresaJefe(): void
+    {
+        $empresaId = (int) ($_POST['empresa_id'] ?? 0);
+        if ($empresaId <= 0 || Empresa::findById($empresaId) === null) {
+            redirect(APP_BASE_PATH . '/catalogo/empresas');
+        }
+
+        $payload = $this->postedJefePayload();
+        if (trim((string) ($payload['nombre'] ?? '')) === '') {
+            redirect(APP_BASE_PATH . '/catalogo/empresas/ver?id=' . $empresaId . '&new_jefe=1&toast=jefe_invalidado');
+        }
+
+        $jefeId = EmpresaJefe::createForEmpresa($empresaId, $payload);
+        if ($jefeId === null || $jefeId <= 0) {
+            redirect(APP_BASE_PATH . '/catalogo/empresas/ver?id=' . $empresaId . '&new_jefe=1&toast=jefe_invalidado');
+        }
+
+        redirect(APP_BASE_PATH . '/catalogo/empresas/ver?id=' . $empresaId . '&edit_jefe=' . $jefeId . '&toast=jefe_creado');
+    }
+
+    public function actualizarEmpresaJefe(): void
+    {
+        $empresaId = (int) ($_POST['empresa_id'] ?? 0);
+        $jefeId = (int) ($_POST['jefe_id'] ?? 0);
+        if ($empresaId <= 0 || $jefeId <= 0) {
+            redirect(APP_BASE_PATH . '/catalogo/empresas');
+        }
+        if (EmpresaJefe::findByIdForEmpresa($empresaId, $jefeId) === null) {
+            redirect(APP_BASE_PATH . '/catalogo/empresas/ver?id=' . $empresaId . '&toast=jefe_no_encontrado');
+        }
+
+        $payload = $this->postedJefePayload();
+        if (trim((string) ($payload['nombre'] ?? '')) === '') {
+            redirect(APP_BASE_PATH . '/catalogo/empresas/ver?id=' . $empresaId . '&edit_jefe=' . $jefeId . '&toast=jefe_invalidado');
+        }
+
+        EmpresaJefe::updateByIdForEmpresa($empresaId, $jefeId, $payload);
+        redirect(APP_BASE_PATH . '/catalogo/empresas/ver?id=' . $empresaId . '&toast=jefe_actualizado');
+    }
+
+    public function eliminarEmpresaJefe(): void
+    {
+        $empresaId = (int) ($_POST['empresa_id'] ?? 0);
+        $jefeId = (int) ($_POST['jefe_id'] ?? 0);
+        if ($empresaId <= 0 || $jefeId <= 0) {
+            redirect(APP_BASE_PATH . '/catalogo/empresas');
+        }
+        if (EmpresaJefe::countAprendicesLinked($jefeId) > 0) {
+            redirect(APP_BASE_PATH . '/catalogo/empresas/ver?id=' . $empresaId . '&toast=jefe_no_eliminado_aprendices');
+        }
+        if (!EmpresaJefe::deleteByIdForEmpresa($empresaId, $jefeId)) {
+            redirect(APP_BASE_PATH . '/catalogo/empresas/ver?id=' . $empresaId . '&toast=jefe_no_encontrado');
+        }
+
+        redirect(APP_BASE_PATH . '/catalogo/empresas/ver?id=' . $empresaId . '&toast=jefe_eliminado');
+    }
+
+    /** @return array<string, string> */
+    private function postedJefePayload(): array
+    {
+        return [
+            'nombre' => trim((string) ($_POST['nombre'] ?? '')),
+            'cargo' => trim((string) ($_POST['cargo'] ?? '')),
+            'correo' => trim((string) ($_POST['correo'] ?? '')),
+            'telefono' => trim((string) ($_POST['telefono'] ?? '')),
+            'nombre_contacto2' => trim((string) ($_POST['nombre_contacto2'] ?? '')),
+            'correo_contacto2' => trim((string) ($_POST['correo_contacto2'] ?? '')),
+        ];
+    }
+
     /** @return array<string, string> */
     private function postedEmpresaPayload(): array
     {
@@ -236,54 +365,6 @@ class CatalogoController
             'correo_contacto2' => trim((string) ($_POST['correo_contacto2'] ?? '')),
             'direccion_practica' => trim((string) ($_POST['direccion_practica'] ?? '')),
         ];
-    }
-
-    /**
-     * @return list<array<string, mixed>>
-     */
-    private function postedJefesForView(int $empresaId): array
-    {
-        $rows = (array) ($_POST['jefes'] ?? []);
-        $out = [];
-        foreach ($rows as $row) {
-            if (!is_array($row)) {
-                continue;
-            }
-            $out[] = [
-                'id' => (int) ($row['id'] ?? 0),
-                'empresa_id' => $empresaId,
-                'nombre' => trim((string) ($row['nombre'] ?? '')),
-                'cargo' => trim((string) ($row['cargo'] ?? '')),
-                'correo' => trim((string) ($row['correo'] ?? '')),
-                'telefono' => trim((string) ($row['telefono'] ?? '')),
-                'nombre_contacto2' => trim((string) ($row['nombre_contacto2'] ?? '')),
-                'correo_contacto2' => trim((string) ($row['correo_contacto2'] ?? '')),
-            ];
-        }
-
-        if ($out === []) {
-            return EmpresaJefe::listByEmpresa($empresaId);
-        }
-
-        return $out;
-    }
-
-    private function savePostedJefes(int $empresaId): void
-    {
-        $rows = (array) ($_POST['jefes'] ?? []);
-        foreach ($rows as $row) {
-            if (!is_array($row)) {
-                continue;
-            }
-            EmpresaJefe::updateByIdForEmpresa($empresaId, (int) ($row['id'] ?? 0), [
-                'nombre' => trim((string) ($row['nombre'] ?? '')),
-                'cargo' => trim((string) ($row['cargo'] ?? '')),
-                'correo' => trim((string) ($row['correo'] ?? '')),
-                'telefono' => trim((string) ($row['telefono'] ?? '')),
-                'nombre_contacto2' => trim((string) ($row['nombre_contacto2'] ?? '')),
-                'correo_contacto2' => trim((string) ($row['correo_contacto2'] ?? '')),
-            ]);
-        }
     }
 
     /** @param array<string, mixed> $current @param array<string, string> $incoming */
@@ -304,48 +385,6 @@ class CatalogoController
             $incomingValue = trim((string) ($incoming[$field] ?? ''));
             if ($currentValue !== $incomingValue) {
                 return true;
-            }
-        }
-
-        return false;
-    }
-
-    /** @param list<array<string, mixed>> $postedRows */
-    private function hasJefesChanges(int $empresaId, array $postedRows): bool
-    {
-        $currentRows = EmpresaJefe::listByEmpresa($empresaId);
-        $currentById = [];
-        foreach ($currentRows as $row) {
-            $rid = (int) ($row['id'] ?? 0);
-            if ($rid > 0) {
-                $currentById[$rid] = $row;
-            }
-        }
-
-        $postedById = [];
-        foreach ($postedRows as $row) {
-            $rid = (int) ($row['id'] ?? 0);
-            if ($rid > 0) {
-                $postedById[$rid] = $row;
-            }
-        }
-
-        if (count($currentById) !== count($postedById)) {
-            return true;
-        }
-
-        $fields = ['nombre', 'cargo', 'correo', 'telefono', 'nombre_contacto2', 'correo_contacto2'];
-        foreach ($currentById as $rid => $current) {
-            if (!isset($postedById[$rid])) {
-                return true;
-            }
-            $incoming = $postedById[$rid];
-            foreach ($fields as $field) {
-                $currentValue = trim((string) ($current[$field] ?? ''));
-                $incomingValue = trim((string) ($incoming[$field] ?? ''));
-                if ($currentValue !== $incomingValue) {
-                    return true;
-                }
             }
         }
 
@@ -1003,6 +1042,52 @@ class CatalogoController
         $base = preg_replace('/[_\-]+/', ' ', $base) ?? $base;
         $base = preg_replace('/\s+/', ' ', trim($base)) ?? trim($base);
         return $base;
+    }
+
+    /** @return array{currentPage: int, totalPages: int, offset: int, perPage: int, totalItems: int} */
+    private function catalogoPaginationState(int $totalItems, int $perPage): array
+    {
+        $totalPages = max(1, (int) ceil($totalItems / $perPage));
+        $currentPage = (int) ($_GET['page'] ?? 1);
+        $currentPage = min(max(1, $currentPage), $totalPages);
+
+        return [
+            'currentPage' => $currentPage,
+            'totalPages' => $totalPages,
+            'offset' => ($currentPage - 1) * $perPage,
+            'perPage' => $perPage,
+            'totalItems' => $totalItems,
+        ];
+    }
+
+    /** @param array<string, int|string> $filters */
+    private function catalogoPaginationQuery(array $filters): array
+    {
+        $queryParams = [];
+        $q = trim((string) ($filters['q'] ?? ''));
+        if ($q !== '') {
+            $queryParams['q'] = $q;
+        }
+        $programaId = (int) ($filters['programa_id'] ?? 0);
+        if ($programaId > 0) {
+            $queryParams['programa_id'] = (string) $programaId;
+        }
+        $nivel = trim((string) ($filters['nivel'] ?? ''));
+        if ($nivel !== '') {
+            $queryParams['nivel'] = $nivel;
+        }
+
+        return $queryParams;
+    }
+
+    /** @param array<string, int|string> $queryParams */
+    private function catalogoPaginationUrl(string $path, array $queryParams): string
+    {
+        $base = rtrim((string) APP_BASE_PATH, '/') . $path;
+
+        return $base
+            . ($queryParams === [] ? '?' : '?' . http_build_query($queryParams) . '&')
+            . 'page=%d';
     }
 
     private function isAjaxFilterRequest(): bool

@@ -8,14 +8,12 @@ use PhpOffice\PhpWord\IOFactory;
 use PhpOffice\PhpWord\Settings;
 
 /**
- * Convierte un .docx ya generado a PDF.
- *
- * Orden de intentos:
- * 1. LibreOffice / soffice en modo headless (fidelidad muy cercana al Word).
- * 2. PhpWord + Dompdf (HTML intermedio), con CSS y fuente reforzados para reducir diferencias.
+ * Convierte un .docx ya generado a PDF con LibreOffice headless (fidelidad cercana al Word).
  */
 final class F023DocxToPdf
 {
+    private const MIN_PDF_BYTES = 512;
+
     /**
      * Escribe `…/mismo_nombre.pdf` junto al .docx y devuelve la ruta absoluta al PDF.
      *
@@ -27,56 +25,90 @@ final class F023DocxToPdf
             throw new \RuntimeException('Archivo Word no encontrado o ilegible para PDF.');
         }
 
-        $pdfPath = preg_replace('/\.docx$/i', '.pdf', $docxPath);
-        if ($pdfPath === null || $pdfPath === '') {
-            $pdfPath = $docxPath . '.pdf';
-        }
-
-        $dir = dirname($docxPath);
-        $lo = self::libreOfficeBinary();
-        if ($lo !== null) {
-            if (is_file($pdfPath)) {
-                @unlink($pdfPath);
+        $binary = self::resolveLibreOfficeBinary();
+        if ($binary === null) {
+            if (self::allowDompdfFallback()) {
+                return self::convertWithPhpWordDompdf($docxPath);
             }
-            $cmd = sprintf(
-                '%s --headless --invisible --nologo --nodefault --norestore --convert-to pdf --outdir %s %s',
-                escapeshellarg($lo),
-                escapeshellarg($dir),
-                escapeshellarg($docxPath)
+
+            throw new \RuntimeException(
+                'La exportación PDF requiere LibreOffice instalado en el servidor. '
+                . 'Use Word (.docx) o instale LibreOffice y configure F023_LIBREOFFICE_PATH en .env.'
             );
-            $code = 1;
-            @exec($cmd . ' 2>&1', $_, $code);
-            if ($code === 0 && is_file($pdfPath) && filesize($pdfPath) > 0) {
-                return $pdfPath;
-            }
-            if (is_file($pdfPath)) {
-                @unlink($pdfPath);
-            }
         }
 
-        self::convertWithPhpWordDompdf($docxPath, $pdfPath);
-
-        return $pdfPath;
+        return self::convertWithLibreOffice($docxPath, $binary);
     }
 
-    private static function libreOfficeBinary(): ?string
+    /** Indica si LibreOffice (o el fallback Dompdf habilitado) está disponible. */
+    public static function isAvailable(): bool
     {
-        foreach (['libreoffice', 'soffice'] as $name) {
-            $which = @shell_exec('command -v ' . escapeshellarg($name) . ' 2>/dev/null');
-            $path = $which !== null ? trim($which) : '';
-            if ($path !== '' && is_executable($path)) {
-                return $path;
-            }
+        return self::resolveLibreOfficeBinary() !== null || self::allowDompdfFallback();
+    }
+
+    /** Mensaje para la UI cuando PDF no puede generarse; null si hay motor disponible. */
+    public static function availabilityMessage(): ?string
+    {
+        if (self::isAvailable()) {
+            return null;
         }
 
-        return null;
+        return 'La exportación PDF requiere LibreOffice en este equipo. Puede usar Word (.docx) '
+            . 'o pedir al administrador que instale LibreOffice.';
+    }
+
+    private static function convertWithLibreOffice(string $docxPath, string $binary): string
+    {
+        $pdfPath = self::pdfPathForDocx($docxPath);
+        $outDir = dirname($docxPath);
+
+        if (is_file($pdfPath)) {
+            @unlink($pdfPath);
+        }
+
+        $profileDir = self::isolatedUserProfileDir();
+        $profileUri = 'file://' . str_replace('\\', '/', $profileDir);
+        if (PHP_OS_FAMILY === 'Windows' && !str_starts_with($profileUri, 'file:///')) {
+            $profileUri = 'file:///' . ltrim(str_replace('\\', '/', $profileDir), '/');
+        }
+
+        $cmd = sprintf(
+            '%s --headless --invisible --nologo --nodefault --norestore -env:UserInstallation=%s --convert-to pdf --outdir %s %s',
+            escapeshellarg($binary),
+            escapeshellarg($profileUri),
+            escapeshellarg($outDir),
+            escapeshellarg($docxPath)
+        );
+
+        $output = [];
+        $exitCode = 1;
+        exec($cmd . ' 2>&1', $output, $exitCode);
+        self::removeDirectory($profileDir);
+
+        if ($exitCode === 0 && is_file($pdfPath) && filesize($pdfPath) >= self::MIN_PDF_BYTES) {
+            return $pdfPath;
+        }
+
+        if (is_file($pdfPath)) {
+            @unlink($pdfPath);
+        }
+
+        $detail = trim(implode("\n", array_slice($output, -5)));
+        if ($detail !== '') {
+            log_error('F023 PDF LibreOffice: ' . $detail);
+        }
+
+        throw new \RuntimeException(
+            'LibreOffice no pudo convertir el documento a PDF. Pruebe con Word (.docx) o contacte al administrador.'
+        );
     }
 
     /**
      * @throws \RuntimeException
      */
-    private static function convertWithPhpWordDompdf(string $docxPath, string $pdfPath): void
+    private static function convertWithPhpWordDompdf(string $docxPath): string
     {
+        $pdfPath = self::pdfPathForDocx($docxPath);
         $dompdfRoot = base_path('vendor/dompdf/dompdf');
         if (!is_dir($dompdfRoot) || !is_readable($dompdfRoot)) {
             throw new \RuntimeException('No se encontró la biblioteca Dompdf en vendor.');
@@ -102,19 +134,134 @@ final class F023DocxToPdf
 
         $writer->save($pdfPath);
 
-        if (!is_file($pdfPath) || filesize($pdfPath) === 0) {
+        if (!is_file($pdfPath) || filesize($pdfPath) < self::MIN_PDF_BYTES) {
             throw new \RuntimeException('La exportación PDF no produjo un archivo válido.');
         }
+
+        return $pdfPath;
+    }
+
+    private static function pdfPathForDocx(string $docxPath): string
+    {
+        $pdfPath = preg_replace('/\.docx$/i', '.pdf', $docxPath);
+
+        return ($pdfPath !== null && $pdfPath !== '') ? $pdfPath : $docxPath . '.pdf';
+    }
+
+    private static function resolveLibreOfficeBinary(): ?string
+    {
+        $configured = trim((string) env('F023_LIBREOFFICE_PATH', ''));
+        if ($configured !== '' && self::isUsableBinary($configured)) {
+            return $configured;
+        }
+
+        $bundled = [
+            base_path('tools/libreoffice/program/soffice'),
+            base_path('tools/libreoffice/program/soffice.exe'),
+        ];
+        foreach ($bundled as $path) {
+            if (self::isUsableBinary($path)) {
+                return $path;
+            }
+        }
+
+        if (PHP_OS_FAMILY === 'Windows') {
+            foreach ([
+                'C:\\Program Files\\LibreOffice\\program\\soffice.exe',
+                'C:\\Program Files (x86)\\LibreOffice\\program\\soffice.exe',
+            ] as $path) {
+                if (self::isUsableBinary($path)) {
+                    return $path;
+                }
+            }
+        }
+
+        if (PHP_OS_FAMILY === 'Linux') {
+            foreach ([
+                '/usr/bin/libreoffice',
+                '/usr/bin/soffice',
+                '/usr/lib/libreoffice/program/soffice',
+                '/usr/lib64/libreoffice/program/soffice',
+            ] as $path) {
+                if (self::isUsableBinary($path)) {
+                    return $path;
+                }
+            }
+        }
+
+        foreach (['libreoffice', 'soffice'] as $name) {
+            $which = @shell_exec('command -v ' . escapeshellarg($name) . ' 2>/dev/null');
+            $path = $which !== null ? trim($which) : '';
+            if ($path !== '' && self::isUsableBinary($path)) {
+                return $path;
+            }
+        }
+
+        return null;
+    }
+
+    private static function isUsableBinary(string $path): bool
+    {
+        if (!is_file($path)) {
+            return false;
+        }
+        if (PHP_OS_FAMILY === 'Windows') {
+            return true;
+        }
+
+        return is_executable($path);
+    }
+
+    private static function allowDompdfFallback(): bool
+    {
+        return filter_var(env('F023_PDF_ALLOW_DOMPDF_FALLBACK', 'false'), FILTER_VALIDATE_BOOL);
+    }
+
+    private static function isolatedUserProfileDir(): string
+    {
+        $dir = rtrim(sys_get_temp_dir(), DIRECTORY_SEPARATOR)
+            . DIRECTORY_SEPARATOR
+            . 'sgep-lo-profile-'
+            . getmypid()
+            . '-'
+            . bin2hex(random_bytes(4));
+        if (!is_dir($dir) && !@mkdir($dir, 0700, true) && !is_dir($dir)) {
+            return sys_get_temp_dir();
+        }
+
+        return $dir;
+    }
+
+    private static function removeDirectory(string $dir): void
+    {
+        if (!is_dir($dir)) {
+            return;
+        }
+        $items = scandir($dir);
+        if ($items === false) {
+            return;
+        }
+        foreach ($items as $item) {
+            if ($item === '.' || $item === '..') {
+                continue;
+            }
+            $path = $dir . DIRECTORY_SEPARATOR . $item;
+            if (is_dir($path)) {
+                self::removeDirectory($path);
+            } else {
+                @unlink($path);
+            }
+        }
+        @rmdir($dir);
     }
 
     /**
-     * Refuerza tablas, bordes y tipografía para Dompdf (PhpWord emite HTML con estilos incompletos).
+     * Refuerza tablas, bordes y tipografía para Dompdf (solo si F023_PDF_ALLOW_DOMPDF_FALLBACK=true).
      */
     public static function injectDompdfCss(string $html): string
     {
         $css = <<<'CSS'
 <style type="text/css">
-/* F023 — reducir diferencias frente al .docx en Dompdf */
 @page { margin: 11mm 9mm; }
 html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 body {

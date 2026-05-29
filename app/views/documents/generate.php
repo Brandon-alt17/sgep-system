@@ -8,9 +8,13 @@ $info = (array) ($info ?? []);
 $exportMomentos = (array) ($export_momentos ?? []);
 $infoFaltantes = (int) ($info_faltantes_count ?? 0);
 $errorKey = (string) ($error ?? '');
+$pdfAvailable = (bool) ($pdf_available ?? true);
+$pdfAvailabilityMessage = (string) ($pdf_availability_message ?? '');
 $errorMsg = match ($errorKey) {
     'sin_partes' => 'Seleccione al menos un bloque a incluir en el documento.',
     'id_aprendiz' => 'Indique un aprendiz válido para exportar.',
+    'pdf_libreoffice' => 'La exportación PDF requiere LibreOffice en este equipo. Use Word (.docx) o pida al administrador que instale LibreOffice.',
+    'pdf_convert_failed' => 'LibreOffice no pudo convertir el documento a PDF. Pruebe con Word (.docx) o contacte al administrador.',
     'export_failed' => 'No se pudo generar el archivo. Si eligió PDF, pruebe con Word o contacte al administrador.',
     default => $errorKey !== '' ? 'No se pudo completar la solicitud. Inténtelo de nuevo.' : '',
 };
@@ -107,7 +111,11 @@ $rowClass = 'flex gap-3 py-2.5';
 
         <section class="<?= $card ?> w-full !p-6 text-left">
             <h3 class="m-0 text-left text-base font-semibold text-app-text">Formato de exportación</h3>
-            <p class="m-0 mt-2 text-sm text-app-muted">El PDF intenta primero con <strong class="font-medium text-app-text">LibreOffice</strong> en el servidor (misma lógica que abrir el Word y exportar a PDF). Si no está disponible, se usa un segundo motor; en ese caso pueden notarse diferencias menores en tablas o márgenes.</p>
+            <?php if ($pdfAvailable): ?>
+                <p class="m-0 mt-2 text-sm text-app-muted">El PDF se genera con <strong class="font-medium text-app-text">LibreOffice</strong> en este equipo (equivalente a abrir el Word y exportar a PDF).</p>
+            <?php else: ?>
+                <p class="m-0 mt-2 rounded-lg border border-amber-500/70 bg-amber-100 px-3 py-2.5 text-sm font-medium text-amber-950"><?= e($pdfAvailabilityMessage !== '' ? $pdfAvailabilityMessage : 'La exportación PDF no está disponible en este equipo.') ?></p>
+            <?php endif; ?>
             <fieldset class="m-0 mt-4 space-y-2 border-0 p-0">
                 <legend class="sr-only">Formato de archivo</legend>
                 <?php $radioFmt = 'mt-0.5 h-4 w-4 shrink-0 border-app-borderControlStrong text-app-accent focus:outline-none focus:ring-0 focus:ring-offset-0'; ?>
@@ -115,9 +123,9 @@ $rowClass = 'flex gap-3 py-2.5';
                     <input type="radio" name="formato" value="docx" checked class="<?= e($radioFmt) ?>">
                     <span>Microsoft Word (.docx)</span>
                 </label>
-                <label class="flex cursor-pointer items-start gap-3 text-left text-sm text-app-text">
-                    <input type="radio" name="formato" value="pdf" class="<?= e($radioFmt) ?>">
-                    <span>PDF (.pdf)</span>
+                <label class="flex items-start gap-3 text-left text-sm <?= $pdfAvailable ? 'cursor-pointer text-app-text' : 'cursor-not-allowed text-app-muted' ?>">
+                    <input type="radio" name="formato" value="pdf" class="<?= e($radioFmt) ?>"<?= $pdfAvailable ? '' : ' disabled' ?>>
+                    <span>PDF (.pdf)<?= $pdfAvailable ? '' : ' — no disponible sin LibreOffice' ?></span>
                 </label>
             </fieldset>
         </section>

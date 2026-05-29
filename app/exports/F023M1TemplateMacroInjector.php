@@ -86,7 +86,7 @@ final class F023M1TemplateMacroInjector
         }
 
         $xml = self::normalizeFooterParagraph($xml);
-        $xml = self::stripEmptyParagraphsBeforeFooter($xml);
+        $xml = self::insertSpacerParagraphsBeforeFooter($xml, 3);
         $xml = self::stripExtraEmptyParasFromConcertacionCells($xml);
         $xml = self::shrinkConcertacionEmptyRowHeights($xml);
         $xml = self::shrinkBottomSectionRowHeights($xml);
@@ -189,6 +189,49 @@ final class F023M1TemplateMacroInjector
         );
 
         return is_string($next) ? $next : $xml;
+    }
+
+    private static function insertSpacerParagraphsBeforeFooter(string $xml, int $count = 3): string
+    {
+        if ($count <= 0) {
+            return $xml;
+        }
+
+        $footerPos = strpos($xml, '${ciudad_diligenciamiento}');
+        if ($footerPos === false) {
+            $footerPos = strpos($xml, 'Ciudad ');
+        }
+        if ($footerPos === false) {
+            return $xml;
+        }
+
+        $pStart = max(
+            (int) strrpos(substr($xml, 0, $footerPos), '<w:p '),
+            (int) strrpos(substr($xml, 0, $footerPos), '<w:p>')
+        );
+        if ($pStart < 0) {
+            return $xml;
+        }
+
+        $lastTableEnd = strrpos(substr($xml, 0, $pStart), '</w:tbl>');
+        if ($lastTableEnd === false) {
+            return $xml;
+        }
+        $lastTableEnd += strlen('</w:tbl>');
+
+        $offset = $lastTableEnd;
+        while (preg_match('/^\s*(<w:p\b[^>]*>(?:(?!<\/w:p>).)*<\/w:p>)/s', substr($xml, $offset), $match)) {
+            if (!self::isLayoutSpacerParagraph($match[1])) {
+                break;
+            }
+            $offset += strlen($match[0]);
+        }
+
+        $spacer = '<w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="240" w:lineRule="exact"/></w:pPr></w:p>';
+
+        return substr($xml, 0, $lastTableEnd)
+            . str_repeat($spacer, $count)
+            . substr($xml, $offset);
     }
 
     private static function stripEmptyParagraphsBeforeFooter(string $xml): string
