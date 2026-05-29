@@ -1145,8 +1145,8 @@ document.querySelectorAll("[data-inline-edit-root]").forEach(function (root) {
 
   var originalValues = {};
   var isEditing = false;
-  var isCompetenciaEdit = !!form.querySelector("input[name='competencia_id']");
-  var competenciaDrawer = isCompetenciaEdit ? root.querySelector("[data-inline-competencia-drawer]") : null;
+  var isDrawerEdit = !!form.querySelector("input[name='competencia_id'], input[name='jefe_id']");
+  var competenciaDrawer = isDrawerEdit ? root.querySelector("[data-inline-competencia-drawer]") : null;
   var originalRaeRowsHtml = null;
   var originalCompetenciaSnapshot = "";
   var showToast = function (message) {
@@ -1233,7 +1233,7 @@ document.querySelectorAll("[data-inline-edit-root]").forEach(function (root) {
     openButton.classList.toggle("hidden", editing);
     saveButton.classList.toggle("hidden", !editing);
     cancelButton.classList.toggle("hidden", !editing);
-    if (isCompetenciaEdit) {
+    if (isDrawerEdit) {
       root.classList.toggle("sg-inline-editing-competencia", editing);
       if (editing) {
         root.style.borderColor = "rgb(10 139 129 / 1)";
@@ -1353,6 +1353,28 @@ document.querySelectorAll("[data-inline-edit-root]").forEach(function (root) {
   });
 
   form.addEventListener("submit", function (event) {
+    var jefeIdField = form.querySelector("input[name='jefe_id']");
+    if (jefeIdField) {
+      var jefeSubmitter = event.submitter;
+      if (jefeSubmitter && jefeSubmitter.hasAttribute("formaction") && (jefeSubmitter.getAttribute("formaction") || "").indexOf("/catalogo/empresas/eliminar-jefe") !== -1) {
+        return;
+      }
+
+      var jefeNombreInput = form.querySelector("input[name='nombre']");
+      var jefeNombre = jefeNombreInput ? (jefeNombreInput.value || "").trim() : "";
+      if (jefeNombre === "") {
+        event.preventDefault();
+        showToast("Completa al menos el nombre del supervisor.");
+        return;
+      }
+
+      if (competenciaSnapshot() === originalCompetenciaSnapshot) {
+        event.preventDefault();
+        showToast("No hay cambios para guardar en este jefe.");
+      }
+      return;
+    }
+
     var competenciaIdField = form.querySelector("input[name='competencia_id']");
     if (!competenciaIdField) return;
     var submitter = event.submitter;
@@ -1442,6 +1464,8 @@ document.querySelectorAll("[data-toast-root] [data-toast]").forEach(function (to
       cleanUrl.searchParams.delete("toast");
       cleanUrl.searchParams.delete("saved");
       cleanUrl.searchParams.delete("edit_competencia");
+      cleanUrl.searchParams.delete("edit_jefe");
+      cleanUrl.searchParams.delete("new_jefe");
       window.history.replaceState(null, "", cleanUrl.pathname + cleanUrl.search + cleanUrl.hash);
     } catch (e) {
       // no-op
@@ -1559,6 +1583,17 @@ document.querySelectorAll("[data-new-competencia-form]").forEach(function (form)
     if (duplicateCompetenciaCode) {
       event.preventDefault();
       showGlobalToast("No se permiten códigos de competencia duplicados.");
+    }
+  });
+});
+
+document.querySelectorAll("[data-new-jefe-form]").forEach(function (form) {
+  form.addEventListener("submit", function (event) {
+    var nombreInput = form.querySelector("input[name='nombre']");
+    var nombre = nombreInput ? (nombreInput.value || "").trim() : "";
+    if (nombre === "") {
+      event.preventDefault();
+      showGlobalToast("Completa al menos el nombre del supervisor.");
     }
   });
 });

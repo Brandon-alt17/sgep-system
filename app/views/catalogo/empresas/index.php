@@ -2,6 +2,9 @@
 $empresas = (array) ($empresas ?? []);
 $filters = (array) ($filters ?? []);
 $q = trim((string) ($filters['q'] ?? ''));
+$currentPage = max(1, (int) ($currentPage ?? 1));
+$totalPages = max(1, (int) ($totalPages ?? 1));
+$paginationUrl = (string) ($paginationUrl ?? '');
 $toastKey = trim((string) ($_GET['toast'] ?? ''));
 $toastMessage = match ($toastKey) {
     'empresa_creada' => 'Empresa creada correctamente.',
@@ -38,6 +41,7 @@ partial('components/page_header', [
         class="flex w-full items-center gap-3"
         data-remote-table-filter-form
         data-remote-table-filter-target="#tabla-catalogo-empresas tbody"
+        data-remote-table-filter-pagination="#empresas-pagination"
         data-remote-table-filter-debounce="350"
     >
         <div class="relative w-full min-w-0 md:flex-1">
@@ -87,3 +91,17 @@ partial('components/page_header', [
         </tbody>
     </table>
 </section>
+
+<div id="empresas-pagination">
+    <?php if ($paginationUrl !== '' && $totalPages > 1): ?>
+        <?php
+        ui_render_pagination(
+            $currentPage,
+            $totalPages,
+            $paginationUrl,
+            'Paginación de empresas',
+            'tabla-catalogo-empresas'
+        );
+        ?>
+    <?php endif; ?>
+</div>

@@ -3,13 +3,15 @@ $programas = (array) ($programas ?? []);
 $filters = (array) ($filters ?? []);
 $q = trim((string) ($filters['q'] ?? ''));
 $nivel = trim((string) ($filters['nivel'] ?? ''));
+$currentPage = max(1, (int) ($currentPage ?? 1));
+$totalPages = max(1, (int) ($totalPages ?? 1));
+$paginationUrl = (string) ($paginationUrl ?? '');
 $toastKey = trim((string) ($_GET['toast'] ?? ''));
 $toastMessage = match ($toastKey) {
     'programa_importado' => 'PDF del programa importado correctamente.',
     'programa_eliminado' => 'Programa eliminado correctamente.',
     default => '',
 };
-$totalRows = count($programas);
 $pendientesCount = (int) ($pendientesCount ?? 0);
 
 // Reutiliza estilos base sin altura fija para permitir crecimiento de fila con multilinea.
@@ -54,6 +56,7 @@ partial('components/page_header', [
         class="flex w-full flex-col gap-4 sm:flex-row sm:items-end sm:gap-3"
         data-remote-table-filter-form
         data-remote-table-filter-target="#tabla-catalogo-programas tbody"
+        data-remote-table-filter-pagination="#programas-pagination"
         data-remote-table-filter-debounce="350"
     >
         <div class="relative min-w-0 flex-1">
@@ -119,3 +122,17 @@ partial('components/page_header', [
         </tbody>
     </table>
 </section>
+
+<div id="programas-pagination">
+    <?php if ($paginationUrl !== '' && $totalPages > 1): ?>
+        <?php
+        ui_render_pagination(
+            $currentPage,
+            $totalPages,
+            $paginationUrl,
+            'Paginación de programas',
+            'tabla-catalogo-programas'
+        );
+        ?>
+    <?php endif; ?>
+</div>

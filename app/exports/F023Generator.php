@@ -89,6 +89,10 @@ class F023Generator
                     $path = F023M1TemplateMacroInjector::patchToTemp($path);
                     $tempCleanup[] = $path;
                 }
+                if (!empty($seg['patch_m3_macros'])) {
+                    $path = F023M3TemplateMacroInjector::patchToTemp($path);
+                    $tempCleanup[] = $path;
+                }
                 if (!is_file($path)) {
                     throw new \RuntimeException('Plantilla no encontrada: ' . basename($path));
                 }
@@ -185,7 +189,7 @@ class F023Generator
             ['nombre_aprendiz' => (string) ($aprendiz['nombre_completo'] ?? '')],
             $this->momentoRowTemplateVars($momento),
             $this->factorTemplateVars(Momento::factoresByMomento((int) $momento['id'])),
-            $this->m1DiligenciamientoTemplateVars($momento)
+            $this->diligenciamientoMarcasTemplateVars($momento)
         );
 
         $tplDir = base_path('storage/templates/');
@@ -204,7 +208,11 @@ class F023Generator
         if ($tipo === 'M3') {
             $out = [];
             foreach ($map['m3_templates'] ?? ['m3_p1.docx', 'm3_p2.docx'] as $rel) {
-                $out[] = ['path' => $tplDir . $rel, 'vars' => $vars];
+                $out[] = [
+                    'path' => $tplDir . $rel,
+                    'vars' => $vars,
+                    'patch_m3_macros' => true,
+                ];
             }
 
             return $out;
@@ -271,7 +279,7 @@ class F023Generator
             }
         }
 
-        if (($out['tipo'] ?? '') === 'M1') {
+        if (in_array($out['tipo'] ?? '', ['M1', 'M3'], true)) {
             if (($out['fecha_diligenciamiento'] ?? '') === '') {
                 $out['fecha_diligenciamiento'] = date('d/m/Y');
             }
@@ -282,23 +290,32 @@ class F023Generator
                     $out['modalidad_diligenciamiento'] = $fallbackModalidad;
                 }
             }
+
+            if (($out['ciudad_diligenciamiento'] ?? '') === '') {
+                $fallbackCiudad = trim((string) ($momento['ciudad'] ?? ''));
+                if ($fallbackCiudad !== '') {
+                    $out['ciudad_diligenciamiento'] = $fallbackCiudad;
+                }
+            }
         }
 
         return $out;
     }
 
     /**
-     * Marcas de modalidad en la línea de diligenciamiento del Momento 1.
+     * Marcas X / ___ de modalidad en el pie de diligenciamiento (M1 y M3).
      *
      * @param array<string,mixed> $momento
      * @return array<string,string>
      */
-    private function m1DiligenciamientoTemplateVars(array $momento): array
+    private function diligenciamientoMarcasTemplateVars(array $momento): array
     {
-        if ((string) ($momento['tipo'] ?? '') !== 'M1') {
+        $tipo = (string) ($momento['tipo'] ?? '');
+        if (!in_array($tipo, ['M1', 'M3'], true)) {
             return [];
         }
 
+        $prefix = strtolower($tipo);
         $modalidad = trim((string) ($momento['modalidad_diligenciamiento'] ?? ''));
         if ($modalidad === '') {
             $modalidad = trim((string) ($momento['modalidad'] ?? ''));
@@ -308,8 +325,8 @@ class F023Generator
         $isVirtual = strcasecmp($modalidad, 'Virtual') === 0;
 
         return [
-            'm1_marca_presencial' => $isPresencial ? 'X' : '___',
-            'm1_marca_virtual' => $isVirtual ? 'X' : '___',
+            $prefix . '_marca_presencial' => $isPresencial ? 'X' : '___',
+            $prefix . '_marca_virtual' => $isVirtual ? 'X' : '___',
         ];
     }
 

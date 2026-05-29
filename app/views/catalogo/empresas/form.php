@@ -23,9 +23,18 @@ $toastKey = trim((string) ($_GET['toast'] ?? ''));
 $toastMessage = match ($toastKey) {
     'empresa_actualizada' => 'Empresa actualizada correctamente.',
     'empresa_sin_cambios' => 'No se detectaron cambios para guardar.',
+    'jefe_creado' => 'Jefe registrado correctamente.',
+    'jefe_actualizado' => 'Jefe actualizado correctamente.',
+    'jefe_eliminado' => 'Jefe eliminado correctamente.',
+    'jefe_invalidado' => 'Completa al menos el nombre del supervisor.',
+    'jefe_no_eliminado_aprendices' => 'No se puede eliminar: hay aprendices vinculados a este jefe.',
+    'jefe_no_encontrado' => 'El jefe indicado no existe o ya fue eliminado.',
     default => '',
 };
-$toastVariant = $toastKey === 'empresa_sin_cambios' ? 'warning' : 'success';
+$toastVariant = match ($toastKey) {
+    'empresa_sin_cambios', 'jefe_invalidado', 'jefe_no_eliminado_aprendices', 'jefe_no_encontrado' => 'warning',
+    default => 'success',
+};
 
 $verUrl = APP_BASE_PATH . '/catalogo/empresas/ver?id=' . $eid;
 $verEditUrl = $verUrl . '&edit=1';
@@ -175,59 +184,6 @@ $viewLabelCls = 'm-0 text-xs font-medium uppercase tracking-wide text-app-muted'
                 </div>
             </div>
         </div>
-
-        <div class="border-t border-app-border py-6">
-            <h3 class="m-0 text-sm font-semibold text-app-text">Jefes y contacto alternativo</h3>
-            <p class="m-0 mt-1 text-xs text-app-muted">Puedes actualizar cada jefe desde aquí.</p>
-            <?php if ($jefes === []): ?>
-                <div class="mt-4 grid gap-6 md:grid-cols-2">
-                    <div>
-                        <p class="<?= e($viewLabelCls) ?>">Supervisor</p>
-                        <p class="mt-1 text-base text-app-text"><span class="italic">Dato no registrado</span></p>
-                    </div>
-                    <div>
-                        <p class="<?= e($viewLabelCls) ?>">Contacto alternativo</p>
-                        <p class="mt-1 text-base text-app-text"><span class="italic">Dato no registrado</span></p>
-                    </div>
-                </div>
-            <?php endif; ?>
-
-            <div class="mt-4 space-y-5">
-                <?php foreach ($jefes as $idx => $jefe): ?>
-                    <?php $jefeId = (int) ($jefe['id'] ?? 0); ?>
-                    <article class="rounded-lg border border-app-border bg-app-panelSubtle p-4">
-                        <input type="hidden" name="jefes[<?= $jefeId ?>][id]" value="<?= $jefeId ?>">
-                        <h4 class="m-0 text-sm font-semibold text-app-text">Jefe #<?= (int) ($idx + 1) ?></h4>
-                        <div class="mt-4 grid gap-6 md:grid-cols-2">
-                            <div>
-                                <p class="<?= e($viewLabelCls) ?>">Supervisor</p>
-                                <input type="text" name="jefes[<?= $jefeId ?>][nombre]" value="<?= e((string) ($jefe['nombre'] ?? '')) ?>" class="<?= e($editInputCls) ?>">
-                            </div>
-                            <div>
-                                <p class="<?= e($viewLabelCls) ?>">Cargo</p>
-                                <input type="text" name="jefes[<?= $jefeId ?>][cargo]" value="<?= e((string) ($jefe['cargo'] ?? '')) ?>" class="<?= e($editInputCls) ?>">
-                            </div>
-                            <div>
-                                <p class="<?= e($viewLabelCls) ?>">Correo supervisor</p>
-                                <input type="email" name="jefes[<?= $jefeId ?>][correo]" value="<?= e((string) ($jefe['correo'] ?? '')) ?>" class="<?= e($editInputCls) ?>">
-                            </div>
-                            <div>
-                                <p class="<?= e($viewLabelCls) ?>">Teléfono supervisor</p>
-                                <input type="text" name="jefes[<?= $jefeId ?>][telefono]" value="<?= e((string) ($jefe['telefono'] ?? '')) ?>" class="<?= e($editInputCls) ?>">
-                            </div>
-                            <div>
-                                <p class="<?= e($viewLabelCls) ?>">Contacto alternativo (nombre)</p>
-                                <input type="text" name="jefes[<?= $jefeId ?>][nombre_contacto2]" value="<?= e((string) ($jefe['nombre_contacto2'] ?? '')) ?>" class="<?= e($editInputCls) ?>">
-                            </div>
-                            <div>
-                                <p class="<?= e($viewLabelCls) ?>">Contacto alternativo (correo)</p>
-                                <input type="email" name="jefes[<?= $jefeId ?>][correo_contacto2]" value="<?= e((string) ($jefe['correo_contacto2'] ?? '')) ?>" class="<?= e($editInputCls) ?>">
-                            </div>
-                        </div>
-                    </article>
-                <?php endforeach; ?>
-            </div>
-        </div>
     </section>
 </form>
 
@@ -241,7 +197,7 @@ $viewLabelCls = 'm-0 text-xs font-medium uppercase tracking-wide text-app-muted'
 <?php else: ?>
 <?php partial('components/ui'); ?>
 
-<?php partial('components/toast', ['message' => $toastMessage]); ?>
+<?php partial('components/toast', ['message' => $toastMessage, 'variant' => $toastVariant]); ?>
 
 <section class="bg-app-bg mb-4 flex flex-row items-start gap-2">
     <a class="<?= e(ui_button_icon_classes()) ?> mt-2.5 shrink-0 self-start" href="<?= e(APP_BASE_PATH) ?>/catalogo/empresas" aria-label="Volver al catálogo de empresas">
@@ -299,73 +255,6 @@ $viewLabelCls = 'm-0 text-xs font-medium uppercase tracking-wide text-app-muted'
         </div>
     </div>
 
-    <div class="border-t border-app-border pt-6">
-        <h3 class="m-0 text-sm font-semibold text-app-text">Jefes y contacto alternativo</h3>
-        <?php if ($jefes === []): ?>
-            <div class="mt-4 grid gap-6 md:grid-cols-2">
-                <div>
-                    <p class="<?= e($viewLabelCls) ?>">Supervisor</p>
-                    <p class="mt-1 text-base text-app-text"><span class="italic">Dato no registrado</span></p>
-                </div>
-                <div>
-                    <p class="<?= e($viewLabelCls) ?>">Cargo</p>
-                    <p class="mt-1 text-base text-app-text"><span class="italic">Dato no registrado</span></p>
-                </div>
-                <div>
-                    <p class="<?= e($viewLabelCls) ?>">Correo supervisor</p>
-                    <p class="mt-1 text-base text-app-text"><span class="italic">Dato no registrado</span></p>
-                </div>
-                <div>
-                    <p class="<?= e($viewLabelCls) ?>">Teléfono supervisor</p>
-                    <p class="mt-1 text-base text-app-text"><span class="italic">Dato no registrado</span></p>
-                </div>
-                <div>
-                    <p class="<?= e($viewLabelCls) ?>">Contacto alternativo (nombre)</p>
-                    <p class="mt-1 text-base text-app-text"><span class="italic">Dato no registrado</span></p>
-                </div>
-                <div>
-                    <p class="<?= e($viewLabelCls) ?>">Contacto alternativo (correo)</p>
-                    <p class="mt-1 text-base text-app-text break-all"><span class="italic">Dato no registrado</span></p>
-                </div>
-            </div>
-        <?php else: ?>
-            <div class="mt-4 space-y-6">
-                <?php foreach ($jefes as $idx => $jefe): ?>
-                    <?php $num = $idx + 1; ?>
-                    <article class="rounded-lg border border-app-border bg-app-panelSubtle p-4">
-                        <h4 class="m-0 text-sm font-semibold text-app-text">Jefe <?= (int) $num ?></h4>
-                        <div class="mt-4 grid gap-6 md:grid-cols-2">
-                            <div>
-                                <p class="<?= e($viewLabelCls) ?>">Supervisor</p>
-                                <p class="mt-1 text-base text-app-text"><?= trim((string) ($jefe['nombre'] ?? '')) !== '' ? e((string) $jefe['nombre']) : '<span class="italic">Dato no registrado</span>' ?></p>
-                            </div>
-                            <div>
-                                <p class="<?= e($viewLabelCls) ?>">Cargo</p>
-                                <p class="mt-1 text-base text-app-text"><?= trim((string) ($jefe['cargo'] ?? '')) !== '' ? e((string) $jefe['cargo']) : '<span class="italic">Dato no registrado</span>' ?></p>
-                            </div>
-                            <div>
-                                <p class="<?= e($viewLabelCls) ?>">Correo supervisor</p>
-                                <p class="mt-1 text-base text-app-text break-all"><?= trim((string) ($jefe['correo'] ?? '')) !== '' ? e((string) $jefe['correo']) : '<span class="italic">Dato no registrado</span>' ?></p>
-                            </div>
-                            <div>
-                                <p class="<?= e($viewLabelCls) ?>">Teléfono supervisor</p>
-                                <p class="mt-1 text-base text-app-text"><?= trim((string) ($jefe['telefono'] ?? '')) !== '' ? e((string) $jefe['telefono']) : '<span class="italic">Dato no registrado</span>' ?></p>
-                            </div>
-                            <div>
-                                <p class="<?= e($viewLabelCls) ?>">Contacto alternativo (nombre)</p>
-                                <p class="mt-1 text-base text-app-text"><?= trim((string) ($jefe['nombre_contacto2'] ?? '')) !== '' ? e((string) $jefe['nombre_contacto2']) : '<span class="italic">Dato no registrado</span>' ?></p>
-                            </div>
-                            <div>
-                                <p class="<?= e($viewLabelCls) ?>">Contacto alternativo (correo)</p>
-                                <p class="mt-1 text-base text-app-text break-all"><?= trim((string) ($jefe['correo_contacto2'] ?? '')) !== '' ? e((string) $jefe['correo_contacto2']) : '<span class="italic">Dato no registrado</span>' ?></p>
-                            </div>
-                        </div>
-                    </article>
-                <?php endforeach; ?>
-            </div>
-        <?php endif; ?>
-    </div>
-
     <div class="flex justify-end border-t border-app-border pt-6">
         <form method="post" action="<?= e(APP_BASE_PATH) ?>/catalogo/empresas/eliminar">
             <input type="hidden" name="empresa_id" value="<?= $eid ?>">
@@ -382,4 +271,15 @@ $viewLabelCls = 'm-0 text-xs font-medium uppercase tracking-wide text-app-muted'
         </form>
     </div>
 </section>
+
+<div class="mx-auto max-w-5xl">
+    <?php partial('catalogo/empresas/_jefes', [
+        'jefes' => $jefes,
+        'eid' => $eid,
+        'verUrl' => $verUrl,
+        'newJefeDraft' => (bool) ($newJefeDraft ?? false),
+        'autoEditJefeId' => (int) ($autoEditJefeId ?? 0),
+        'viewLabelCls' => $viewLabelCls,
+    ]); ?>
+</div>
 <?php endif; ?>

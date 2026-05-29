@@ -93,6 +93,83 @@ class EmpresaJefe
         return $row ?: null;
     }
 
+    public static function findByIdForEmpresa(int $empresaId, int $jefeId): ?array
+    {
+        if ($empresaId <= 0 || $jefeId <= 0) {
+            return null;
+        }
+        $stmt = Database::connection()->prepare(
+            'SELECT * FROM empresa_jefes WHERE id = :id AND empresa_id = :empresa_id LIMIT 1'
+        );
+        $stmt->execute(['id' => $jefeId, 'empresa_id' => $empresaId]);
+        $row = $stmt->fetch();
+
+        return $row ?: null;
+    }
+
+    /**
+     * @param array{nombre?: mixed, cargo?: mixed, correo?: mixed, telefono?: mixed, nombre_contacto2?: mixed, correo_contacto2?: mixed} $data
+     */
+    public static function createForEmpresa(int $empresaId, array $data): ?int
+    {
+        if ($empresaId <= 0) {
+            return null;
+        }
+
+        $nombre = self::clampField((string) ($data['nombre'] ?? ''), self::MAX_NOMBRE);
+        if ($nombre === '') {
+            return null;
+        }
+
+        $pdo = Database::connection();
+        $ins = $pdo->prepare(
+            'INSERT INTO empresa_jefes (empresa_id, nombre, cargo, correo, telefono, nombre_contacto2, correo_contacto2, created_at, updated_at)
+             VALUES (:empresa_id, :nombre, :cargo, :correo, :telefono, :nombre_contacto2, :correo_contacto2, NOW(), NOW())'
+        );
+        $ins->execute([
+            'empresa_id' => $empresaId,
+            'nombre' => $nombre,
+            'cargo' => self::clampOptionalField($data['cargo'] ?? null, self::MAX_CARGO),
+            'correo' => self::clampOptionalField($data['correo'] ?? null, self::MAX_CORREO),
+            'telefono' => self::clampOptionalField($data['telefono'] ?? null, self::MAX_TELEFONO),
+            'nombre_contacto2' => self::clampOptionalField($data['nombre_contacto2'] ?? null, self::MAX_NOMBRE),
+            'correo_contacto2' => self::clampOptionalField($data['correo_contacto2'] ?? null, self::MAX_CORREO),
+        ]);
+
+        return (int) $pdo->lastInsertId();
+    }
+
+    public static function countAprendicesLinked(int $jefeId): int
+    {
+        if ($jefeId <= 0) {
+            return 0;
+        }
+        $stmt = Database::connection()->prepare('SELECT COUNT(*) FROM aprendices WHERE jefe_id = :id');
+        $stmt->execute(['id' => $jefeId]);
+
+        return (int) $stmt->fetchColumn();
+    }
+
+    public static function deleteByIdForEmpresa(int $empresaId, int $jefeId): bool
+    {
+        if ($empresaId <= 0 || $jefeId <= 0) {
+            return false;
+        }
+        if (self::findByIdForEmpresa($empresaId, $jefeId) === null) {
+            return false;
+        }
+        if (self::countAprendicesLinked($jefeId) > 0) {
+            return false;
+        }
+
+        $stmt = Database::connection()->prepare(
+            'DELETE FROM empresa_jefes WHERE id = :id AND empresa_id = :empresa_id'
+        );
+        $stmt->execute(['id' => $jefeId, 'empresa_id' => $empresaId]);
+
+        return $stmt->rowCount() > 0;
+    }
+
     /**
      * @return list<array<string, mixed>>
      */

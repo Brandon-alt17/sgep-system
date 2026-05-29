@@ -30,9 +30,9 @@ class Empresa
 
     /**
      * @param array{q?: string} $filters
-     * @return list<array<string, mixed>>
+     * @return array{where: list<string>, params: array<string, string>}
      */
-    public static function catalogo(array $filters = []): array
+    private static function catalogoWhere(array $filters): array
     {
         $q = trim((string) ($filters['q'] ?? ''));
         $where = [];
@@ -44,6 +44,33 @@ class Empresa
             $params['q_nit'] = $likeQ;
             $params['q_ciudad'] = $likeQ;
         }
+
+        return ['where' => $where, 'params' => $params];
+    }
+
+    /**
+     * @param array{q?: string} $filters
+     */
+    public static function countCatalogo(array $filters = []): int
+    {
+        ['where' => $where, 'params' => $params] = self::catalogoWhere($filters);
+        $sql = 'SELECT COUNT(*) FROM empresas e';
+        if ($where !== []) {
+            $sql .= ' WHERE ' . implode(' AND ', $where);
+        }
+        $stmt = Database::connection()->prepare($sql);
+        $stmt->execute($params);
+
+        return (int) ($stmt->fetchColumn() ?: 0);
+    }
+
+    /**
+     * @param array{q?: string} $filters
+     * @return list<array<string, mixed>>
+     */
+    public static function catalogo(array $filters = [], int $limit = 0, int $offset = 0): array
+    {
+        ['where' => $where, 'params' => $params] = self::catalogoWhere($filters);
         $sql = 'SELECT e.*,
                 (SELECT COUNT(*) FROM aprendices a WHERE a.empresa_id = e.id) AS aprendices_count
                 FROM empresas e';
@@ -51,8 +78,19 @@ class Empresa
             $sql .= ' WHERE ' . implode(' AND ', $where);
         }
         $sql .= ' ORDER BY e.nombre ASC';
+        if ($limit > 0) {
+            $sql .= ' LIMIT :limit OFFSET :offset';
+        }
         $stmt = Database::connection()->prepare($sql);
-        $stmt->execute($params);
+        foreach ($params as $key => $value) {
+            $stmt->bindValue(':' . $key, $value);
+        }
+        if ($limit > 0) {
+            $stmt->bindValue(':limit', $limit, \PDO::PARAM_INT);
+            $stmt->bindValue(':offset', max(0, $offset), \PDO::PARAM_INT);
+        }
+        $stmt->execute();
+
         return $stmt->fetchAll() ?: [];
     }
 

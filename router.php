@@ -65,6 +65,9 @@ $routes = [
     ['GET', '/catalogo/empresas/editar', [CatalogoController::class, 'empresasEditar']],
     ['POST', '/catalogo/empresas/actualizar', [CatalogoController::class, 'empresasActualizar']],
     ['POST', '/catalogo/empresas/eliminar', [CatalogoController::class, 'empresasEliminar']],
+    ['POST', '/catalogo/empresas/agregar-jefe', [CatalogoController::class, 'agregarEmpresaJefe']],
+    ['POST', '/catalogo/empresas/actualizar-jefe', [CatalogoController::class, 'actualizarEmpresaJefe']],
+    ['POST', '/catalogo/empresas/eliminar-jefe', [CatalogoController::class, 'eliminarEmpresaJefe']],
 ];
 
 foreach ($routes as [$routeMethod, $routePath, $handler]) {

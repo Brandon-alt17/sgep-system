@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Controllers;
 
+use App\Exports\F023DocxToPdf;
 use App\Exports\F023Generator;
 use App\Helpers\Database;
 use App\Models\Aprendiz;
@@ -53,6 +54,8 @@ class DocumentoController
             'export_momentos' => $exportMomentos,
             'info_faltantes_count' => $faltantes,
             'error' => (string) ($_GET['error'] ?? ''),
+            'pdf_available' => F023DocxToPdf::isAvailable(),
+            'pdf_availability_message' => F023DocxToPdf::availabilityMessage(),
         ]);
     }
 
@@ -93,7 +96,15 @@ class DocumentoController
             $path = (new F023Generator())->generate($aprendizId, $partes, $formato);
         } catch (\Throwable $e) {
             log_error('F023 export: ' . $e->getMessage());
-            redirect(APP_BASE_PATH . '/documentos/generar?aprendiz_id=' . $aprendizId . '&error=export_failed');
+            $errorKey = 'export_failed';
+            if ($formato === 'pdf') {
+                if (!F023DocxToPdf::isAvailable()) {
+                    $errorKey = 'pdf_libreoffice';
+                } elseif (str_contains($e->getMessage(), 'LibreOffice')) {
+                    $errorKey = 'pdf_convert_failed';
+                }
+            }
+            redirect(APP_BASE_PATH . '/documentos/generar?aprendiz_id=' . $aprendizId . '&error=' . $errorKey);
 
             return;
         }

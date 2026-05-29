@@ -129,34 +129,52 @@ final class F023InfoTemplateMacroInjector
     }
 
     /**
-     * La plantilla oficial deja un párrafo vacío con w:before="1540" entre la tabla de encabezado
-     * y la de «Información general», lo que fuerza una segunda hoja al exportar solo info.
+     * Ajusta el layout para exportación: tabla de encabezado en flujo normal (LibreOffice/PDF)
+     * y una sola página cuando solo se exporta info.
      */
     private static function compactLayoutForSinglePage(string $xml): string
     {
-        $next = preg_replace(
-            '/(<w:spacing w:after="240" w:before=")1540(")/',
-            '${1}0${2}',
-            $xml,
-            1
-        );
-        if (is_string($next)) {
-            $xml = $next;
-        }
-
-        // Mantener el párrafo espaciador entre la tabla de encabezado (PROCESO, etc.) y la de
-        // «Información general». Eliminarlo hace que la segunda tabla quede debajo del bloque
-        // flotante del encabezado (solapamiento). Solo quitamos párrafos vacíos extra del hueco.
-        $xml = self::trimRedundantEmptyParagraphsBetweenFirstTwoTables($xml);
+        $xml = self::inlineFirstHeaderTable($xml);
+        $xml = self::insertGapAfterFirstHeaderTable($xml);
 
         return self::removeTrailingEmptyParagraphAfterLastTable($xml);
     }
 
     /**
-     * Entre la primera y segunda tabla hay un párrafo con w:before (reservaba salto de página).
-     * Tras poner before=0, los dos párrafos vacíos siguientes sobran; el primero se conserva.
+     * La plantilla oficial ancla la tabla PROCESO/NOMBRE DEL FORMATO con w:tblpPr (flotante).
+     * Word y OnlyOffice lo respetan; LibreOffice la superpone al contenido siguiente.
      */
-    private static function trimRedundantEmptyParagraphsBetweenFirstTwoTables(string $xml): string
+    private static function inlineFirstHeaderTable(string $xml): string
+    {
+        $firstTbl = strpos($xml, '<w:tbl>');
+        if ($firstTbl === false) {
+            return $xml;
+        }
+
+        $tblPrStart = strpos($xml, '<w:tblPr>', $firstTbl);
+        $tblPrEnd = strpos($xml, '</w:tblPr>', $tblPrStart !== false ? $tblPrStart : $firstTbl);
+        if ($tblPrStart === false || $tblPrEnd === false) {
+            return $xml;
+        }
+
+        $tblPrEnd += strlen('</w:tblPr>');
+        $tblPr = substr($xml, $tblPrStart, $tblPrEnd - $tblPrStart);
+        $inlined = preg_replace('/<w:tblpPr\b[^>]*\/>/', '', $tblPr);
+        if (!is_string($inlined)) {
+            return $xml;
+        }
+        if (!str_contains($inlined, '<w:jc')) {
+            $inlined = preg_replace('/(<w:tblPr>)/', '$1<w:jc w:val="center"/>', $inlined, 1) ?? $inlined;
+        }
+        if ($inlined === $tblPr && !str_contains($tblPr, '<w:tblpPr')) {
+            return $xml;
+        }
+
+        return substr($xml, 0, $tblPrStart) . $inlined . substr($xml, $tblPrEnd);
+    }
+
+    /** Párrafo espaciador entre la cabecera PROCESO y la tabla «Información general». */
+    private static function insertGapAfterFirstHeaderTable(string $xml): string
     {
         $firstTableEnd = strpos($xml, '</w:tbl>');
         if ($firstTableEnd === false) {
@@ -169,37 +187,11 @@ final class F023InfoTemplateMacroInjector
         }
 
         $between = substr($xml, $firstTableEnd, $secondTableStart - $firstTableEnd);
-        $trimmed = self::stripTrailingEmptyOuterParagraphsFromGap($between);
+        $between = preg_replace('/<w:p\b[^>]*>(?:(?!<\/w:p>).)*<\/w:p>/s', '', $between) ?? $between;
 
-        return substr($xml, 0, $firstTableEnd) . $trimmed . substr($xml, $secondTableStart);
-    }
+        $spacer = '<w:p><w:pPr><w:spacing w:before="0" w:after="200"/></w:pPr></w:p>';
 
-    private static function stripTrailingEmptyOuterParagraphsFromGap(string $gap): string
-    {
-        while (preg_match('/(<w:p\b[^>]*>(?:(?!<\/w:p>).)*<\/w:p>)\s*$/s', $gap, $m)) {
-            $para = $m[1];
-            if (
-                str_contains($para, '${')
-                || preg_match('/<w:t[^>]*>[^<\s][^<]*<\/w:t>/', $para)
-                || str_contains($para, '<w:drawing>')
-                || str_contains($para, '<mc:AlternateContent>')
-                || self::paragraphHasStructuralSpacing($para)
-            ) {
-                break;
-            }
-
-            $gap = substr($gap, 0, -strlen($m[0]));
-        }
-
-        return $gap;
-    }
-
-    private static function paragraphHasStructuralSpacing(string $paragraph): bool
-    {
-        return (bool) preg_match(
-            '/<w:spacing\b[^>]*\bw:(before|after)="([1-9]\d*|\d{3,})"/',
-            $paragraph
-        );
+        return substr($xml, 0, $firstTableEnd) . $between . $spacer . substr($xml, $secondTableStart);
     }
 
     private static function removeTrailingEmptyParagraphAfterLastTable(string $xml): string

@@ -95,12 +95,9 @@
     </div>
 
     <!-- SOLO LA TABLA SE DESPLAZA HORIZONTALMENTE -->
-    <div class="bg-white border border-gray-200 rounded-2xl">
-        
-        <!-- ESTE ES EL ÚNICO CONTENEDOR CON SCROLL -->
-        <div style="overflow-x: auto; overflow-y: visible; width: 100%;">
-            
-            <table style="min-width: 2800px; width: 100%; border-collapse: collapse;" class="text-xs">
+    <div class="bg-white border border-gray-200 rounded-2xl overflow-hidden" data-reporte-maestro-root>
+        <div class="reporte-maestro-table-scroll" data-reporte-table-scroll>
+            <table style="min-width: 2800px; width: 100%; border-collapse: collapse;" class="text-xs" data-reporte-table>
 
                 <thead>
                     <tr>
@@ -249,9 +246,72 @@
 
             </table>
         </div>
+        <div class="reporte-maestro-hscroll-bar is-hidden" data-reporte-hscroll-bar aria-hidden="true">
+            <div class="reporte-maestro-hscroll-spacer" data-reporte-hscroll-spacer></div>
+        </div>
     </div>
 
 </div>
 </div>
 
 </div>
+
+<script>
+(function () {
+  var tableScroll = document.querySelector("[data-reporte-table-scroll]");
+  var hScrollBar = document.querySelector("[data-reporte-hscroll-bar]");
+  var hScrollSpacer = document.querySelector("[data-reporte-hscroll-spacer]");
+  var main = document.querySelector("main");
+  if (!tableScroll || !hScrollBar || !hScrollSpacer || !main) return;
+
+  var syncing = false;
+
+  var syncScroll = function (source, target) {
+    if (syncing) return;
+    syncing = true;
+    target.scrollLeft = source.scrollLeft;
+    syncing = false;
+  };
+
+  var updateGeometry = function () {
+    var mainRect = main.getBoundingClientRect();
+    hScrollBar.style.left = mainRect.left + "px";
+    hScrollBar.style.width = mainRect.width + "px";
+    hScrollBar.style.bottom = Math.max(0, window.innerHeight - mainRect.bottom) + "px";
+  };
+
+  var updateBar = function () {
+    var table = tableScroll.querySelector("[data-reporte-table]");
+    var scrollWidth = table ? table.offsetWidth : tableScroll.scrollWidth;
+    hScrollSpacer.style.width = scrollWidth + "px";
+    updateGeometry();
+
+    var tableRect = tableScroll.getBoundingClientRect();
+    var mainRect = main.getBoundingClientRect();
+    var tableVisible = tableRect.bottom > mainRect.top && tableRect.top < mainRect.bottom;
+    var needsScroll = scrollWidth > tableScroll.clientWidth + 1;
+    hScrollBar.classList.toggle("is-hidden", !tableVisible || !needsScroll);
+  };
+
+  tableScroll.addEventListener("scroll", function () {
+    syncScroll(tableScroll, hScrollBar);
+  });
+  hScrollBar.addEventListener("scroll", function () {
+    syncScroll(hScrollBar, tableScroll);
+  });
+
+  main.addEventListener("scroll", updateBar, { passive: true });
+  window.addEventListener("scroll", updateBar, { passive: true });
+  window.addEventListener("resize", updateBar);
+
+  if (typeof ResizeObserver !== "undefined") {
+    var ro = new ResizeObserver(updateBar);
+    ro.observe(tableScroll);
+    var table = tableScroll.querySelector("[data-reporte-table]");
+    if (table) ro.observe(table);
+    ro.observe(main);
+  }
+
+  updateBar();
+})();
+</script>

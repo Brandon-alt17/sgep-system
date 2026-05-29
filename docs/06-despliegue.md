@@ -28,6 +28,7 @@ El SGEP es una aplicación web **100% local**. No requiere internet para funcion
 | **WAMP** (Windows) | PHP 8.3+, MySQL 8.0+, Apache | El directivo, una sola vez |
 | **MAMP** (macOS) | PHP 8.3+, MySQL 8.0+, Apache | El directivo, una sola vez |
 | **Carpeta del SGEP** | Código PHP + dependencias + assets | El equipo, en cada versión |
+| **LibreOffice** (opcional) | Exportación F-023 a PDF | El directivo o el equipo, si se usa PDF |
 | **Base de datos MySQL** | Tablas vacías o con datos | El script de instalación o migraciones |
 
 ---
@@ -351,6 +352,22 @@ Causa: El archivo public/css/app.css no está actualizado o no está incluido en
 Solución: El equipo debe correr "npm run build:css" antes de empaquetar.
           Verificar que public/css/app.css existe en el ZIP.
 ```
+
+### La exportación PDF del F-023 falla
+
+```
+Causa: LibreOffice no está instalado o PHP no puede ejecutarlo.
+Solución:
+  1. Instalar LibreOffice (https://www.libreoffice.org) en el mismo PC donde corre WAMP/MAMP.
+  2. En .env, indicar la ruta si no está en el PATH:
+     F023_LIBREOFFICE_PATH=C:\Program Files\LibreOffice\program\soffice.exe
+     (Linux: /usr/bin/libreoffice)
+  3. Verificar desde la carpeta del proyecto:
+     php scripts/check_pdf_converter.php
+  4. Mientras tanto, exportar en Word (.docx) y guardar como PDF desde Word o LibreOffice Writer.
+```
+
+Opcionalmente, el equipo puede incluir una copia portable en `tools/libreoffice/` dentro del paquete SGEP (~300 MB).
 
 ---
 
