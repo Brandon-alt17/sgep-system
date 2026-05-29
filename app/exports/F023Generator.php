@@ -116,7 +116,12 @@ class F023Generator
                 mkdir($dir, 0775, true);
             }
 
-            F023DocxMerge::mergeInto($out, $mergeInputs);
+            F023DocxMerge::mergeInto(
+                $out,
+                $mergeInputs,
+                $this->segmentsIncludeM3($segments),
+                $this->m3SegmentMask($segments)
+            );
 
             if ($formato === 'pdf') {
                 try {
@@ -206,6 +211,36 @@ class F023Generator
         }
 
         return [];
+    }
+
+    /**
+     * @param list<array<string,mixed>> $segments
+     */
+    private function segmentsIncludeM3(array $segments): bool
+    {
+        foreach ($segments as $seg) {
+            $base = basename((string) ($seg['path'] ?? ''));
+            if (preg_match('/^m3_p[12]\.docx$/', $base)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @param list<array<string,mixed>> $segments
+     * @return list<bool>
+     */
+    private function m3SegmentMask(array $segments): array
+    {
+        $mask = [];
+        foreach ($segments as $seg) {
+            $base = basename((string) ($seg['path'] ?? ''));
+            $mask[] = (bool) preg_match('/^m3_p[12]\.docx$/', $base);
+        }
+
+        return $mask;
     }
 
     /**
