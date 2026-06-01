@@ -8,6 +8,11 @@ use App\Helpers\Database;
 
 class EmpresaJefe
 {
+    private const MAX_NOMBRE = 160;
+    private const MAX_CARGO = 120;
+    private const MAX_CORREO = 150;
+    private const MAX_TELEFONO = 30;
+
     /**
      * @param array{nombre?: mixed, cargo?: mixed, correo?: mixed, telefono?: mixed, nombre_contacto2?: mixed, correo_contacto2?: mixed} $data
      */
@@ -17,7 +22,7 @@ class EmpresaJefe
             return;
         }
 
-        $nombre = trim((string) ($data['nombre'] ?? ''));
+        $nombre = self::clampField((string) ($data['nombre'] ?? ''), self::MAX_NOMBRE);
         if ($nombre === '') {
             return;
         }
@@ -36,11 +41,11 @@ class EmpresaJefe
             'id' => $jefeId,
             'empresa_id' => $empresaId,
             'nombre' => $nombre,
-            'cargo' => self::nullIfEmptyString($data['cargo'] ?? null),
-            'correo' => self::nullIfEmptyString($data['correo'] ?? null),
-            'telefono' => self::nullIfEmptyString($data['telefono'] ?? null),
-            'nombre_contacto2' => self::nullIfEmptyString($data['nombre_contacto2'] ?? null),
-            'correo_contacto2' => self::nullIfEmptyString($data['correo_contacto2'] ?? null),
+            'cargo' => self::clampOptionalField($data['cargo'] ?? null, self::MAX_CARGO),
+            'correo' => self::clampOptionalField($data['correo'] ?? null, self::MAX_CORREO),
+            'telefono' => self::clampOptionalField($data['telefono'] ?? null, self::MAX_TELEFONO),
+            'nombre_contacto2' => self::clampOptionalField($data['nombre_contacto2'] ?? null, self::MAX_NOMBRE),
+            'correo_contacto2' => self::clampOptionalField($data['correo_contacto2'] ?? null, self::MAX_CORREO),
         ]);
     }
 
@@ -54,6 +59,16 @@ class EmpresaJefe
         $value = $value !== null ? trim($value) : null;
         if ($column === 'nombre' && ($value === null || $value === '')) {
             return false;
+        }
+
+        $maxByColumn = [
+            'nombre' => self::MAX_NOMBRE,
+            'cargo' => self::MAX_CARGO,
+            'correo' => self::MAX_CORREO,
+            'telefono' => self::MAX_TELEFONO,
+        ];
+        if ($value !== null && $value !== '') {
+            $value = self::clampField($value, $maxByColumn[$column] ?? 255);
         }
 
         $sql = 'UPDATE empresa_jefes SET ' . $column . ' = :value, updated_at = NOW() WHERE id = :id AND empresa_id = :empresa_id';
@@ -106,16 +121,16 @@ class EmpresaJefe
         if ($empresaId <= 0) {
             return null;
         }
-        $nombre = trim((string) ($data['nombre'] ?? ''));
+        $nombre = self::clampField((string) ($data['nombre'] ?? ''), self::MAX_NOMBRE);
         if ($nombre === '') {
             return null;
         }
 
-        $cargo = self::nullIfEmptyString($data['cargo'] ?? null);
-        $correo = self::nullIfEmptyString($data['correo'] ?? null);
-        $telefono = self::nullIfEmptyString($data['telefono'] ?? null);
-        $nombreContacto2 = self::nullIfEmptyString($data['nombre_contacto2'] ?? null);
-        $correoContacto2 = self::nullIfEmptyString($data['correo_contacto2'] ?? null);
+        $cargo = self::clampOptionalField($data['cargo'] ?? null, self::MAX_CARGO);
+        $correo = self::clampOptionalField($data['correo'] ?? null, self::MAX_CORREO);
+        $telefono = self::clampOptionalField($data['telefono'] ?? null, self::MAX_TELEFONO);
+        $nombreContacto2 = self::clampOptionalField($data['nombre_contacto2'] ?? null, self::MAX_NOMBRE);
+        $correoContacto2 = self::clampOptionalField($data['correo_contacto2'] ?? null, self::MAX_CORREO);
 
         $nombreKey = self::normalizeComparableName($nombre);
 
@@ -160,6 +175,29 @@ class EmpresaJefe
         $s = trim((string) $v);
 
         return $s === '' ? null : $s;
+    }
+
+    private static function clampField(string $value, int $maxLength): string
+    {
+        $value = trim($value);
+        if ($value === '' || $maxLength <= 0) {
+            return '';
+        }
+        if (mb_strlen($value) <= $maxLength) {
+            return $value;
+        }
+
+        return mb_substr($value, 0, $maxLength);
+    }
+
+    private static function clampOptionalField(mixed $value, int $maxLength): ?string
+    {
+        $normalized = self::nullIfEmptyString($value);
+        if ($normalized === null) {
+            return null;
+        }
+
+        return self::clampField($normalized, $maxLength) ?: null;
     }
 
     /**
@@ -255,8 +293,8 @@ class EmpresaJefe
                 WHERE id = :id';
         Database::connection()->prepare($sql)->execute([
             'id' => $jefeId,
-            'nombre_contacto2' => $nombreContacto2,
-            'correo_contacto2' => $correoContacto2,
+            'nombre_contacto2' => self::clampOptionalField($nombreContacto2, self::MAX_NOMBRE),
+            'correo_contacto2' => self::clampOptionalField($correoContacto2, self::MAX_CORREO),
         ]);
     }
 }

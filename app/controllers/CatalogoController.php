@@ -356,31 +356,68 @@ class CatalogoController
     {
         ProgramaEnlacePendiente::syncAprendicesSinVinculoValido();
         $filters = ['q' => trim((string) ($_GET['q'] ?? ''))];
-        $pendientes = ProgramaEnlacePendiente::pendingList($filters);
+        $allPendientes = ProgramaEnlacePendiente::pendingList($filters);
         $programas = Programa::all();
         $pendientesCount = Programa::countPendientesEnlace();
+
+        $perPage = 10;
+        $totalPendientes = count($allPendientes);
+        $totalPages = max(1, (int) ceil($totalPendientes / $perPage));
+        $currentPage = (int) ($_GET['page'] ?? 1);
+        $currentPage = min(max(1, $currentPage), $totalPages);
+        $offset = ($currentPage - 1) * $perPage;
+        $pendientes = array_slice($allPendientes, $offset, $perPage);
+
+        $importCtx = import_nav_context();
+        $base = rtrim((string) APP_BASE_PATH, '/') . '/catalogo/programas/pendientes';
+        $queryParams = [];
+        if ($filters['q'] !== '') {
+            $queryParams['q'] = $filters['q'];
+        }
+        if ($importCtx['fromImport']) {
+            $queryParams['from'] = 'import';
+            $queryParams['import_id'] = $importCtx['importId'];
+        }
+        $pendientesPaginationUrl = $base
+            . ($queryParams === [] ? '?' : '?' . http_build_query($queryParams) . '&')
+            . 'page=%d';
 
         if ($this->isAjaxFilterRequest()) {
             partial('components/ui');
             $tdClasses = str_replace('h-[50px] ', '', ui_td_classes());
+            $pendientesEmptyMessage = $filters['q'] !== ''
+                ? 'Sin coincidencias para esta búsqueda.'
+                : 'No hay pendientes por enlazar.';
             ob_start();
             partial('catalogo/programas/_pendientes_rows', [
                 'pendientes' => $pendientes,
                 'programas' => $programas,
                 'tdClasses' => $tdClasses,
+                'preserveImportNav' => $importCtx['fromImport'],
+                'importId' => $importCtx['importId'],
+                'emptyMessage' => $pendientesEmptyMessage,
             ]);
             $rowsHtml = (string) ob_get_clean();
-
+            ob_start();
+            if ($totalPages > 1) {
+                ui_render_pagination(
+                    $currentPage,
+                    $totalPages,
+                    $pendientesPaginationUrl,
+                    'Paginación de pendientes por enlazar',
+                    'tabla-pendientes'
+                );
+            }
+            $paginationHtml = (string) ob_get_clean();
             header('Content-Type: application/json; charset=utf-8');
             echo json_encode([
                 'ok' => true,
                 'rowsHtml' => $rowsHtml,
-                'total' => count($pendientes),
+                'paginationHtml' => $paginationHtml,
             ], JSON_UNESCAPED_UNICODE);
+
             return;
         }
-
-        $importCtx = import_nav_context();
 
         view('catalogo/programas/pendientes', [
             'pendientes' => $pendientes,
@@ -388,6 +425,10 @@ class CatalogoController
             'programas' => $programas,
             'pendientesCount' => $pendientesCount,
             'importReturnUrl' => $importCtx['returnUrl'],
+            'currentPage' => $currentPage,
+            'totalPages' => $totalPages,
+            'pendientesPaginationUrl' => $pendientesPaginationUrl,
+            'totalFiltered' => $totalPendientes,
         ]);
     }
 

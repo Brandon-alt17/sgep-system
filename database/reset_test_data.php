@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Dotenv\Dotenv;
 use App\Helpers\Database;
+use App\Helpers\ImportHistory;
 
 define('BASE_PATH', dirname(__DIR__));
 
@@ -31,7 +32,7 @@ if (!in_array(strtolower($host), ['127.0.0.1', 'localhost'], true)) {
     exit(1);
 }
 
-fwrite(STDOUT, 'ATENCION: Esto eliminara TODOS los datos de negocio de la BD actual.' . PHP_EOL);
+fwrite(STDOUT, 'ATENCION: Esto eliminara TODOS los datos de negocio de la BD actual y el historial de importaciones.' . PHP_EOL);
 fwrite(STDOUT, 'Base detectada: ' . $dbName . ' en host ' . $host . PHP_EOL);
 fwrite(STDOUT, 'Escribe RESET para continuar: ');
 $confirm = trim((string) fgets(STDIN));
@@ -71,8 +72,17 @@ try {
     }
 
     $pdo->exec('SET FOREIGN_KEY_CHECKS = 1');
-    fwrite(STDOUT, 'Reset completado. Estructura intacta, datos eliminados.' . PHP_EOL);
-    fwrite(STDOUT, 'Nota: historial de imports en storage/app/imports/history.json no se limpia desde este script.' . PHP_EOL);
+
+    if (!ImportHistory::clear()) {
+        $historyPath = BASE_PATH . '/storage/app/imports/history.json';
+        fwrite(STDERR, 'Error: no se pudo limpiar el historial de importaciones.' . PHP_EOL);
+        fwrite(STDERR, 'Archivo: ' . $historyPath . PHP_EOL);
+        fwrite(STDERR, 'Sugerencia: sudo rm ' . $historyPath . ' o ajuste permisos del directorio storage/app/imports.' . PHP_EOL);
+        exit(1);
+    }
+
+    fwrite(STDOUT, 'Limpia: historial de importaciones (history.json)' . PHP_EOL);
+    fwrite(STDOUT, 'Reset completado. Estructura intacta, datos e historial de imports eliminados.' . PHP_EOL);
 } catch (\Throwable $e) {
     $pdo->exec('SET FOREIGN_KEY_CHECKS = 1');
     fwrite(STDERR, 'Error en reset: ' . $e->getMessage() . PHP_EOL);

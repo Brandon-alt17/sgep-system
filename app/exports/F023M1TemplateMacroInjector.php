@@ -85,7 +85,12 @@ final class F023M1TemplateMacroInjector
             );
         }
 
-        $xml = self::applyInlineReplacements($xml);
+        $xml = self::normalizeFooterParagraph($xml);
+        $xml = self::stripEmptyParagraphsBeforeFooter($xml);
+        $xml = self::stripExtraEmptyParasFromConcertacionCells($xml);
+        $xml = self::shrinkConcertacionEmptyRowHeights($xml);
+        $xml = self::shrinkBottomSectionRowHeights($xml);
+        $xml = self::removeTrailingEmptyParagraphsAfterFooter($xml);
 
         if ($zip->locateName(self::DOCUMENT_XML) !== false) {
             $zip->deleteName(self::DOCUMENT_XML);
@@ -100,25 +105,267 @@ final class F023M1TemplateMacroInjector
         return $tmpDocx;
     }
 
-    private static function applyInlineReplacements(string $xml): string
+    private static function normalizeFooterParagraph(string $xml): string
     {
-        $xml = str_replace('Ciudad____________', '${ciudad_diligenciamiento}', $xml);
-        $xml = str_replace('resencial ___ o ', 'resencial ${m1_marca_presencial} o ', $xml);
-        $xml = str_replace('irtual _</w:t>', 'irtual ${m1_marca_virtual}</w:t>', $xml);
+        $anchorPos = strpos($xml, 'Ciudad____________');
+        if ($anchorPos === false) {
+            $anchorPos = strpos($xml, 'Ciudad ${ciudad_diligenciamiento}');
+        }
+        if ($anchorPos === false) {
+            $anchorPos = strpos($xml, 'de diligenciamiento');
+        }
+        if ($anchorPos === false) {
+            return $xml;
+        }
 
-        $pattern = '/de diligenciamiento<\/w:t><\/w:r>(?s).*?\/____ de forma <\/w:t>/u';
-        $replacement = 'de diligenciamiento</w:t></w:r>' . self::macroRunXml('fecha_diligenciamiento')
-            . '<w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri"/>'
+        $before = substr($xml, 0, $anchorPos);
+        $pStart = max(
+            (int) strrpos($before, '<w:p '),
+            (int) strrpos($before, '<w:p>')
+        );
+        if ($pStart < 0) {
+            return $xml;
+        }
+
+        $pEnd = strpos($xml, '</w:p>', $anchorPos);
+        if ($pEnd === false) {
+            return $xml;
+        }
+        $pEnd += strlen('</w:p>');
+
+        $pTagEnd = strpos($xml, '>', $pStart);
+        if ($pTagEnd === false) {
+            return $xml;
+        }
+        $pTag = substr($xml, $pStart, $pTagEnd - $pStart + 1);
+
+        $pPr = '<w:pPr><w:pBdr></w:pBdr><w:spacing w:after="0" w:before="0" w:line="240" w:lineRule="auto"/>'
+            . '<w:ind /><w:jc w:val="center" />'
+            . '<w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri"/>'
+            . '<w:b/><w:bCs/><w:color w:val="000000"/><w:sz w:val="20"/><w:szCs w:val="20"/>'
+            . '<w:lang w:val="es-CO" w:eastAsia="es-CO"/></w:rPr></w:pPr>';
+
+        $runs = self::footerBoldRun('Ciudad ')
+            . self::footerMacroRun('ciudad_diligenciamiento', false)
+            . self::footerBoldRun(' y fecha de diligenciamiento: ')
+            . self::footerMacroRun('fecha_diligenciamiento', true)
+            . self::footerBoldRun(' de forma presencial ')
+            . self::footerMacroRun('m1_marca_presencial', false)
+            . self::footerBoldRun(' o virtual ')
+            . self::footerMacroRun('m1_marca_virtual', false);
+
+        $newPara = $pTag . $pPr . $runs . '</w:p>';
+
+        return substr($xml, 0, $pStart) . $newPara . substr($xml, $pEnd);
+    }
+
+    private static function footerBoldRun(string $text): string
+    {
+        return '<w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri"/>'
             . '<w:b/><w:bCs/><w:color w:val="000000"/><w:sz w:val="20"/><w:szCs w:val="20"/>'
             . '<w:lang w:val="es-CO" w:eastAsia="es-CO"/></w:rPr>'
-            . '<w:t xml:space="preserve"> de forma </w:t></w:r>';
+            . '<w:t xml:space="preserve">' . $text . '</w:t></w:r>';
+    }
 
-        $next = preg_replace($pattern, $replacement, $xml, 1);
-        if (is_string($next)) {
-            $xml = $next;
+    private static function footerMacroRun(string $macro, bool $bold): string
+    {
+        $safe = preg_replace('/[^a-zA-Z0-9_]/', '', $macro) ?? '';
+        $boldPr = $bold ? '<w:b/><w:bCs/>' : '';
+
+        return '<w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri"/>'
+            . $boldPr . '<w:color w:val="000000"/><w:sz w:val="20"/><w:szCs w:val="20"/>'
+            . '<w:lang w:val="es-CO" w:eastAsia="es-CO"/></w:rPr>'
+            . '<w:t xml:space="preserve">${' . $safe . '}</w:t></w:r>';
+    }
+
+    private static function shrinkBottomSectionRowHeights(string $xml): string
+    {
+        $xml = self::capRowHeightNearAnchor($xml, 'Firma delaprendiz', 320);
+        $next = preg_replace(
+            '/<w:trHeight w:val="765"\s*\/>/',
+            '<w:trHeight w:val="360" w:hRule="atLeast"/>',
+            $xml,
+            1
+        );
+
+        return is_string($next) ? $next : $xml;
+    }
+
+    private static function stripEmptyParagraphsBeforeFooter(string $xml): string
+    {
+        $footerPos = strpos($xml, '${ciudad_diligenciamiento}');
+        if ($footerPos === false) {
+            $footerPos = strpos($xml, 'Ciudad ');
+        }
+        if ($footerPos === false) {
+            return $xml;
+        }
+
+        $pStart = max(
+            (int) strrpos(substr($xml, 0, $footerPos), '<w:p '),
+            (int) strrpos(substr($xml, 0, $footerPos), '<w:p>')
+        );
+        if ($pStart < 0) {
+            return $xml;
+        }
+
+        $lastTableEnd = strrpos(substr($xml, 0, $pStart), '</w:tbl>');
+        if ($lastTableEnd === false) {
+            return $xml;
+        }
+        $lastTableEnd += strlen('</w:tbl>');
+
+        $offset = $lastTableEnd;
+        while (preg_match('/^\s*(<w:p\b[^>]*>(?:(?!<\/w:p>).)*<\/w:p>)/s', substr($xml, $offset), $match)) {
+            if (!self::isLayoutSpacerParagraph($match[1])) {
+                break;
+            }
+            $offset += strlen($match[0]);
+        }
+
+        return substr($xml, 0, $lastTableEnd) . substr($xml, $offset);
+    }
+
+    private static function removeTrailingEmptyParagraphsAfterFooter(string $xml): string
+    {
+        $marker = strpos($xml, '${m1_marca_virtual}');
+        if ($marker === false) {
+            return $xml;
+        }
+
+        $footerEnd = strpos($xml, '</w:p>', $marker);
+        if ($footerEnd === false) {
+            return $xml;
+        }
+        $footerEnd += strlen('</w:p>');
+
+        $offset = $footerEnd;
+        while (preg_match('#^(\s*<w:p\b[^>]*>(?:(?!</w:p>).)*</w:p>)#s', substr($xml, $offset), $match)) {
+            if (!self::isLayoutSpacerParagraph($match[1])) {
+                break;
+            }
+            $offset += strlen($match[0]);
+        }
+
+        return substr($xml, 0, $footerEnd) . substr($xml, $offset);
+    }
+
+    private static function isLayoutSpacerParagraph(string $paragraph): bool
+    {
+        if (str_contains($paragraph, '${')) {
+            return false;
+        }
+
+        return !preg_match('/<w:t[^>]*>[^<\s][^<]*<\/w:t>/', $paragraph);
+    }
+
+    private static function stripExtraEmptyParasFromConcertacionCells(string $xml): string
+    {
+        foreach ([
+            'Competencias a ',
+            'Resultados de aprendizaje',
+            'Actividades a desarrollar ',
+            'Evidencias de aprendizaje',
+            'Observaciones adicionales',
+        ] as $anchor) {
+            $xml = self::stripExtraParasFromContentCell($xml, $anchor);
         }
 
         return $xml;
+    }
+
+    private static function stripExtraParasFromContentCell(string $xml, string $anchor): string
+    {
+        $anchorPos = strpos($xml, $anchor);
+        if ($anchorPos === false) {
+            return $xml;
+        }
+
+        $labelCellEnd = strpos($xml, '</w:tc>', $anchorPos);
+        if ($labelCellEnd === false) {
+            return $xml;
+        }
+        $contentCellOffset = $labelCellEnd + strlen('</w:tc>');
+
+        $contentCellEnd = strpos($xml, '</w:tc>', $contentCellOffset);
+        if ($contentCellEnd === false) {
+            return $xml;
+        }
+
+        $contentCell = substr($xml, $contentCellOffset, $contentCellEnd - $contentCellOffset);
+
+        $firstParaClose = strpos($contentCell, '</w:p>');
+        if ($firstParaClose === false) {
+            return $xml;
+        }
+        $firstParaClose += strlen('</w:p>');
+
+        $removed = substr($contentCell, $firstParaClose);
+        if ($removed === '') {
+            return $xml;
+        }
+
+        // Only strip if what follows is truly empty paragraphs (no macros, no visible text).
+        if (
+            str_contains($removed, '${')
+            || preg_match('/<w:t[^>]*>[^<]+<\/w:t>/', $removed)
+        ) {
+            return $xml;
+        }
+
+        return substr($xml, 0, $contentCellOffset)
+            . substr($contentCell, 0, $firstParaClose)
+            . '</w:tc>'
+            . substr($xml, $contentCellEnd + strlen('</w:tc>'));
+    }
+
+    private static function shrinkConcertacionEmptyRowHeights(string $xml): string
+    {
+        $targets = [
+            ['anchor' => 'Competencias a ', 'maxTwips' => 360],
+            ['anchor' => 'Resultados de aprendizaje', 'maxTwips' => 360],
+            ['anchor' => 'Actividades a desarrollar ', 'maxTwips' => 240],
+            ['anchor' => 'Evidencias de aprendizaje', 'maxTwips' => 240],
+            ['anchor' => 'Observaciones adicionales', 'maxTwips' => 240],
+        ];
+
+        foreach ($targets as $target) {
+            $xml = self::capRowHeightNearAnchor($xml, (string) $target['anchor'], (int) $target['maxTwips']);
+        }
+
+        return $xml;
+    }
+
+    private static function capRowHeightNearAnchor(string $xml, string $anchor, int $maxTwips): string
+    {
+        $pos = strpos($xml, $anchor);
+        if ($pos === false) {
+            return $xml;
+        }
+
+        $rowStart = strrpos(substr($xml, 0, $pos), '<w:tr');
+        if ($rowStart === false) {
+            return $xml;
+        }
+
+        $rowEnd = strpos($xml, '</w:tr>', $pos);
+        if ($rowEnd === false) {
+            return $xml;
+        }
+        $rowEnd += strlen('</w:tr>');
+
+        $row = substr($xml, $rowStart, $rowEnd - $rowStart);
+        $newRow = preg_replace(
+            '/<w:trHeight w:val="\d+"\s*\/>/',
+            '<w:trHeight w:val="' . $maxTwips . '" w:hRule="atLeast"/>',
+            $row,
+            1
+        );
+        if (!is_string($newRow) || $newRow === $row) {
+            return $xml;
+        }
+
+        return substr($xml, 0, $rowStart) . $newRow . substr($xml, $rowEnd);
     }
 
     private static function injectAfterAnchor(string $xml, string $anchor, int $occurrence, string $macro): string

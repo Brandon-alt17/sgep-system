@@ -23,19 +23,7 @@ $docLabelClass = 'min-w-0 flex-1 cursor-pointer text-left text-sm [&_.doc-title]
 $rowClass = 'flex gap-3 py-2.5';
 ?>
 
-<?php if ($aprendiz === null): ?>
-    <?php partial('components/page_header', [
-        'title' => 'Exportar GFPI-F-023',
-        'subtitle' => 'Elija un aprendiz desde el listado para generar el documento con las plantillas del sistema.',
-    ]); ?>
-    <div class="<?= $card ?> !p-6">
-        <p class="m-0 text-sm text-app-muted">Para exportar, abra el perfil de un aprendiz y use el botón <strong class="font-medium text-app-text">Generar documento GFPI-F-023</strong>.</p>
-        <a href="<?= e(APP_BASE_PATH) ?>/aprendices" class="mt-4 inline-flex <?= e(ui_button_primary_classes()) ?> items-center gap-2 text-app-textOnBrand">
-            Ir a aprendices
-        </a>
-    </div>
-<?php else: ?>
-    <?php $volverPerfilUrl = APP_BASE_PATH . '/aprendices/show?id=' . $aprendizId; ?>
+<?php $volverPerfilUrl = APP_BASE_PATH . '/aprendices/show?id=' . $aprendizId; ?>
     <section class="bg-app-bg mb-4 flex flex-row items-start gap-2">
         <a class="<?= e(ui_button_icon_classes()) ?> mt-2.5 self-start" href="<?= e($volverPerfilUrl) ?>" aria-label="Volver al perfil del aprendiz">
             <span class="inline-flex h-3.5 w-3.5 [&_svg]:h-3.5 [&_svg]:w-3.5"><?= ui_icon('arrow') ?></span>
@@ -139,4 +127,3 @@ $rowClass = 'flex gap-3 py-2.5';
             Generar y descargar
         </button>
     </form>
-<?php endif; ?>

@@ -20,35 +20,58 @@
     </div>
 
     <!-- FILTROS -->
-    <div class="flex flex-wrap items-center gap-3">
+    <form method="GET" action="" class="flex flex-wrap items-center gap-3">
+        <?php
+        // 1. Extraer SOLO los valores que aparecen en la tabla actual
+        $fichas_arr = [];
+        $estados_arr = [];
+        foreach ($rows as $r) {
+            if (!empty($r['ficha'])) $fichas_arr[] = $r['ficha'];
+            if (!empty($r['estado_etapa'])) $estados_arr[] = $r['estado_etapa'];
+        }
+        // Eliminar duplicados, filtrar vacíos y ordenar
+        $fichas = array_unique(array_filter($fichas_arr)); sort($fichas);
+        $estados = array_unique(array_filter($estados_arr)); sort($estados);
+        ?>
 
-        <select class="h-10 px-3 rounded-lg border border-gray-300 bg-white text-sm min-w-[180px]">
-            <option>Carlos Mendoza</option>
+        <!-- SELECT DE FICHA -->
+        <select name="ficha" onchange="this.form.submit()" class="h-10 px-3 rounded-lg border border-gray-300 bg-white text-sm min-w-[160px]">
+            <option value="">Todos</option>
+            <?php foreach ($fichas as $f): ?>
+                <option value="<?= htmlspecialchars($f) ?>" <?= ((string)$f === (string)($_GET['ficha'] ?? '')) ? 'selected' : '' ?>>
+                    <?= htmlspecialchars($f) ?>
+                </option>
+            <?php endforeach; ?>
         </select>
 
-        <select class="h-10 px-3 rounded-lg border border-gray-300 bg-white text-sm min-w-[160px]">
-            <option>Todos</option>
-            <option>2745623</option>
-            <option>2801445</option>
-        </select>
-
-        <select class="h-10 px-3 rounded-lg border border-gray-300 bg-white text-sm min-w-[180px]">
-            <option>Todos</option>
-            <option>En ejecución</option>
-            <option>Finalizada</option>
-            <option>Pendiente</option>
+        <!-- SELECT DE ESTADO -->
+        <select name="estado" onchange="this.form.submit()" class="h-10 px-3 rounded-lg border border-gray-300 bg-white text-sm min-w-[180px]">
+            <option value="">Todos</option>
+            <?php foreach ($estados as $e): ?>
+                <option value="<?= htmlspecialchars($e) ?>" <?= ((string)$e === (string)($_GET['estado'] ?? '')) ? 'selected' : '' ?>>
+                    <?= htmlspecialchars($e) ?>
+                </option>
+            <?php endforeach; ?>
         </select>
 
         <div class="flex-1"></div>
 
-        <a
-            href="<?= APP_BASE_PATH ?>/reportes/export"
-            class="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium px-4 h-10 rounded-lg transition-colors"
-        >
+        <!-- LÓGICA DE EXPORTACIÓN (Se mantiene igual, pero ahora lee los filtros activos) -->
+        <?php
+        $exportQuery = [];
+        foreach (['estado', 'ficha', 'programa_id'] as $filterKey) {
+            $v = trim((string) ($_GET[$filterKey] ?? ''));
+            if ($v !== '') {
+                $exportQuery[$filterKey] = $v;
+            }
+        }
+        $exportUrl = APP_BASE_PATH . '/reportes/exportar'
+            . ($exportQuery === [] ? '' : '?' . http_build_query($exportQuery));
+        ?>
+        <a href="<?= e($exportUrl) ?>" class="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium px-4 h-10 rounded-lg transition-colors">
             Exportar a Excel
         </a>
-
-    </div>
+    </form>
 
     <!-- STATS -->
     <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
@@ -103,7 +126,6 @@
                     </tr>
                     <tr style="background: #f9fafb;">
                         <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">#</th>
-                        <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;"># Grupo</th>
                         <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">Ficha</th>
                         <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">Cód. programa</th>
                         <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">Programa</th>
@@ -171,7 +193,6 @@
                             data-nombre="<?= htmlspecialchars($a['nombre'] ?? '') ?>"
                         >                        
                             <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;"><?= $a['num_aprendiz'] ?? '' ?></td>
-                            <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;"><?= $a['num_por_grupo'] ?? '' ?></td>
                             <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;"><?= $a['ficha'] ?? '' ?></td>
                             <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;"><?= $a['codigo_programa'] ?? '' ?></td>
                             <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap; max-width: 150px; overflow: hidden; text-overflow: ellipsis;"><?= $a['programa_formacion'] ?? '' ?></td>
@@ -209,8 +230,27 @@
                             <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;"><?= $a['cambio_modalidad'] ?? '' ?></td>
                             <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap; max-width: 150px; overflow: hidden; text-overflow: ellipsis;"><?= $a['observaciones_novedad'] ?: '—' ?></td>
                             <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: center;"><?= !empty($a['doc_gfpi_165']) ? '✓' : '—' ?></td>
+                            <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: center;"><?= !empty($a['doc_momento_1']) ? '✓' : '—' ?></td>
+                            <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: center;"><?= !empty($a['doc_bitacora_1']) ? '✓' : '—' ?></td>
+                            <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: center;"><?= !empty($a['doc_bitacora_2']) ? '✓' : '—' ?></td>
+                            <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: center;"><?= !empty($a['doc_bitacora_3']) ? '✓' : '—' ?></td>
+                            <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: center;"><?= !empty($a['doc_bitacora_4']) ? '✓' : '—' ?></td>
+                            <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: center;"><?= !empty($a['doc_bitacora_5']) ? '✓' : '—' ?></td>
+                            <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: center;"><?= !empty($a['doc_bitacora_6']) ? '✓' : '—' ?></td>
+                            <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: center;"><?= !empty($a['doc_momento_final']) ? '✓' : '—' ?></td>
+                            <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: center;"><?= !empty($a['cert_doc_identidad']) ? '✓' : '—' ?></td>
+                            <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: center;"><?= !empty($a['cert_paz_salvo']) ? '✓' : '—' ?></td>
+                            <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: center;"><?= !empty($a['cert_gfpi_023']) ? '✓' : '—' ?></td>
+                            <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: center;"><?= !empty($a['cert_bitacoras']) ? '✓' : '—' ?></td>
+                            <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: center;"><?= !empty($a['cert_cumplimiento']) ? '✓' : '—' ?></td>
+                            <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: center;"><?= !empty($a['cert_ape']) ? '✓' : '—' ?></td>
+                            <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: center;"><?= !empty($a['cert_carnet']) ? '✓' : '—' ?></td>
+                            <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: center;"><?= !empty($a['cert_saber_tyt']) ? '✓' : '—' ?></td>
+                            <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;"><?= e((string) ($a['fecha_entrega_admin'] ?? '')) ?></td>
+                            <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;"><?= e((string) ($a['estado_aprendiz'] ?? '')) ?></td>
+                            <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap; max-width: 150px; overflow: hidden; text-overflow: ellipsis;"><?= e((string) ($a['observaciones_cert'] ?? '')) ?: '—' ?></td>
 
-                            <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;"><?= $a['instructor_asignado'] ?? '' ?></td>
+                            <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;"><?= e((string) ($a['instructor_asignado'] ?? '')) ?></td>
                             <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;"><?= $a['telefono_instructor'] ?? '' ?></td>
                             <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap; max-width: 150px; overflow: hidden; text-overflow: ellipsis;"><?= $a['correo_instructor'] ?? '' ?></td>
                         </tr>

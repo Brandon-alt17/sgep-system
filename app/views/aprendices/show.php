@@ -47,48 +47,51 @@
             </div>
 
             <div class="space-y-3 text-sm md:col-span-2 grid gap-1">
-                <?php function infoRow($label, $value, $icon = null) { ?>
+                <?php
+                function infoRow(string $label, mixed $rawValue, ?string $icon = null): void
+                {
+                    $display = trim((string) $rawValue);
+                    $isMissing = $display === '';
+                    if ($isMissing) {
+                        $display = 'Dato no registrado';
+                    }
+                    $valueClass = $isMissing
+                        ? 'font-medium italic text-gray-500'
+                        : 'font-medium text-app-text';
+                    $iconClass = $isMissing
+                        ? 'w-4 h-4 shrink-0 text-gray-400 [&_svg]:w-4 [&_svg]:h-4'
+                        : 'w-4 h-4 shrink-0 text-app-muted [&_svg]:w-4 [&_svg]:h-4';
+                    ?>
                     <div>
-                        <!-- LABEL -->
                         <p class="text-xs text-app-muted mb-1"><?= e($label) ?></p>
-
-                        <!-- VALOR + ICONO -->
                         <div class="flex items-center gap-2">
-                            
                             <?php if ($icon): ?>
-                                <span class="w-4 h-4 text-app-muted [&_svg]:w-4 [&_svg]:h-4">
+                                <span class="<?= e($iconClass) ?>">
                                     <?= ui_icon($icon) ?>
                                 </span>
                             <?php endif; ?>
-
-                            <p class="font-medium"><?= e($value) ?></p>
+                            <p class="<?= e($valueClass) ?>"><?= e($display) ?></p>
                         </div>
                     </div>
-                <?php } ?>
+                    <?php
+                }
+                ?>
 
-                <?php infoRow('Documento', ($aprendiz['tipo_documento'] ?? '') . ' ' . ($aprendiz['numero_documento'] ?? ''), 'id-card'); ?>
-
-                <?php infoRow('Teléfono', $aprendiz['telefono'] ?? 'Dato no registrado', 'phone'); ?>
-
-                <?php infoRow('Email personal', $aprendiz['correo_personal'] ?? 'Dato no registrado', 'mail'); ?>
-
-                <?php infoRow('Email institucional', $aprendiz['correo_institucional'] ?? 'Dato no registrado', 'mail'); ?>
-
-                <?php infoRow('Dirección', $aprendiz['direccion_domicilio'] ?? 'Dato no registrado', 'map-pin'); ?>
-
-                <?php infoRow('Alternativa etapa productiva', $aprendiz['alternativa_ep'] ?? 'Dato no registrado', 'briefcase'); ?>
-
-                <?php infoRow('Programa de formación', trim((string) ($aprendiz['programa_nombre'] ?? '')) !== '' ? (string) $aprendiz['programa_nombre'] : 'Dato no registrado', 'graduation-cap'); ?>
-
-                <?php infoRow('Grupo', $aprendiz['ficha'] ?? 'Dato no registrado', 'users'); ?>
-
-                <?php infoRow('Instructor seguimiento', $aprendiz['nombre_instructor_seguimiento'] ?? 'Dato no registrado', 'user'); ?>
-
-                <?php infoRow('Teléfono instructor seguimiento', $aprendiz['telefono_instructor_seguimiento'] ?? 'Dato no registrado', 'phone'); ?>
-
-                <?php infoRow('Jefe de grupo', $aprendiz['jefe_grupo'] ?? 'Dato no registrado', 'user-check'); ?>
-
-                <?php infoRow('Area de coordinacion', $aprendiz['coordinacion'] ?? 'Dato no registrado', 'layers'); ?>
+                <?php
+                $documentoDisplay = trim(($aprendiz['tipo_documento'] ?? '') . ' ' . ($aprendiz['numero_documento'] ?? ''));
+                infoRow('Documento', $documentoDisplay, 'id-card');
+                infoRow('Teléfono', $aprendiz['telefono'] ?? '', 'phone');
+                infoRow('Email personal', $aprendiz['correo_personal'] ?? '', 'mail');
+                infoRow('Email institucional', $aprendiz['correo_institucional'] ?? '', 'mail');
+                infoRow('Dirección', $aprendiz['direccion_domicilio'] ?? '', 'map-pin');
+                infoRow('Alternativa etapa productiva', $aprendiz['alternativa_ep'] ?? '', 'briefcase');
+                infoRow('Programa de formación', $aprendiz['programa_nombre'] ?? '', 'graduation-cap');
+                infoRow('Grupo', $aprendiz['ficha'] ?? '', 'users');
+                infoRow('Instructor seguimiento', $aprendiz['nombre_instructor_seguimiento'] ?? '', 'user');
+                infoRow('Teléfono instructor seguimiento', $aprendiz['telefono_instructor_seguimiento'] ?? '', 'phone');
+                infoRow('Jefe de grupo', $aprendiz['jefe_grupo'] ?? '', 'user-check');
+                infoRow('Area de coordinacion', $aprendiz['coordinacion'] ?? '', 'layers');
+                ?>
 
                 <div class="pt-2">
                     <span class="<?= e(ui_badge_success_classes()) ?>">
@@ -112,13 +115,15 @@
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm mt-3">
-                    <?php infoRow('Razón social', $aprendiz['empresa_nombre'] ?? 'Dato no registrado'); ?>
-                    <?php infoRow('NIT', $aprendiz['nit'] ?? 'Dato no registrado'); ?>
-                    <?php infoRow('Dirección', $aprendiz['direccion'] ?? 'Dato no registrado'); ?>
-                    <?php infoRow('Supervisor', $aprendiz['nombre_jefe'] ?? 'Dato no registrado'); ?>
-                    <?php infoRow('Cargo', $aprendiz['cargo_jefe'] ?? 'Dato no registrado'); ?>
-                    <?php infoRow('Teléfono contacto', $aprendiz['telefono_jefe'] ?? 'Dato no registrado'); ?>
-                    <?php infoRow('Correo supervisor', $aprendiz['correo_jefe'] ?? 'Dato no registrado', 'mail'); ?>
+                    <?php
+                    infoRow('Razón social', $aprendiz['empresa_nombre'] ?? '');
+                    infoRow('NIT', $aprendiz['nit'] ?? '');
+                    infoRow('Dirección', $aprendiz['direccion'] ?? '');
+                    infoRow('Supervisor', $aprendiz['nombre_jefe'] ?? '');
+                    infoRow('Cargo', $aprendiz['cargo_jefe'] ?? '');
+                    infoRow('Teléfono contacto', $aprendiz['telefono_jefe'] ?? '');
+                    infoRow('Correo supervisor', $aprendiz['correo_jefe'] ?? '', 'mail');
+                    ?>
                 </div>
             </section>
 

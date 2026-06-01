@@ -4,53 +4,188 @@ declare(strict_types=1);
 
 namespace App\Exports;
 
-use App\Helpers\Database;
-use PhpOffice\PhpSpreadsheet\Spreadsheet;
-use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use App\Services\ReporteMaestroData;
+use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
+use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
+use RuntimeException;
 
 class ReporteMaestroExport
 {
+    /**
+     * @param array{estado?: string, ficha?: string, programa_id?: int|string} $filters
+     */
     public function export(array $filters = []): string
     {
-        $rows = $this->query($filters);
-        $sheet = (new Spreadsheet())->getActiveSheet();
-        $headers = ['Documento', 'Nombre', 'Estado', 'Programa', 'Empresa', 'Próxima visita'];
-        foreach ($headers as $i => $header) {
-            $sheet->setCellValueByColumnAndRow($i + 1, 1, $header);
+        /** @var array<string, mixed> $map */
+        $map = require base_path('config/reporte_maestro_map.php');
+        $templatePath = base_path((string) $map['template_path']);
+
+        if (!is_file($templatePath)) {
+            throw new RuntimeException('Plantilla de reporte maestro no encontrada: ' . $templatePath);
         }
-        $line = 2;
+
+        $spreadsheet = IOFactory::load($templatePath);
+        $sheetName = (string) ($map['sheet_name'] ?? '');
+        $sheet = $sheetName !== '' && $spreadsheet->sheetNameExists($sheetName)
+            ? $spreadsheet->getSheetByName($sheetName)
+            : $spreadsheet->getActiveSheet();
+
+        if (!$sheet instanceof Worksheet) {
+            throw new RuntimeException('No se pudo abrir la hoja del reporte maestro.');
+        }
+
+        $firstDataRow = (int) ($map['first_data_row'] ?? 4);
+        $styleSourceRow = (int) ($map['style_source_row'] ?? $firstDataRow);
+        $styleRangeEnd = (string) ($map['style_range_end'] ?? 'BJ');
+        $styleHighlightEnd = (string) ($map['style_highlight_end'] ?? 'B');
+        $protectedColumns = array_values(array_filter(
+            (array) ($map['protected_columns'] ?? []),
+            static fn (mixed $col): bool => is_string($col) && $col !== ''
+        ));
+        $columns = (array) ($map['columns'] ?? []);
+
+        $writableColumns = array_filter(
+            $columns,
+            static fn (string $letter): bool => !in_array($letter, $protectedColumns, true),
+            ARRAY_FILTER_USE_BOTH
+        );
+
+        $clearLetters = array_values(array_unique(array_merge(
+            array_values($writableColumns),
+            ['A']
+        )));
+        $clearLetters = array_values(array_filter(
+            $clearLetters,
+            static fn (string $letter): bool => !in_array($letter, $protectedColumns, true)
+        ));
+
+        $this->clearDataRows($sheet, $firstDataRow, $clearLetters);
+
+        $rows = ReporteMaestroData::rows($filters);
+        $excelRow = $firstDataRow;
         foreach ($rows as $row) {
-            $sheet->setCellValue('A' . $line, $row['numero_documento'] ?? '');
-            $sheet->setCellValue('B' . $line, $row['nombre_completo'] ?? '');
-            $sheet->setCellValue('C' . $line, $row['estado'] ?? '');
-            $sheet->setCellValue('D' . $line, $row['programa'] ?? '');
-            $sheet->setCellValue('E' . $line, $row['empresa'] ?? '');
-            $sheet->setCellValue('F' . $line, $row['proxima_visita'] ?? '');
-            $line++;
+            $row['num_aprendiz'] = $excelRow - $firstDataRow + 1;
+            foreach ($writableColumns as $key => $colLetter) {
+                $value = ReporteMaestroData::cellValue($row, (string) $key, $map);
+                $sheet->setCellValue($colLetter . $excelRow, $value);
+            }
+            $excelRow++;
         }
-        $path = base_path('storage/documents/reporte_maestro_' . time() . '.xlsx');
-        (new Xlsx($sheet->getParent()))->save($path);
+
+        $lastDataRow = $excelRow - 1;
+        if ($lastDataRow >= $firstDataRow) {
+            $this->extendRowStyles(
+                $sheet,
+                $firstDataRow,
+                $lastDataRow,
+                $styleSourceRow,
+                $styleRangeEnd,
+                $styleHighlightEnd
+            );
+        }
+
+        $dir = base_path('storage/documents');
+        if (!is_dir($dir)) {
+            mkdir($dir, 0755, true);
+        }
+
+        $path = $dir . '/reporte_maestro_' . date('Ymd_His') . '.xlsx';
+        IOFactory::createWriter($spreadsheet, 'Xlsx')->save($path);
+
         return $path;
     }
 
-    private function query(array $filters): array
+    /**
+     * @param list<string> $columnLetters
+     */
+    private function clearDataRows(Worksheet $sheet, int $firstDataRow, array $columnLetters): void
     {
-        $sql = 'SELECT a.numero_documento, a.nombre_completo, a.estado, p.nombre AS programa, e.nombre AS empresa, m.proxima_visita
-                FROM aprendices a
-                LEFT JOIN programas p ON p.id = a.programa_id
-                LEFT JOIN empresas e ON e.id = a.empresa_id
-                LEFT JOIN momentos m ON m.aprendiz_id = a.id';
-        $where = [];
-        $params = [];
-        if (!empty($filters['estado'])) {
-            $where[] = 'a.estado = :estado';
-            $params['estado'] = $filters['estado'];
+        $highestRow = max($firstDataRow, (int) $sheet->getHighestRow());
+
+        for ($row = $firstDataRow; $row <= $highestRow; $row++) {
+            foreach ($columnLetters as $letter) {
+                $sheet->setCellValue($letter . $row, null);
+            }
         }
-        if ($where !== []) {
-            $sql .= ' WHERE ' . implode(' AND ', $where);
+    }
+
+    private function extendRowStyles(
+        Worksheet $sheet,
+        int $firstDataRow,
+        int $lastDataRow,
+        int $styleSourceRow,
+        string $styleRangeEnd,
+        string $styleHighlightEnd
+    ): void {
+        $lastTemplateStyledRow = $this->detectLastStyledDataRow($sheet, $firstDataRow, $styleSourceRow);
+        if ($lastDataRow <= $lastTemplateStyledRow) {
+            return;
         }
-        $stmt = Database::connection()->prepare($sql);
-        $stmt->execute($params);
-        return $stmt->fetchAll();
+
+        $highlightSource = 'A' . $styleSourceRow . ':' . $styleHighlightEnd . $styleSourceRow;
+        $bodyStartCol = $this->nextColumnLetter($styleHighlightEnd);
+        $bodySource = $bodyStartCol . $styleSourceRow . ':' . $styleRangeEnd . $styleSourceRow;
+        $sourceHeight = $sheet->getRowDimension($styleSourceRow)->getRowHeight();
+
+        for ($row = $lastTemplateStyledRow + 1; $row <= $lastDataRow; $row++) {
+            $sheet->duplicateStyle(
+                $sheet->getStyle($highlightSource),
+                'A' . $row . ':' . $styleHighlightEnd . $row
+            );
+            $sheet->duplicateStyle(
+                $sheet->getStyle($bodySource),
+                $bodyStartCol . $row . ':' . $styleRangeEnd . $row
+            );
+            if ($sourceHeight >= 0) {
+                $sheet->getRowDimension($row)->setRowHeight($sourceHeight);
+            }
+        }
+    }
+
+    private function nextColumnLetter(string $column): string
+    {
+        $index = Coordinate::columnIndexFromString($column);
+
+        return Coordinate::stringFromColumnIndex($index + 1);
+    }
+
+    private function detectLastStyledDataRow(
+        Worksheet $sheet,
+        int $firstDataRow,
+        int $styleSourceRow
+    ): int {
+        $referenceArgb = strtoupper(
+            (string) $sheet->getStyle('A' . $styleSourceRow)->getFill()->getStartColor()->getARGB()
+        );
+        $hasReferenceFill = $referenceArgb !== ''
+            && $referenceArgb !== 'FFFFFFFF'
+            && $referenceArgb !== '00000000'
+            && $sheet->getStyle('A' . $styleSourceRow)->getFill()->getFillType() !== Fill::FILL_NONE;
+
+        $scanLimit = max($firstDataRow, (int) $sheet->getHighestRow());
+        $lastStyled = $firstDataRow - 1;
+
+        for ($row = $firstDataRow; $row <= $scanLimit; $row++) {
+            $fillType = $sheet->getStyle('A' . $row)->getFill()->getFillType();
+            if ($fillType === Fill::FILL_NONE) {
+                break;
+            }
+
+            $argb = strtoupper((string) $sheet->getStyle('A' . $row)->getFill()->getStartColor()->getARGB());
+            if ($hasReferenceFill && $argb !== $referenceArgb) {
+                break;
+            }
+
+            $lastStyled = $row;
+        }
+
+        return max($lastStyled, $firstDataRow - 1);
+    }
+
+    public static function downloadFilename(): string
+    {
+        return 'Reporte_seguimiento_maestro_' . date('Y-m-d') . '.xlsx';
     }
 }

@@ -163,6 +163,8 @@ class AprendizController
     {
         $map = [
             'info_f023_guardada' => ['message' => 'Información general F-023 guardada correctamente.', 'variant' => 'success'],
+            'momento_guardado' => ['message' => 'Momento guardado correctamente.', 'variant' => 'success'],
+            'momento_actualizado' => ['message' => 'Momento actualizado correctamente.', 'variant' => 'success'],
         ];
 
         return $map[$key] ?? null;
@@ -205,6 +207,7 @@ class AprendizController
         $estado = trim((string) ($input['estado'] ?? ''));
         $empresaId = (int) ($input['empresa_id'] ?? 0);
         $programaId = (int) ($input['programa_id'] ?? 0);
+        $datosPendientes = ((string) ($input['datos_pendientes'] ?? '')) === '1';
         $from = trim((string) ($input['from'] ?? ''));
         $importId = trim((string) ($input['import_id'] ?? ''));
         $page = (int) ($input['page'] ?? 1);
@@ -226,6 +229,7 @@ class AprendizController
             'estado' => $estado,
             'empresa_id' => $empresaId > 0 ? $empresaId : 0,
             'programa_id' => $programaId > 0 ? $programaId : 0,
+            'datos_pendientes' => $datosPendientes,
             'from' => $from,
             'import_id' => $importId,
             'page' => $page,
@@ -242,6 +246,7 @@ class AprendizController
             'estado' => $filters['estado'],
             'empresa_id' => $filters['empresa_id'] > 0 ? (string) $filters['empresa_id'] : '',
             'programa_id' => $filters['programa_id'] > 0 ? (string) $filters['programa_id'] : '',
+            'datos_pendientes' => $filters['datos_pendientes'] ? '1' : '',
             'page' => $filters['page'] > 1 ? (string) $filters['page'] : '',
             'from' => $filters['from'],
             'import_id' => $filters['import_id'],

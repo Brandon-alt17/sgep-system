@@ -3,10 +3,11 @@ declare(strict_types=1);
 
 $conflictRows = (array) ($conflictRows ?? []);
 $tdClasses = (string) ($tdClasses ?? ui_td_classes());
+$emptyMessage = trim((string) ($emptyMessage ?? 'No hay aprendices con conflictos pendientes.'));
 ?>
 <?php if ($conflictRows === []): ?>
-    <tr>
-        <td class="<?= e($tdClasses) ?> px-5 pl-6 text-app-muted" colspan="4">No hay aprendices con conflictos pendientes.</td>
+    <tr class="h-[4.5rem]">
+        <td class="<?= e($tdClasses) ?> px-5 pl-6 text-center align-middle text-app-muted" colspan="4"><?= e($emptyMessage) ?></td>
     </tr>
 <?php else: ?>
     <?php foreach ($conflictRows as $conflictRow): ?>
@@ -18,7 +19,6 @@ $tdClasses = (string) ($tdClasses ?? ui_td_classes());
         $conflictCount = count((array) ($conflictRow['conflicts'] ?? []));
         $conflictName = trim((string) ($conflictRow['nombre'] ?? ''));
         $conflictDoc = trim((string) ($conflictRow['identificacion'] ?? ''));
-        $filterText = mb_strtolower($conflictName . ' ' . $conflictDoc);
         ?>
         <tr
             class="cursor-pointer hover:bg-app-panelSubtle"
@@ -26,8 +26,6 @@ $tdClasses = (string) ($tdClasses ?? ui_td_classes());
             data-aprendiz-id="<?= e((string) $conflictAprendizId) ?>"
             data-conflict-name="<?= e($conflictName !== '' ? $conflictName : 'Aprendiz') ?>"
             data-modal-open="conflict-<?= e((string) $conflictAprendizId) ?>"
-            data-live-filter-item
-            data-live-filter-text="<?= e($filterText) ?>"
             tabindex="0"
             role="button"
         >

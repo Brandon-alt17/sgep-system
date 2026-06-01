@@ -1,7 +1,6 @@
 <!-- POPUP LATERAL -->
-<!-- Se agregó h-screen y display:flex para asegurar altura completa y layout correcto -->
-<div id="documentPopup" class="fixed top-0 right-0 h-screen w-96 bg-white shadow-2xl z-50 transition-transform duration-300 ease-in-out" style="transform: translateX(100%); display: flex; flex-direction: column; overflow: hidden;">
-    
+<div id="popupOverlay" class="fixed inset-0 bg-black bg-opacity-50 hidden transition-opacity duration-300" style="z-index: 9998;"></div>
+<div id="documentPopup" class="fixed top-0 right-0 h-full w-96 bg-white shadow-2xl transition-transform duration-300 ease-in-out" style="z-index: 9999; transform: translateX(100%);">
     <!-- HEADER -->
     <div class="flex-shrink-0 p-4 border-b border-gray-200 bg-slate-50">
         <div class="flex items-start justify-between gap-4">
@@ -141,8 +140,7 @@
     </div>
 </div>
 
-<!-- Overlay con fondo negro transparente -->
-<div id="popupOverlay" class="fixed inset-0 bg-black bg-opacity-50 z-40 transition-opacity duration-300" style="opacity: 0; pointer-events: none; display: none;"></div>
+<!-- Overlay -->
 
 <style>
 /* Estilos para los checkboxes */

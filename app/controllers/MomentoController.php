@@ -136,7 +136,7 @@ class MomentoController
                 Aprendiz::updateEstado($aprendizId, $estado, 'Cambio automático por M3');
             }
             $pdo->commit();
-            redirect(APP_BASE_PATH . '/aprendices/show?id=' . $aprendizId);
+            redirect(APP_BASE_PATH . '/aprendices/show?id=' . $aprendizId . '&toast=momento_guardado');
         } catch (\Throwable $e) {
             $pdo->rollBack();
             throw $e;
@@ -200,7 +200,7 @@ class MomentoController
             $pdo->rollBack();
             throw $e;
         }
-        redirect(APP_BASE_PATH . '/aprendices/show?id=' . $aprendizId);
+        redirect(APP_BASE_PATH . '/aprendices/show?id=' . $aprendizId . '&toast=momento_actualizado');
     }
 
     /** @param array<string,mixed> $post @return array<string,mixed> */
@@ -255,8 +255,8 @@ class MomentoController
             'fecha_visita' => null,
             'modalidad' => (string) ($aprendiz['modalidad'] ?? 'Presencial'),
             'proxima_visita' => $aprendiz['proxima_visita'] ?? null,
-            'ciudad_diligenciamiento' => (string) ($aprendiz['direccion'] ?? ''),
-            'fecha_diligenciamiento' => null,
+            'ciudad_diligenciamiento' => '',
+            'fecha_diligenciamiento' => date('Y-m-d'),
             'modalidad_diligenciamiento' => '',
             'numero_visitas_realizadas' => null,
             'm1_competencias' => $primerCompetencia,

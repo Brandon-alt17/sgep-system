@@ -8,6 +8,7 @@ use App\Helpers\ImportHistory;
 use App\Helpers\Database;
 use App\Imports\AprendicesImport;
 use App\Imports\AprendicesImportValidator;
+use App\Models\Aprendiz;
 use App\Models\EmpresaJefe;
 use App\Models\Programa;
 use App\Models\ProgramaEnlacePendiente;
@@ -99,10 +100,13 @@ class ImportacionController
         $resultado = (array) ($entry['resultado'] ?? []);
         $tieneProgramasPendientes = ($resultado['programa_pending_rows'] ?? []) !== [];
 
+        $datosPendientesCount = Aprendiz::countFiltered(['datos_pendientes' => true]);
+
         view('import/preview', [
             'entry' => $entry,
             'resultado' => $resultado,
             'pendientesEnlaceCount' => $tieneProgramasPendientes ? Programa::countPendientesEnlace() : 0,
+            'datosPendientesCount' => $datosPendientesCount,
         ]);
     }
 
@@ -121,7 +125,23 @@ class ImportacionController
         $resultado = (array) ($entry['resultado'] ?? []);
         $base = rtrim((string) APP_BASE_PATH, '/');
         $importCtx = import_nav_context();
+        $searchQ = trim((string) ($_GET['q'] ?? ''));
         $allConflictRows = (array) ($resultado['conflict_rows'] ?? []);
+        if ($searchQ !== '') {
+            $needle = mb_strtolower($searchQ);
+            $allConflictRows = array_values(array_filter(
+                $allConflictRows,
+                static function (mixed $row) use ($needle): bool {
+                    if (!is_array($row)) {
+                        return false;
+                    }
+                    $name = mb_strtolower(trim((string) ($row['nombre'] ?? '')));
+                    $doc = mb_strtolower(trim((string) ($row['identificacion'] ?? '')));
+
+                    return str_contains($name, $needle) || str_contains($doc, $needle);
+                }
+            ));
+        }
         $perPage = 10;
         $totalConflicts = count($allConflictRows);
         $totalPages = max(1, (int) ceil($totalConflicts / $perPage));
@@ -130,19 +150,61 @@ class ImportacionController
         $offset = ($currentPage - 1) * $perPage;
         $conflictPageItems = array_slice($allConflictRows, $offset, $perPage);
 
-        $conflictsBaseUrl = $base . '/importar/conflictos?id=' . rawurlencode($id);
+        $conflictQuery = ['id' => $id];
         if ($importCtx['fromImport']) {
-            $conflictsBaseUrl .= '&from=import';
+            $conflictQuery['from'] = 'import';
         }
-        $conflictsBaseUrl .= '&page=%d';
+        if ($searchQ !== '') {
+            $conflictQuery['q'] = $searchQ;
+        }
+        $conflictsBaseUrl = $base . '/importar/conflictos?'
+            . http_build_query($conflictQuery)
+            . '&page=%d';
 
         $aprendicesUrl = $base . '/aprendices';
+
+        $conflictRowsAll = (array) ($resultado['conflict_rows'] ?? []);
+
+        if ($this->isAjaxFilterRequest()) {
+            partial('components/ui');
+            $conflictsTdClasses = str_replace('h-[50px] ', '', ui_td_classes());
+            $emptyMessage = $searchQ !== ''
+                ? 'Sin coincidencias para esta búsqueda.'
+                : 'No hay aprendices con conflictos pendientes.';
+            ob_start();
+            partial('import/_conflicts_rows', [
+                'conflictRows' => $conflictPageItems,
+                'tdClasses' => $conflictsTdClasses,
+                'emptyMessage' => $emptyMessage,
+            ]);
+            $rowsHtml = (string) ob_get_clean();
+            ob_start();
+            if ($totalPages > 1) {
+                ui_render_pagination(
+                    $currentPage,
+                    $totalPages,
+                    $conflictsBaseUrl,
+                    'Paginación de conflictos de importación',
+                    'tabla-conflictos'
+                );
+            }
+            $paginationHtml = (string) ob_get_clean();
+            $this->jsonResponse([
+                'ok' => true,
+                'rowsHtml' => $rowsHtml,
+                'paginationHtml' => $paginationHtml,
+            ]);
+
+            return;
+        }
 
         view('import/conflictos', [
             'entry' => $entry,
             'conflictRows' => $conflictPageItems,
-            'conflictRowsAll' => $allConflictRows,
-            'conflictsCount' => $totalConflicts,
+            'conflictRowsAll' => $conflictRowsAll,
+            'conflictsCount' => count($conflictRowsAll),
+            'conflictsFilteredCount' => $totalConflicts,
+            'searchQ' => $searchQ,
             'currentPage' => $currentPage,
             'totalPages' => $totalPages,
             'conflictsPaginationUrl' => $conflictsBaseUrl,
@@ -281,7 +343,8 @@ class ImportacionController
             $actionByField[$field] = trim((string) ($item['action'] ?? '')) === 'new' ? 'new' : 'current';
         }
 
-        if ($incomingJefeId > 0) {
+        $jefeAction = $actionByField['jefe_id'] ?? '';
+        if ($incomingJefeId > 0 && $jefeAction !== 'current') {
             $pdo = \App\Helpers\Database::connection();
             $checkJefe = $pdo->prepare(
                 'SELECT id FROM empresa_jefes WHERE id = :id LIMIT 1'
@@ -511,5 +574,13 @@ class ImportacionController
         http_response_code($statusCode);
         header('Content-Type: application/json; charset=utf-8');
         echo json_encode($payload, JSON_UNESCAPED_UNICODE);
+    }
+
+    private function isAjaxFilterRequest(): bool
+    {
+        $isXmlHttpRequest = strtolower((string) ($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '')) === 'xmlhttprequest';
+        $isAjaxQueryFlag = ((string) ($_GET['ajax'] ?? '')) === '1';
+
+        return $isXmlHttpRequest || $isAjaxQueryFlag;
     }
 }

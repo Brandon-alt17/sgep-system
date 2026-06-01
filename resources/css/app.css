@@ -5,17 +5,67 @@
 @tailwind utilities;
 
 @layer base {
+  html,
+  body,
+  body * {
+    caret-color: transparent;
+  }
+
   body {
     @apply m-0 bg-app-bg font-sans text-app-text;
     font-family: "Inter", system-ui, sans-serif;
+    cursor: default;
+  }
+
+  /*
+   * Cursor y caret: forzar flecha estándar en contenedores y tablas.
+   * Solo los campos editables (input, textarea, [contenteditable]) conservan
+   * el caret parpadeante; el resto lo suprime con caret-color: transparent.
+   */
+  table,
+  thead,
+  tbody,
+  tr,
+  th,
+  td,
+  div,
+  section,
+  article,
+  aside,
+  main,
+  nav,
+  header,
+  footer,
+  ul,
+  ol,
+  li,
+  p,
+  span,
+  label {
+    cursor: default;
+    caret-color: transparent;
+  }
+
+  input,
+  textarea,
+  select,
+  [contenteditable="true"] {
+    caret-color: auto;
   }
 
   a {
     @apply text-app-link no-underline;
+    cursor: pointer;
   }
 
   a:hover {
     @apply underline;
+  }
+
+  a[class*="rounded"]:hover,
+  a[class*="btn"]:hover,
+  a[class*="font-app"]:hover {
+    text-decoration: none;
   }
 
   /* @tailwindcss/forms añade anillo de foco a casillas; lo quitamos en toda la app */
@@ -76,7 +126,7 @@
   }
 
   .modal-panel {
-    @apply relative max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-xl border border-app-border bg-app-panel p-6 shadow-lg;
+    @apply relative flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-xl border border-app-border bg-app-panel p-6 shadow-lg;
   }
 
   .modal-panel--conflict {

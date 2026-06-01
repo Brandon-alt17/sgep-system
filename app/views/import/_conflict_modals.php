@@ -18,7 +18,7 @@ $pendingFieldLabels = (array) ($pendingFieldLabels ?? []);
     ?>
     <div id="modal-conflict-<?= e((string) $conflictAprendizId) ?>" class="modal-overlay hidden" data-modal-overlay="conflict-<?= e((string) $conflictAprendizId) ?>" data-incoming-jefe-id="<?= e((string) $conflictIncomingJefeId) ?>" data-empresa-id="<?= e((string) $conflictEmpresaId) ?>">
         <div class="modal-panel modal-panel--conflict bg-app-panel" role="dialog" aria-modal="true" aria-labelledby="conflict-modal-title-<?= e((string) $conflictAprendizId) ?>">
-            <div class="mb-3 flex items-center justify-between gap-3">
+            <div class="mb-3 flex shrink-0 items-center justify-between gap-3">
                 <div>
                     <h3 id="conflict-modal-title-<?= e((string) $conflictAprendizId) ?>" class="m-0 cursor-default select-none text-lg font-semibold text-app-text">Resolución de conflictos</h3>
                     <p class="mt-1 inline-flex cursor-default select-none items-center gap-1.5 text-sm text-app-muted">
@@ -30,8 +30,8 @@ $pendingFieldLabels = (array) ($pendingFieldLabels ?? []);
                     <span class="inline-flex h-4 w-4 [&_svg]:h-4 [&_svg]:w-4"><?= ui_icon('x') ?></span>
                 </button>
             </div>
-            <p class="mb-3 mt-0 cursor-default select-none text-sm text-app-muted">Estos cambios están en conflicto y no se actualizaron automáticamente. Selecciona si conservar el valor actual o tomar el nuevo por cada campo.</p>
-            <div class="max-h-[70vh] overflow-auto rounded-lg border border-app-border bg-white/50">
+            <p class="mb-3 mt-0 shrink-0 cursor-default select-none text-sm text-app-muted">Estos cambios están en conflicto y no se actualizaron automáticamente. Selecciona si conservar el valor actual o tomar el nuevo por cada campo.</p>
+            <div class="min-h-0 flex-1 overflow-auto rounded-lg border border-app-border bg-white/50">
                 <div class="conflict-table">
                     <div class="conflict-table__header">
                         <div>Campo</div>
@@ -87,7 +87,7 @@ $pendingFieldLabels = (array) ($pendingFieldLabels ?? []);
                     <?php endforeach; ?>
                 </div>
             </div>
-            <div class="mt-5 flex flex-wrap items-center justify-end gap-3 border-t border-app-borderSoft pt-4">
+            <div class="mt-5 flex shrink-0 flex-wrap items-center justify-end gap-3 border-t border-app-borderSoft pt-4">
                 <p class="mr-auto mb-0 hidden cursor-default select-none text-xs text-app-muted sm:block">Aplica la misma decisión a todos los campos en conflicto de este aprendiz.</p>
                 <button type="button" class="inline-flex cursor-pointer select-none rounded-md border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-medium text-rose-700 hover:bg-rose-100" data-conflict-bulk="current" data-conflict-modal="conflict-<?= e((string) $conflictAprendizId) ?>">Mantener todos los actuales</button>
                 <button type="button" class="inline-flex cursor-pointer select-none rounded-md border border-app-accent bg-app-accent px-4 py-2 text-sm font-medium text-app-textOnBrand hover:bg-app-accentHover" data-conflict-bulk="new" data-conflict-modal="conflict-<?= e((string) $conflictAprendizId) ?>">Aceptar todos los nuevos</button>
