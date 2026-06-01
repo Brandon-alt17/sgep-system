@@ -158,21 +158,34 @@ class Aprendiz
 
     public static function create(array $data): int
     {
-        $sql = 'INSERT INTO aprendices (nombre_completo, tipo_documento, numero_documento, telefono, correo_personal, correo_institucional, programa_id, ficha, estado, created_at, updated_at)
-                VALUES (:nombre_completo, :tipo_documento, :numero_documento, :telefono, :correo_personal, :correo_institucional, :programa_id, :ficha, :estado, NOW(), NOW())';
+        $sql = 'INSERT INTO aprendices (
+            nombre_completo, tipo_documento, numero_documento, telefono,
+            correo_personal, correo_institucional, direccion_domicilio, ciudad_domicilio,
+            jefe_grupo, alternativa_ep, fecha_registro, ficha, estado, created_at, updated_at
+        ) VALUES (
+            :nombre_completo, :tipo_documento, :numero_documento, :telefono,
+            :correo_personal, :correo_institucional, :direccion_domicilio, :ciudad_domicilio,
+            :jefe_grupo, :alternativa_ep, :fecha_registro, :ficha, :estado, NOW(), NOW()
+        )';
+        
         $pdo = Database::connection();
         $stmt = $pdo->prepare($sql);
         $stmt->execute([
-            'nombre_completo' => $data['nombre_completo'],
-            'tipo_documento' => $data['tipo_documento'],
-            'numero_documento' => $data['numero_documento'],
-            'telefono' => $data['telefono'] ?? null,
-            'correo_personal' => $data['correo_personal'] ?? null,
-            'correo_institucional' => $data['correo_institucional'] ?? null,
-            'programa_id' => $data['programa_id'] ?? null,
-            'ficha' => $data['ficha'] ?? null,
-            'estado' => $data['estado'] ?? 'Pendiente por iniciar',
+            'nombre_completo'      => trim((string) ($data['nombre_completo'] ?? '')),
+            'tipo_documento'       => trim((string) ($data['tipo_documento'] ?? '')),
+            'numero_documento'     => trim((string) ($data['numero_documento'] ?? '')),
+            'telefono'             => self::nullableTrim($data['telefono'] ?? null),
+            'correo_personal'      => self::nullableTrim($data['correo_personal'] ?? null),
+            'correo_institucional' => self::nullableTrim($data['correo_institucional'] ?? null),
+            'direccion_domicilio'  => self::nullableTrim($data['direccion'] ?? null),
+            'ciudad_domicilio'     => self::nullableTrim($data['ciudad_domicilio'] ?? null),
+            'jefe_grupo'           => self::nullableTrim($data['jefe_grupo'] ?? null),
+            'alternativa_ep'       => self::nullableTrim($data['alternativa'] ?? null),
+            'fecha_registro'       => self::nullableTrim($data['fecha_registro'] ?? null),
+            'ficha'                => self::nullableTrim($data['ficha'] ?? null),
+            'estado'               => trim((string) ($data['estado'] ?? 'Pendiente por iniciar')),
         ]);
+        
         return (int) $pdo->lastInsertId();
     }
 
@@ -207,6 +220,8 @@ class Aprendiz
             telefono_instructor_seguimiento=:telefono_instructor_seguimiento,
             estado=:estado,
             jefe_id=:jefe_id,
+            coordinacion=:coordinacion,
+            jefe_grupo=:jefe_grupo,
             updated_at=NOW()
             WHERE id=:id';
         Database::connection()->prepare($sql)->execute([
@@ -223,6 +238,8 @@ class Aprendiz
             'nombre_instructor_seguimiento' => self::nullableTrim($data['nombre_instructor_seguimiento'] ?? null),
             'telefono_instructor_seguimiento' => self::nullableTrim($data['telefono_instructor_seguimiento'] ?? null),
             'estado' => trim((string) ($data['estado'] ?? 'Pendiente por iniciar')),
+            'coordinacion' => trim((string) ($data['coordinacion'] ?? '')),
+            'jefe_grupo' => trim((string) ($data['jefe_grupo'] ?? '')),
             'jefe_id' => $jefeIdResolved,
         ]);
 

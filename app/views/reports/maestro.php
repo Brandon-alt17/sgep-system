@@ -20,27 +20,43 @@
     </div>
 
     <!-- FILTROS -->
-    <div class="flex flex-wrap items-center gap-3">
+    <form method="GET" action="" class="flex flex-wrap items-center gap-3">
+        <?php
+        // 1. Extraer SOLO los valores que aparecen en la tabla actual
+        $fichas_arr = [];
+        $estados_arr = [];
+        foreach ($rows as $r) {
+            if (!empty($r['ficha'])) $fichas_arr[] = $r['ficha'];
+            if (!empty($r['estado_etapa'])) $estados_arr[] = $r['estado_etapa'];
+        }
+        // Eliminar duplicados, filtrar vacíos y ordenar
+        $fichas = array_unique(array_filter($fichas_arr)); sort($fichas);
+        $estados = array_unique(array_filter($estados_arr)); sort($estados);
+        ?>
 
-        <select class="h-10 px-3 rounded-lg border border-gray-300 bg-white text-sm min-w-[180px]">
-            <option>Carlos Mendoza</option>
+        <!-- SELECT DE FICHA -->
+        <select name="ficha" onchange="this.form.submit()" class="h-10 px-3 rounded-lg border border-gray-300 bg-white text-sm min-w-[160px]">
+            <option value="">Todos</option>
+            <?php foreach ($fichas as $f): ?>
+                <option value="<?= htmlspecialchars($f) ?>" <?= ((string)$f === (string)($_GET['ficha'] ?? '')) ? 'selected' : '' ?>>
+                    <?= htmlspecialchars($f) ?>
+                </option>
+            <?php endforeach; ?>
         </select>
 
-        <select class="h-10 px-3 rounded-lg border border-gray-300 bg-white text-sm min-w-[160px]">
-            <option>Todos</option>
-            <option>2745623</option>
-            <option>2801445</option>
-        </select>
-
-        <select class="h-10 px-3 rounded-lg border border-gray-300 bg-white text-sm min-w-[180px]">
-            <option>Todos</option>
-            <option>En ejecución</option>
-            <option>Finalizada</option>
-            <option>Pendiente</option>
+        <!-- SELECT DE ESTADO -->
+        <select name="estado" onchange="this.form.submit()" class="h-10 px-3 rounded-lg border border-gray-300 bg-white text-sm min-w-[180px]">
+            <option value="">Todos</option>
+            <?php foreach ($estados as $e): ?>
+                <option value="<?= htmlspecialchars($e) ?>" <?= ((string)$e === (string)($_GET['estado'] ?? '')) ? 'selected' : '' ?>>
+                    <?= htmlspecialchars($e) ?>
+                </option>
+            <?php endforeach; ?>
         </select>
 
         <div class="flex-1"></div>
 
+        <!-- LÓGICA DE EXPORTACIÓN (Se mantiene igual, pero ahora lee los filtros activos) -->
         <?php
         $exportQuery = [];
         foreach (['estado', 'ficha', 'programa_id'] as $filterKey) {
@@ -52,14 +68,10 @@
         $exportUrl = APP_BASE_PATH . '/reportes/exportar'
             . ($exportQuery === [] ? '' : '?' . http_build_query($exportQuery));
         ?>
-        <a
-            href="<?= e($exportUrl) ?>"
-            class="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium px-4 h-10 rounded-lg transition-colors"
-        >
+        <a href="<?= e($exportUrl) ?>" class="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium px-4 h-10 rounded-lg transition-colors">
             Exportar a Excel
         </a>
-
-    </div>
+    </form>
 
     <!-- STATS -->
     <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
@@ -114,7 +126,6 @@
                     </tr>
                     <tr style="background: #f9fafb;">
                         <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">#</th>
-                        <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;"># Grupo</th>
                         <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">Ficha</th>
                         <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">Cód. programa</th>
                         <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">Programa</th>
@@ -182,7 +193,6 @@
                             data-nombre="<?= htmlspecialchars($a['nombre'] ?? '') ?>"
                         >                        
                             <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;"><?= $a['num_aprendiz'] ?? '' ?></td>
-                            <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;"><?= $a['num_por_grupo'] ?? '' ?></td>
                             <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;"><?= $a['ficha'] ?? '' ?></td>
                             <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;"><?= $a['codigo_programa'] ?? '' ?></td>
                             <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap; max-width: 150px; overflow: hidden; text-overflow: ellipsis;"><?= $a['programa_formacion'] ?? '' ?></td>
