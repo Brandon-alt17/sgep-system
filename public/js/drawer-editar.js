@@ -7,12 +7,131 @@
         console.log('Inicializando popup...');
         setupEventListeners();
         setupRowClicks();
+        loadAllTableData(); // Cargar todos los datos guardados en la tabla al iniciar
+    }
+
+    // Función para cargar todos los datos guardados en la tabla al iniciar
+    function loadAllTableData() {
+        console.log('Cargando datos guardados...');
+        document.querySelectorAll('tr[data-id]').forEach(row => {
+            const aprendizId = row.dataset.id;
+            const saved = localStorage.getItem(`formulario_${aprendizId}`);
+            if (saved) {
+                try {
+                    const data = JSON.parse(saved);
+                    console.log('Cargando datos para:', aprendizId, data);
+                    updateTableRow(row, data);
+                } catch(e) {
+                    console.error('Error loading data for row:', e);
+                }
+            }
+        });
+    }
+
+    // Función para actualizar una fila específica de la tabla usando clases
+    function updateTableRow(row, data) {
+        console.log('Actualizando fila con datos:', data);
+        
+        // Mapeo de IDs del formulario a las clases CSS de las celdas
+        const classMapping = {
+            'doc_gfpi_165': 'doc-status-gfpi-165',
+            'doc_momento_1': 'doc-status-momento-1',
+            'doc_bitacora_1': 'doc-status-bitacora-1',
+            'doc_bitacora_2': 'doc-status-bitacora-2',
+            'doc_bitacora_3': 'doc-status-bitacora-3',
+            'doc_bitacora_4': 'doc-status-bitacora-4',
+            'doc_bitacora_5': 'doc-status-bitacora-5',
+            'doc_bitacora_6': 'doc-status-bitacora-6',
+            'doc_momento_final': 'doc-status-momento-final',
+            'cert_doc_identidad': 'doc-status-cert-doc-identidad',
+            'cert_paz_salvo': 'doc-status-cert-paz-salvo',
+            'cert_gfpi_023': 'doc-status-cert-gfpi-023',
+            'cert_bitacoras': 'doc-status-cert-bitacoras',
+            'cert_cumplimiento': 'doc-status-cert-cumplimiento',
+            'cert_ape': 'doc-status-cert-ape',
+            'cert_carnet': 'doc-status-cert-carnet'
+        };
+        
+        // Actualizar checkboxes (documentos)
+        for (const [key, className] of Object.entries(classMapping)) {
+            if (data[key] !== undefined) {
+                const cell = row.querySelector('.' + className);
+                if (cell) {
+                    if (data[key]) {
+                        cell.innerHTML = '✓';
+                        cell.style.color = '#059669';
+                        cell.style.fontWeight = 'bold';
+                    } else {
+                        cell.innerHTML = '—';
+                        cell.style.color = '';
+                        cell.style.fontWeight = '';
+                    }
+                    console.log(`Actualizado ${key} en celda .${className}:`, data[key]);
+                } else {
+                    console.warn(`No se encontró celda con clase .${className}`);
+                }
+            }
+        }
+        
+        // Actualizar reingreso
+        if (data.reingreso !== undefined) {
+            const reingresoCell = row.querySelector('td:nth-child(32)'); // Columna 32
+            if (reingresoCell) {
+                reingresoCell.innerHTML = data.reingreso ? 'Sí' : 'No';
+                console.log('Actualizado reingreso:', data.reingreso);
+            }
+        }
+        
+        // Actualizar cambio modalidad (columna 33)
+        if (data.cambio_modalidad !== undefined) {
+            const cambioCell = row.querySelector('td:nth-child(33)');
+            if (cambioCell) {
+                cambioCell.innerHTML = data.cambio_modalidad || '—';
+                console.log('Actualizado cambio modalidad:', data.cambio_modalidad);
+            }
+        }
+        
+        // Actualizar observaciones novedad (columna 34)
+        if (data.observaciones_novedad !== undefined) {
+            const novedadCell = row.querySelector('td:nth-child(34)');
+            if (novedadCell) {
+                novedadCell.innerHTML = data.observaciones_novedad || '—';
+                console.log('Actualizado observaciones novedad');
+            }
+        }
+        
+        // Actualizar fecha entrega (columna 51)
+        if (data.fecha_entrega !== undefined) {
+            const fechaCell = row.querySelector('td:nth-child(51)');
+            if (fechaCell) {
+                fechaCell.innerHTML = data.fecha_entrega || '';
+                console.log('Actualizado fecha entrega:', data.fecha_entrega);
+            }
+        }
+        
+        // Actualizar estado aprendiz (columna 52)
+        if (data.estado_aprendiz !== undefined) {
+            const estadoCell = row.querySelector('td:nth-child(52)');
+            if (estadoCell) {
+                estadoCell.innerHTML = data.estado_aprendiz || '';
+                console.log('Actualizado estado aprendiz:', data.estado_aprendiz);
+            }
+        }
+        
+        // Actualizar observaciones (columna 53)
+        if (data.observaciones !== undefined) {
+            const obsCell = row.querySelector('td:nth-child(53)');
+            if (obsCell) {
+                obsCell.innerHTML = data.observaciones || '—';
+                console.log('Actualizado observaciones');
+            }
+        }
     }
 
     function setupEventListeners() {
         const closeBtn = document.getElementById('closePopupBtn');
         const cancelBtn = document.getElementById('cancelPopupBtn');
-        const saveBtn = document.getElementById('saveDocsBtn'); // Corregido ID
+        const saveBtn = document.getElementById('saveDocsBtn');
         const overlay = document.getElementById('popupOverlay');
         
         if (closeBtn) {
@@ -38,7 +157,6 @@
         
         if (overlay) {
             overlay.onclick = function(e) {
-                // Solo cierra si el click es directamente en el overlay (fondo oscuro)
                 if (e.target === overlay) {
                     closePopup();
                 }
@@ -46,13 +164,10 @@
         }
 
         const popup = document.getElementById('documentPopup');
-
         if (popup) {
-            // Evita que los clicks dentro del popup lleguen al overlay o a la tabla
             popup.addEventListener('click', function(e) {
                 e.stopPropagation();
             });
-            // Eliminado stopPropagation en 'wheel' para permitir el scroll interno
         }
         
         document.onkeydown = function(e) {
@@ -67,16 +182,12 @@
 
     function setupRowClicks() {
         document.addEventListener('click', function(e) {
-            // Ignorar popup
             if (e.target.closest('#documentPopup')) return;
-            // Ignorar overlay
             if (e.target.closest('#popupOverlay')) return;
 
-            // Buscar fila
             const row = e.target.closest('tr[data-id]');
             if (!row) return;
 
-            // Ignorar elementos interactivos
             if (e.target.closest('button') || e.target.closest('input') || 
                 e.target.closest('textarea') || e.target.closest('select') || 
                 e.target.closest('label') || e.target.closest('a')) {
@@ -104,10 +215,8 @@
         
         loadSavedData(aprendizId);
         
-        // Mostrar popup y overlay con transición
         popup.style.transform = 'translateX(0%)';
         overlay.style.display = 'block';
-        // Forzar reflow para que la transición de opacidad funcione
         requestAnimationFrame(() => {
             overlay.style.opacity = '1';
             overlay.style.pointerEvents = 'auto';
@@ -127,7 +236,7 @@
         
         setTimeout(() => {
             overlay.style.display = 'none';
-        }, 300); // Coincide con la duración de la transición
+        }, 300);
         document.body.style.overflow = '';
     }
 
@@ -200,20 +309,44 @@
         
         const formData = {};
         
+        // Guardar checkboxes
         document.querySelectorAll('#documentPopup .doc-checkbox').forEach(cb => {
-            if (cb.id) formData[cb.id] = cb.checked;
+            if (cb.id) {
+                formData[cb.id] = cb.checked;
+                console.log(`Guardando ${cb.id}: ${cb.checked}`);
+            }
         });
         
+        // Guardar inputs
         const ids = ['fecha_entrega', 'estado_aprendiz', 'observaciones', 'observaciones_novedad', 'cambio_modalidad'];
         ids.forEach(id => {
             const el = document.getElementById(id);
-            if (el) formData[id] = el.value;
+            if (el) {
+                formData[id] = el.value;
+                console.log(`Guardando ${id}: ${el.value}`);
+            }
         });
         
+        // Guardar reingreso
         const reingreso = document.getElementById('reingreso');
-        if (reingreso) formData.reingreso = reingreso.checked;
+        if (reingreso) {
+            formData.reingreso = reingreso.checked;
+            console.log(`Guardando reingreso: ${reingreso.checked}`);
+        }
         
+        // Guardar en localStorage
         localStorage.setItem(`formulario_${currentAprendizId}`, JSON.stringify(formData));
+        console.log('Datos guardados en localStorage:', formData);
+        
+        // Actualizar la tabla inmediatamente
+        const row = document.querySelector(`tr[data-id="${currentAprendizId}"]`);
+        if (row) {
+            console.log('Actualizando fila en la tabla...');
+            updateTableRow(row, formData);
+        } else {
+            console.error('No se encontró la fila con data-id:', currentAprendizId);
+        }
+        
         showNotification('Datos guardados correctamente', 'success');
         closePopup();
     }
@@ -226,6 +359,7 @@
             background-color: ${type === 'success' ? '#059669' : '#dc2626'};
             color: white; border-radius: 8px; z-index: 10001; font-size: 14px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1); transition: opacity 0.3s ease; opacity: 0;
+            z-index: 10002;
         `;
         document.body.appendChild(notification);
         
