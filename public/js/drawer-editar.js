@@ -49,7 +49,8 @@
             'cert_bitacoras': 'doc-status-cert-bitacoras',
             'cert_cumplimiento': 'doc-status-cert-cumplimiento',
             'cert_ape': 'doc-status-cert-ape',
-            'cert_carnet': 'doc-status-cert-carnet'
+            'cert_carnet': 'doc-status-cert-carnet',
+            'cert_saber_tyt': 'doc-status-cert-saber-tyt'
         };
         
         // Actualizar checkboxes (documentos)
@@ -73,54 +74,72 @@
             }
         }
         
-        // Actualizar reingreso
+        // Actualizar reingreso - buscar por clase o posición relativa
         if (data.reingreso !== undefined) {
-            const reingresoCell = row.querySelector('td:nth-child(32)'); // Columna 32
+            // Buscar la celda que contiene el texto actual de reingreso
+            const cells = row.querySelectorAll('td');
+            // La columna de reingreso está después de "Estado etapa" (que tiene clase estado-etapa o similar)
+            // Alternativa: buscar por el texto actual o usar un data attribute
+            let reingresoCell = null;
+            for (let i = 0; i < cells.length; i++) {
+                // Buscar una celda que normalmente contiene 'Sí' o 'No' y está cerca de Estado etapa
+                if (cells[i].previousElementSibling && 
+                    cells[i].previousElementSibling.textContent.includes('En ejecución') ||
+                    cells[i].previousElementSibling && 
+                    cells[i].previousElementSibling.textContent.includes('Finalizado')) {
+                    reingresoCell = cells[i];
+                    break;
+                }
+            }
+            // Como fallback, usa índice aproximado (ajusta según tu tabla)
+            if (!reingresoCell && cells[31]) reingresoCell = cells[31];
+            
             if (reingresoCell) {
                 reingresoCell.innerHTML = data.reingreso ? 'Sí' : 'No';
                 console.log('Actualizado reingreso:', data.reingreso);
             }
         }
         
-        // Actualizar cambio modalidad (columna 33)
+        // Actualizar cambio modalidad - usar clase específica
         if (data.cambio_modalidad !== undefined) {
-            const cambioCell = row.querySelector('td:nth-child(33)');
+            // Buscar por clase si existe, o por índice
+            let cambioCell = row.querySelector('td:nth-child(33)'); // Ajusta este índice
             if (cambioCell) {
                 cambioCell.innerHTML = data.cambio_modalidad || '—';
                 console.log('Actualizado cambio modalidad:', data.cambio_modalidad);
             }
         }
         
-        // Actualizar observaciones novedad (columna 34)
+        // Actualizar observaciones novedad
         if (data.observaciones_novedad !== undefined) {
-            const novedadCell = row.querySelector('td:nth-child(34)');
+            let novedadCell = row.querySelector('td:nth-child(34)'); // Ajusta este índice
             if (novedadCell) {
                 novedadCell.innerHTML = data.observaciones_novedad || '—';
                 console.log('Actualizado observaciones novedad');
             }
         }
         
-        // Actualizar fecha entrega (columna 51)
+        // Actualizar fecha entrega - usar clase CSS
         if (data.fecha_entrega !== undefined) {
-            const fechaCell = row.querySelector('td:nth-child(51)');
+            const fechaCell = row.querySelector('.fecha-entrega');
             if (fechaCell) {
                 fechaCell.innerHTML = data.fecha_entrega || '';
                 console.log('Actualizado fecha entrega:', data.fecha_entrega);
             }
         }
         
-        // Actualizar estado aprendiz (columna 52)
+        // Actualizar estado aprendiz - usar clase CSS
         if (data.estado_aprendiz !== undefined) {
-            const estadoCell = row.querySelector('td:nth-child(52)');
+            const estadoCell = row.querySelector('.estado-aprendiz');
             if (estadoCell) {
                 estadoCell.innerHTML = data.estado_aprendiz || '';
                 console.log('Actualizado estado aprendiz:', data.estado_aprendiz);
             }
         }
         
-        // Actualizar observaciones (columna 53)
+        // Actualizar observaciones - usar clase CSS
         if (data.observaciones !== undefined) {
-            const obsCell = row.querySelector('td:nth-child(53)');
+            const obsCell = row.querySelector('.observaciones');
             if (obsCell) {
                 obsCell.innerHTML = data.observaciones || '—';
                 console.log('Actualizado observaciones');
@@ -249,15 +268,21 @@
                     const element = document.getElementById(key);
                     if (element) {
                         if (element.type === 'checkbox') {
-                            element.checked = value;
-                            const toggleDiv = element.nextElementSibling; 
-                            if (toggleDiv) {
-                                if (value) {
-                                    toggleDiv.style.backgroundColor = '#059669';
-                                    toggleDiv.querySelector('div').style.transform = 'translateX(20px)';
-                                } else {
-                                    toggleDiv.style.backgroundColor = '#e5e7eb';
-                                    toggleDiv.querySelector('div').style.transform = 'translateX(0px)';
+                            // Solo cambiar si el valor es diferente para evitar bucles
+                            if (element.checked !== value) {
+                                element.checked = value;
+                                // Actualizar visual del switch
+                                const toggleDiv = element.nextElementSibling;
+                                if (toggleDiv) {
+                                    if (value) {
+                                        toggleDiv.style.backgroundColor = '#059669';
+                                        const innerDiv = toggleDiv.querySelector('div');
+                                        if (innerDiv) innerDiv.style.transform = 'translateX(20px)';
+                                    } else {
+                                        toggleDiv.style.backgroundColor = '#e5e7eb';
+                                        const innerDiv = toggleDiv.querySelector('div');
+                                        if (innerDiv) innerDiv.style.transform = 'translateX(0px)';
+                                    }
                                 }
                             }
                         } else {

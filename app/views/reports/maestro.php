@@ -302,7 +302,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap; max-width: 150px; overflow: hidden; text-overflow: ellipsis;"><?= $a['correo_contacto'] ?? '' ?></td>
                             <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;"><span style="display: inline-flex; border-radius: 9999px; padding: 2px 8px; font-size: 11px; background: #dbeafe;"><?= $a['estado_etapa'] ?? '' ?></span></td>
                             <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: center;"><?= !empty($a['reingreso_vencimiento']) ? 'Sí' : 'No' ?></td>
-                            <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;"><?= $a['cambio_modalidad'] ?? '' ?></td>
+                            <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;" class="cambio-modalidad"><?= $a['cambio_modalidad'] ?? '' ?></td>
                             <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap; max-width: 150px; overflow: hidden; text-overflow: ellipsis;"><?= $a['observaciones_novedad'] ?: '—' ?></td>
                             
                             <!-- PROCESO DOCUMENTAL DEL SEGUIMIENTO - Con clases específicas -->
@@ -324,8 +324,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: center;" class="doc-status-cert-cumplimiento"><?= !empty($a['cert_cumplimiento']) ? '✓' : '—' ?></td>
                             <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: center;" class="doc-status-cert-ape"><?= !empty($a['cert_ape']) ? '✓' : '—' ?></td>
                             <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: center;" class="doc-status-cert-carnet"><?= !empty($a['cert_carnet']) ? '✓' : '—' ?></td>
-                            
-                            <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: center;"><?= !empty($a['cert_saber_tyt']) ? '✓' : '—' ?></td>
+                            <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: center;" class="doc-status-cert-saber-tyt"><?= !empty($a['cert_saber_tyt']) ? '✓' : '—' ?></td>
                             <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;" class="fecha-entrega"><?= e((string) ($a['fecha_entrega_admin'] ?? '')) ?></td>
                             <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;" class="estado-aprendiz"><?= e((string) ($a['estado_aprendiz'] ?? '')) ?></td>
                             <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap; max-width: 150px; overflow: hidden; text-overflow: ellipsis;" class="observaciones"><?= e((string) ($a['observaciones_cert'] ?? '')) ?: '—' ?></td>
