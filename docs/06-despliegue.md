@@ -10,6 +10,7 @@
 - [Entornos de ejecución](#entornos-de-ejecución)
 - [Proceso de empaquetado](#proceso-de-empaquetado)
 - [Instalación en Windows (WAMP)](#instalación-en-windows-wamp)
+- [LibreOffice para exportar PDF (opcional)](#libreoffice-para-exportar-pdf-opcional)
 - [Instalación en macOS (MAMP)](#instalación-en-macos-mamp)
 - [Actualizaciones](#actualizaciones)
 - [Comandos de referencia](#comandos-de-referencia)
@@ -72,6 +73,12 @@ DB_PORT=3306
 DB_DATABASE=sgep
 DB_USERNAME=root
 DB_PASSWORD=                # Vacío en WAMP por defecto
+
+# Exportación F-023 a PDF (LibreOffice headless)
+# Ruta absoluta a soffice.exe; vacío = rutas típicas de instalación (ver sección LibreOffice)
+F023_LIBREOFFICE_PATH=
+# Solo desarrollo sin LibreOffice: true permite fallback Dompdf (baja fidelidad). Producción: false
+F023_PDF_ALLOW_DOMPDF_FALLBACK=false
 
 ```
 
@@ -195,6 +202,71 @@ SGEP_v1.0.zip
    → http://localhost/sgep/public
 ```
 
+> **Exportación PDF:** solo si el directivo va a generar F-023 en PDF, instale LibreOffice en el mismo PC (ver [LibreOffice para exportar PDF](#libreoffice-para-exportar-pdf-opcional)). Word (.docx) funciona sin LibreOffice.
+
+---
+
+## LibreOffice para exportar PDF (opcional)
+
+LibreOffice **no viene** con WAMP ni MAMP. Solo hace falta si se usa la opción **PDF** al generar el GFPI-F-023. La exportación **Word (.docx)** no lo requiere.
+
+### Paso a paso (Windows)
+
+1. **Descargar** el instalador desde [https://www.libreoffice.org/download](https://www.libreoffice.org/download) (versión Windows, 64 bits).
+2. **Ejecutar el instalador** hasta finalizar (no basta con tener el archivo `.msi` o `.exe` descargado).
+3. **Comprobar** que existe el ejecutable (Explorador de archivos → buscar `soffice.exe`). Ruta habitual:
+   ```
+   C:\Program Files\LibreOffice\program\soffice.exe
+   ```
+4. **Verificar desde la carpeta del SGEP** (con WAMP en verde):
+   ```bat
+   cd C:\wamp64\www\sgep
+   php scripts\check_pdf_converter.php
+   ```
+   Debe mostrar: `OK: motor PDF disponible.`
+5. En el SGEP, ir a **Documentos → Generar F-023**. La alerta amarilla *“La exportación PDF requiere LibreOffice…”* **no debe aparecer** y la opción PDF debe estar habilitada.
+
+### ¿Hay que editar el `.env`?
+
+| Situación | ¿Configurar `.env`? |
+|-----------|----------------------|
+| Instalación estándar en `C:\Program Files\LibreOffice\...` | **No** — SGEP la detecta solo |
+| Instalación en otra carpeta (portable, unidad `D:\`, etc.) | **Sí** — ver abajo |
+| Copia incluida en el proyecto en `tools/libreoffice/` | **No** — SGEP la busca ahí |
+
+Si hace falta indicar la ruta manualmente, editar `.env`:
+
+```env
+F023_LIBREOFFICE_PATH=C:\Program Files\LibreOffice\program\soffice.exe
+```
+
+(Ajustar la ruta real si LibreOffice está en otro sitio.)
+
+**Después de cambiar `.env`:** reiniciar WAMP (Apache) para que PHP cargue la variable.
+
+> En Windows, SGEP **no usa el PATH del sistema**; busca rutas fijas conocidas o la variable `F023_LIBREOFFICE_PATH`.
+
+### Paso a paso (macOS)
+
+1. Descargar e instalar LibreOffice desde [libreoffice.org](https://www.libreoffice.org).
+2. Ruta habitual del ejecutable:
+   ```
+   /Applications/LibreOffice.app/Contents/MacOS/soffice
+   ```
+3. Si la detección automática falla, en `.env`:
+   ```env
+   F023_LIBREOFFICE_PATH=/Applications/LibreOffice.app/Contents/MacOS/soffice
+   ```
+4. Verificar: `php scripts/check_pdf_converter.php` desde la carpeta del proyecto.
+
+### Copia portable (equipo de desarrollo)
+
+Opcionalmente se puede empaquetar LibreOffice en `tools/libreoffice/` dentro del ZIP (~300 MB). SGEP lo detecta sin configurar `.env`. No es obligatorio para el directivo si instala LibreOffice normalmente.
+
+### Variable de respaldo (solo desarrollo)
+
+`F023_PDF_ALLOW_DOMPDF_FALLBACK=true` permite generar PDF sin LibreOffice con calidad inferior. **En producción debe permanecer en `false`.**
+
 ---
 
 ## Instalación en macOS (MAMP)
@@ -231,6 +303,8 @@ php database/run_migrations.php
 # 5. Abrir en el navegador (ejemplo con puerto 8888):
 # http://localhost:8888/sgep/public
 ```
+
+> **Exportación PDF:** instalar LibreOffice en el Mac y verificar con `php scripts/check_pdf_converter.php` ([detalle](#libreoffice-para-exportar-pdf-opcional)).
 
 ---
 
@@ -353,21 +427,53 @@ Solución: El equipo debe correr "npm run build:css" antes de empaquetar.
           Verificar que public/css/app.css existe en el ZIP.
 ```
 
-### La exportación PDF del F-023 falla
+### Aparece la alerta “La exportación PDF requiere LibreOffice…”
 
 ```
-Causa: LibreOffice no está instalado o PHP no puede ejecutarlo.
+Causa: SGEP no encuentra soffice.exe en el PC donde corre Apache/PHP.
 Solución:
-  1. Instalar LibreOffice (https://www.libreoffice.org) en el mismo PC donde corre WAMP/MAMP.
-  2. En .env, indicar la ruta si no está en el PATH:
-     F023_LIBREOFFICE_PATH=C:\Program Files\LibreOffice\program\soffice.exe
-     (Linux: /usr/bin/libreoffice)
-  3. Verificar desde la carpeta del proyecto:
-     php scripts/check_pdf_converter.php
-  4. Mientras tanto, exportar en Word (.docx) y guardar como PDF desde Word o LibreOffice Writer.
+  1. Confirmar que LibreOffice está INSTALADO (no solo descargado el instalador).
+  2. Buscar soffice.exe y comprobar la ruta (Windows: C:\Program Files\LibreOffice\program\soffice.exe).
+  3. Si está en otra carpeta, añadir en .env:
+     F023_LIBREOFFICE_PATH=C:\ruta\completa\a\program\soffice.exe
+     Reiniciar WAMP/MAMP después de guardar .env.
+  4. Ejecutar: php scripts/check_pdf_converter.php
+     → debe responder "OK: motor PDF disponible."
+  5. Recargar la página de generar documento.
 ```
 
-Opcionalmente, el equipo puede incluir una copia portable en `tools/libreoffice/` dentro del paquete SGEP (~300 MB).
+### La exportación PDF del F-023 falla al generar
+
+```
+Causa: LibreOffice está instalado pero la conversión headless falló (permisos, ruta incorrecta, antivirus).
+Solución:
+  1. Repetir php scripts/check_pdf_converter.php desde la carpeta del proyecto.
+  2. Verificar F023_LIBREOFFICE_PATH en .env (ruta exacta al .exe, sin comillas).
+  3. Probar exportar solo Word (.docx); si Word funciona, el problema es solo LibreOffice/PDF.
+  4. Revisar logs de PHP/Apache por mensajes "F023 PDF LibreOffice".
+  5. Alternativa: exportar .docx y guardar como PDF desde LibreOffice Writer o Word.
+```
+
+### Instalé LibreOffice pero SGEP sigue sin detectarlo
+
+```
+Causas frecuentes:
+  • Solo se descargó el instalador, no se ejecutó hasta el final.
+  • LibreOffice portable o en carpeta personalizada → configurar F023_LIBREOFFICE_PATH.
+  • Se editó .env pero no se reinició Apache (WAMP/MAMP).
+  • PHP de la terminal y PHP de Apache son distintos → probar el script desde la misma
+    carpeta del proyecto con el php de WAMP:
+    C:\wamp64\bin\php\php8.3.x\php.exe scripts\check_pdf_converter.php
+```
+
+### Linux (servidor o desarrollo en Arch/Ubuntu)
+
+```
+Rutas que SGEP prueba automáticamente: /usr/bin/libreoffice, /usr/bin/soffice, etc.
+Instalación ejemplo (Arch): sudo pacman -S libreoffice-fresh
+Si no se detecta: F023_LIBREOFFICE_PATH=/usr/bin/libreoffice
+Verificar: php scripts/check_pdf_converter.php
+```
 
 ---
 
