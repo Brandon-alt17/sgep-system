@@ -7,6 +7,7 @@ namespace App\Controllers;
 use App\Helpers\ImportHistory;
 use App\Helpers\Validator;
 use App\Models\Aprendiz;
+use App\Models\Empresa;
 use App\Models\EmpresaJefe;
 use App\Models\Momento;
 use App\Models\Programa;
@@ -116,10 +117,40 @@ class AprendizController
         view('aprendices/show', [
             'aprendiz' => $aprendiz,
             'jefes' => $jefes,
+            'empresasOptions' => Empresa::catalogo(),
+            'programasOptions' => Programa::all(),
             'momentos' => $momentos,
             'backToListUrl' => $this->aprendicesBackUrl($_GET),
             'pageToast' => $this->toastFromQuery((string) ($_GET['toast'] ?? '')),
         ]);
+    }
+
+    public function jefesPorEmpresa(): void
+    {
+        header('Content-Type: application/json; charset=utf-8');
+        $empresaId = (int) ($_GET['empresa_id'] ?? 0);
+        if ($empresaId <= 0) {
+            echo json_encode(['ok' => true, 'jefes' => []], JSON_UNESCAPED_UNICODE);
+
+            return;
+        }
+
+        $jefes = [];
+        foreach (EmpresaJefe::listByEmpresa($empresaId) as $jefeRow) {
+            $jid = (int) ($jefeRow['id'] ?? 0);
+            if ($jid <= 0) {
+                continue;
+            }
+            $nombre = trim((string) ($jefeRow['nombre'] ?? ''));
+            $cargo = trim((string) ($jefeRow['cargo'] ?? ''));
+            $label = $nombre !== '' ? $nombre : 'Supervisor #' . $jid;
+            if ($cargo !== '') {
+                $label .= ' — ' . $cargo;
+            }
+            $jefes[] = ['id' => $jid, 'label' => $label];
+        }
+
+        echo json_encode(['ok' => true, 'jefes' => $jefes], JSON_UNESCAPED_UNICODE);
     }
 
     /**

@@ -213,7 +213,7 @@
             <div class="flex justify-between items-start">
                 <div>
                     <h2 class="text-xl font-semibold text-gray-900">Editar datos — <?= e($aprendiz['nombre_completo']) ?></h2>
-                    <p class="text-sm text-gray-500 mt-1">Actualiza la información personal del aprendiz y de la empresa co-formadora.</p>
+                    <p class="text-sm text-gray-500 mt-1">Actualiza la información personal del aprendiz y la vinculación con la empresa co-formadora.</p>
                 </div>
                 <button type="button" onclick="cerrarModal()" class="text-gray-400 hover:text-gray-600 transition text-2xl leading-none">&times;</button>
             </div>
@@ -234,13 +234,49 @@
         <!-- FORM (resto del contenido igual) -->
         <?php
         $jefes = (array) ($jefes ?? []);
+        $empresasOptions = (array) ($empresasOptions ?? []);
+        $programasOptions = (array) ($programasOptions ?? []);
         $currentJefeId = (int) ($aprendiz['jefe_id'] ?? 0);
+        $currentProgramaId = (int) ($aprendiz['programa_id'] ?? 0);
         $empresaIdAp = (int) ($aprendiz['empresa_id'] ?? 0);
         $jefeIdsInList = array_map(static fn (array $j): int => (int) ($j['id'] ?? 0), $jefes);
+        $empresaComboboxOptions = [];
+        $empresasCatalogForJs = [];
+        foreach ($empresasOptions as $empresaRow) {
+            $eidOpt = (int) ($empresaRow['id'] ?? 0);
+            if ($eidOpt <= 0) {
+                continue;
+            }
+            $empresaNombre = trim((string) ($empresaRow['nombre'] ?? 'Empresa #' . $eidOpt));
+            $empresaComboboxOptions[] = [
+                'value' => (string) $eidOpt,
+                'label' => $empresaNombre,
+                'search' => $empresaNombre . ' ' . trim((string) ($empresaRow['nit'] ?? '')),
+            ];
+            $empresasCatalogForJs[] = [
+                'id' => $eidOpt,
+                'nombre' => $empresaNombre,
+                'nit' => trim((string) ($empresaRow['nit'] ?? '')),
+                'direccion' => trim((string) ($empresaRow['direccion'] ?? '')),
+            ];
+        }
+        $showEmpresaReadonly = static function (string $value): string {
+            $t = trim($value);
+
+            return $t !== '' ? e($t) : '<span class="italic text-gray-400">Dato no registrado</span>';
+        };
         ?>
-        <form method="POST" action="<?= e(APP_BASE_PATH) ?>/aprendices/update" class="p-6 pt-4">
+        <form
+            method="POST"
+            action="<?= e(APP_BASE_PATH) ?>/aprendices/update"
+            class="p-6 pt-4"
+            id="form-editar-aprendiz"
+            data-jefes-url="<?= e(APP_BASE_PATH) ?>/aprendices/jefes-por-empresa"
+            data-empresas-catalog="<?= e(json_encode($empresasCatalogForJs, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT)) ?>"
+            data-initial-empresa-id="<?= $empresaIdAp ?>"
+            data-initial-jefe-id="<?= $currentJefeId ?>"
+        >
             <input type="hidden" name="id" value="<?= (int) $aprendiz['id'] ?>">
-            <input type="hidden" name="empresa_id" value="<?= $empresaIdAp ?>">
 
             <!-- ===================== -->
             <!-- DATOS APRENDIZ (Más campos, más ancho) -->
@@ -283,6 +319,19 @@
                         <label class="form-label">Grupo</label>
                         <input type="text" name="ficha" value="<?= e($aprendiz['ficha'] ?? '') ?>" class="form-input">
                     </div>
+                    <div class="form-field md:col-span-2">
+                        <label class="form-label">Programa de formación</label>
+                        <select name="programa_id" class="form-input">
+                            <option value="">Sin programa</option>
+                            <?php foreach ($programasOptions as $programaRow): ?>
+                                <?php $pid = (int) ($programaRow['id'] ?? 0); ?>
+                                <?php if ($pid <= 0) continue; ?>
+                                <option value="<?= $pid ?>" <?= $currentProgramaId === $pid ? 'selected' : '' ?>>
+                                    <?= e(trim((string) ($programaRow['nombre'] ?? 'Programa #' . $pid))) ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
                     <div class="form-field">
                         <label class="form-label">Instructor seguimiento</label>
                         <input type="text" name="nombre_instructor_seguimiento" value="<?= e($aprendiz['nombre_instructor_seguimiento'] ?? '') ?>" class="form-input">
@@ -291,17 +340,33 @@
                         <label class="form-label">Teléfono instructor seguimiento</label>
                         <input type="text" name="telefono_instructor_seguimiento" value="<?= e($aprendiz['telefono_instructor_seguimiento'] ?? '') ?>" class="form-input">
                     </div>
-                    
+                    <div class="form-field">
+                        <label class="form-label">Jefe de grupo</label>
+                        <input type="text" name="jefe_grupo" value="<?= e($aprendiz['jefe_grupo'] ?? '') ?>" class="form-input">
+                    </div>
+                    <div class="form-field">
+                        <label class="form-label">Área de coordinación</label>
+                        <input type="text" name="coordinacion" value="<?= e($aprendiz['coordinacion'] ?? '') ?>" class="form-input">
+                    </div>
+
                     <div class="form-field">
                         <label class="form-label">Estado</label>
                         <select name="estado" class="form-input">
-                            <option value="Pendiente por iniciar" <?= ($aprendiz['estado'] ?? '') === 'Pendiente por iniciar' ? 'selected' : '' ?>>Pendiente por iniciar</option>
-                            <option value="En ejecución" <?= ($aprendiz['estado'] ?? '') === 'En ejecución' ? 'selected' : 'En ejecución' ?>>En ejecución</option>
-                            <option value="Certificado" <?= ($aprendiz['estado'] ?? '') === 'Certificado' ? 'selected' : 'Certificado' ?>>Certificado</option>
-                            <option value="Aplazada" <?= ($aprendiz['estado'] ?? '') === 'Aplazada' ? 'selected' : 'Aplazada' ?>>Aplazada</option>
-                            <option value="Finalizada" <?= ($aprendiz['estado'] ?? '') === 'Finalizada' ? 'selected' : 'Finalizada' ?>>Finalizada</option>
-                            <option value="Por certificar" <?= ($aprendiz['estado'] ?? '') === 'Por certificar' ? 'selected' : 'Por certificar' ?>>Por certificar</option>
-                            <option value="Pendiente por comité" <?= ($aprendiz['estado'] ?? '') === 'Pendiente por comité' ? 'selected' : 'Pendiente por comité' ?>>Pendiente por comité</option>
+                            <?php
+                            $estadoActual = (string) ($aprendiz['estado'] ?? 'Pendiente por iniciar');
+                            $estadosAprendiz = [
+                                'Pendiente por iniciar',
+                                'En ejecución',
+                                'Certificado',
+                                'Aplazada',
+                                'Finalizada',
+                                'Por certificar',
+                                'Pendiente por comité',
+                            ];
+                            foreach ($estadosAprendiz as $estadoOpt):
+                            ?>
+                                <option value="<?= e($estadoOpt) ?>" <?= $estadoActual === $estadoOpt ? 'selected' : '' ?>><?= e($estadoOpt) ?></option>
+                            <?php endforeach; ?>
                         </select>
                     </div>
                 </div>
@@ -310,71 +375,64 @@
             <!-- ===================== -->
             <!-- DATOS EMPRESA (Menos campos, más compacto) -->
             <!-- ===================== -->
-            <div id="contenido-empresa" class="hidden">
-                <div class="form-grid">
-                    <div class="form-field">
-                        <label class="form-label">Razón social</label>
-                        <input type="text" name="empresa_nombre" value="<?= e($aprendiz['empresa_nombre'] ?? '') ?>" class="form-input">
-                    </div>
-                    <div class="form-field">
-                        <label class="form-label">NIT</label>
-                        <input type="text" name="nit" value="<?= e($aprendiz['nit'] ?? '') ?>" class="form-input">
-                    </div>
-                    <div class="form-field">
-                        <label class="form-label">Dirección</label>
-                        <textarea name="direccion" rows="1" data-auto-resize-textarea class="form-input min-h-10 resize-none overflow-hidden"><?= e($aprendiz['direccion'] ?? '') ?></textarea>
-                    </div>
-                    <div class="form-field md:col-span-2">
-                        <label class="form-label" for="select-jefe-id">Supervisor</label>
-                        <select name="jefe_id" id="select-jefe-id" class="form-input" onchange="toggleJefeNuevoFields(this)">
-                            <option value="">Sin supervisor asignado</option>
-                            <?php foreach ($jefes as $jefeRow): ?>
-                                <?php $jid = (int) ($jefeRow['id'] ?? 0); ?>
-                                <option value="<?= $jid ?>" <?= $currentJefeId === $jid ? 'selected' : '' ?>>
-                                    <?= e(trim((string) ($jefeRow['nombre'] ?? ''))) ?><?php
-                                    $cj = trim((string) ($jefeRow['cargo'] ?? ''));
-                                    echo $cj !== '' ? ' — ' . e($cj) : '';
-                                    ?>
-                                </option>
-                            <?php endforeach; ?>
-                            <?php if ($currentJefeId > 0 && !in_array($currentJefeId, $jefeIdsInList, true)): ?>
-                                <option value="<?= $currentJefeId ?>" selected>
-                                    <?= e(trim((string) ($aprendiz['nombre_jefe'] ?? 'Supervisor #' . $currentJefeId))) ?> (actual)
-                                </option>
-                            <?php endif; ?>
-                            <option value="__new__">+ Crear nuevo supervisor</option>
-                        </select>
-                    </div>
-                    <div id="jefe-nuevo-fields" class="form-grid hidden md:col-span-2" style="grid-column: 1 / -1;">
+            <div id="contenido-empresa" class="hidden space-y-5">
+                <div class="form-field">
+                    <label class="form-label">Vincular a empresa co-formadora</label>
+                    <?php partial('components/combobox', [
+                        'name' => 'empresa_id',
+                        'value' => $empresaIdAp > 0 ? (string) $empresaIdAp : '',
+                        'placeholder' => 'Buscar empresa co-formadora...',
+                        'options' => $empresaComboboxOptions,
+                        'comboboxDropUp' => true,
+                        'comboboxPreserveValueOnSearch' => true,
+                        'valueInputAttrs' => ['id' => 'edit-aprendiz-empresa-id', 'data-edit-empresa-vinculo' => '1'],
+                    ]); ?>
+                    <p class="mt-2 text-xs text-gray-500 m-0">Seleccione la empresa a la que pertenece el aprendiz. Los datos de la empresa se editan en el catálogo.</p>
+                </div>
+
+                <div id="edit-empresa-readonly-panel" class="rounded-lg border border-gray-100 bg-gray-50/80 p-4 <?= $empresaIdAp <= 0 ? 'hidden' : '' ?>">
+                    <p class="m-0 mb-3 text-xs font-medium uppercase tracking-wide text-gray-500">Datos de la empresa (solo lectura)</p>
+                    <div class="form-grid">
+                        <div class="form-field">
+                            <span class="form-label">Razón social</span>
+                            <div id="edit-empresa-readonly-nombre" class="mt-1 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700"><?= $showEmpresaReadonly((string) ($aprendiz['empresa_nombre'] ?? '')) ?></div>
+                        </div>
+                        <div class="form-field">
+                            <span class="form-label">NIT</span>
+                            <div id="edit-empresa-readonly-nit" class="mt-1 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700"><?= $showEmpresaReadonly((string) ($aprendiz['nit'] ?? '')) ?></div>
+                        </div>
                         <div class="form-field md:col-span-2">
-                            <p class="text-xs text-gray-500 m-0 mb-2">Complete los datos del nuevo supervisor; se guardará vinculado a esta empresa.</p>
-                        </div>
-                        <div class="form-field">
-                            <label class="form-label">Nombre del supervisor</label>
-                            <input type="text" name="nombre_jefe" value="" class="form-input" autocomplete="off">
-                        </div>
-                        <div class="form-field">
-                            <label class="form-label">Cargo</label>
-                            <input type="text" name="cargo_jefe" value="" class="form-input" autocomplete="off">
-                        </div>
-                        <div class="form-field">
-                            <label class="form-label">Correo</label>
-                            <input type="email" name="correo_jefe" value="" class="form-input" autocomplete="off">
-                        </div>
-                        <div class="form-field">
-                            <label class="form-label">Teléfono</label>
-                            <input type="text" name="telefono_jefe" value="" class="form-input" autocomplete="off">
-                        </div>
-                        <div class="form-field">
-                            <label class="form-label">Contacto alternativo (nombre)</label>
-                            <input type="text" name="nombre_contacto2_jefe" value="" class="form-input" autocomplete="off">
-                        </div>
-                        <div class="form-field">
-                            <label class="form-label">Contacto alternativo (correo)</label>
-                            <input type="email" name="correo_contacto2_jefe" value="" class="form-input" autocomplete="off">
+                            <span class="form-label">Dirección</span>
+                            <div id="edit-empresa-readonly-direccion" class="mt-1 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700"><?= $showEmpresaReadonly((string) ($aprendiz['direccion'] ?? '')) ?></div>
                         </div>
                     </div>
                 </div>
+
+                <div id="edit-jefe-vinculo-wrap" class="form-field <?= $empresaIdAp <= 0 ? 'hidden' : '' ?>">
+                    <label class="form-label" for="select-jefe-id">Vincular supervisor</label>
+                    <select name="jefe_id" id="select-jefe-id" class="form-input">
+                        <option value="">Sin supervisor asignado</option>
+                        <?php foreach ($jefes as $jefeRow): ?>
+                            <?php $jid = (int) ($jefeRow['id'] ?? 0); ?>
+                            <option value="<?= $jid ?>" <?= $currentJefeId === $jid ? 'selected' : '' ?>>
+                                <?= e(trim((string) ($jefeRow['nombre'] ?? ''))) ?><?php
+                                $cj = trim((string) ($jefeRow['cargo'] ?? ''));
+                                echo $cj !== '' ? ' — ' . e($cj) : '';
+                                ?>
+                            </option>
+                        <?php endforeach; ?>
+                        <?php if ($currentJefeId > 0 && !in_array($currentJefeId, $jefeIdsInList, true)): ?>
+                            <option value="<?= $currentJefeId ?>" selected>
+                                <?= e(trim((string) ($aprendiz['nombre_jefe'] ?? 'Supervisor #' . $currentJefeId))) ?> (actual)
+                            </option>
+                        <?php endif; ?>
+                    </select>
+                    <p class="mt-2 text-xs text-gray-500 m-0">Para crear o editar supervisores, use la ficha de la empresa en el catálogo.</p>
+                </div>
+
+                <p id="edit-sin-empresa-aviso" class="m-0 rounded-lg border border-dashed border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-500 <?= $empresaIdAp > 0 ? 'hidden' : '' ?>">
+                    Sin empresa vinculada. Seleccione una empresa para asignar un supervisor.
+                </p>
             </div>
 
             <!-- Footer -->

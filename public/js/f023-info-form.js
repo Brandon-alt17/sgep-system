@@ -66,6 +66,13 @@
   );
 
   form.addEventListener("submit", function () {
+    var discapacidadToggle = document.getElementById("toggle-discapacidad");
+    if (discapacidadToggle && !discapacidadToggle.checked) {
+      ["asistencia_nombre", "asistencia_tipo", "asistencia_contacto"].forEach(function (fieldName) {
+        var input = form.querySelector('[name="' + fieldName + '"]');
+        if (input) input.value = "";
+      });
+    }
     setDirty(false);
     initial = serialize();
     hideLeaveFooter();

@@ -201,6 +201,12 @@ var initComboboxes = function (scope) {
       var openUp = forceDropUp || (spaceBelow < 120 && spaceAbove > spaceBelow);
       var maxList = Math.min(210, Math.max(96, openUp ? spaceAbove : spaceBelow));
       if (listEl) listEl.style.maxHeight = maxList + "px";
+      var menuZ = 100;
+      document.querySelectorAll('[id^="modal-"]:not(.hidden), #modal-editar-aprendiz:not(.hidden)').forEach(function (el) {
+        var z = parseInt(window.getComputedStyle(el).zIndex, 10);
+        if (!isNaN(z) && z + 1 > menuZ) menuZ = z + 1;
+      });
+      menu.style.zIndex = String(menuZ);
       menu.style.position = "fixed";
       menu.style.left = Math.max(8, anchorRect.left) + "px";
       menu.style.width = anchorRect.width + "px";
@@ -253,6 +259,7 @@ var initComboboxes = function (scope) {
     var closeMenu = function () {
       menu.classList.add("hidden");
       menu.style.position = "";
+      menu.style.zIndex = "";
       menu.style.left = "";
       menu.style.top = "";
       menu.style.width = "";
@@ -295,6 +302,14 @@ var initComboboxes = function (scope) {
       syncClearAndChevron();
     };
     var clearValue = function () {
+      if (root.dataset.comboboxPreserveValueOnSearch === "1") {
+        searchInput.value = "";
+        searchInput.setCustomValidity("");
+        applyFilter();
+        openMenuIfPointerInside();
+        searchInput.focus();
+        return;
+      }
       hiddenInput.value = "";
       hiddenInput.dispatchEvent(new Event("change", { bubbles: true }));
       searchInput.value = "";
@@ -331,10 +346,15 @@ var initComboboxes = function (scope) {
     searchInput.addEventListener("blur", function () {
       window.setTimeout(function () {
         setChevronOpen(false);
+        if (root.dataset.comboboxPreserveValueOnSearch === "1") {
+          syncLabelFromValue();
+        }
       }, 0);
     });
     searchInput.addEventListener("input", function () {
-      hiddenInput.value = "";
+      if (root.dataset.comboboxPreserveValueOnSearch !== "1") {
+        hiddenInput.value = "";
+      }
       searchInput.setCustomValidity("");
       applyFilter();
       openMenuIfPointerInside();
@@ -382,6 +402,7 @@ var initComboboxes = function (scope) {
     applyFilter();
   });
 };
+window.initComboboxes = initComboboxes;
 initComboboxes(document);
 
 // Listados: actualiza solo tbody (o nodo destino) por GET + JSON; debounce en texto; replaceState sin perder foco.
@@ -1587,7 +1608,7 @@ document.querySelectorAll("[data-new-competencia-form]").forEach(function (form)
   });
 });
 
-document.querySelectorAll("[data-new-jefe-form]").forEach(function (form) {
+document.querySelectorAll("[data-jefe-form]").forEach(function (form) {
   form.addEventListener("submit", function (event) {
     var nombreInput = form.querySelector("input[name='nombre']");
     var nombre = nombreInput ? (nombreInput.value || "").trim() : "";

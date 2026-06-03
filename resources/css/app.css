@@ -138,6 +138,10 @@
     @apply flex;
   }
 
+  .modal-overlay--confirm {
+    z-index: 80;
+  }
+
   .modal-panel {
     @apply relative flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-xl border border-app-border bg-app-panel p-6 shadow-lg;
   }

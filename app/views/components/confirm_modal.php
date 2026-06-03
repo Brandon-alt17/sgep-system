@@ -1,12 +1,11 @@
 <?php
 declare(strict_types=1);
 ?>
-<div id="modal-confirm-action" class="hidden fixed inset-0 z-[70] items-center justify-center p-4" data-modal-overlay="confirm-action">
-    <div class="absolute inset-0 bg-app-text/40"></div>
-    <div class="relative w-full max-w-md rounded-[10px] border border-app-border bg-app-panel p-6 shadow-xsSoft">
+<div id="modal-confirm-action" class="modal-overlay modal-overlay--confirm hidden" data-modal-overlay="confirm-action">
+    <div class="modal-panel max-w-md" role="dialog" aria-modal="true" aria-labelledby="modal-confirm-action-title">
         <div class="min-w-0">
             <div class="flex items-center justify-between gap-3">
-                <h3 class="m-0 text-lg font-semibold text-app-text" data-confirm-title>Confirmar acción</h3>
+                <h3 id="modal-confirm-action-title" class="m-0 text-lg font-semibold text-app-text" data-confirm-title>Confirmar acción</h3>
                 <span class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-rose-50 text-rose-700 [&_svg]:h-5 [&_svg]:w-5">
                     <?= ui_icon('circle-alert') ?>
                 </span>
