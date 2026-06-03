@@ -299,7 +299,7 @@ class CatalogoController
             redirect(APP_BASE_PATH . '/catalogo/empresas/ver?id=' . $empresaId . '&new_jefe=1&toast=jefe_invalidado');
         }
 
-        redirect(APP_BASE_PATH . '/catalogo/empresas/ver?id=' . $empresaId . '&edit_jefe=' . $jefeId . '&toast=jefe_creado');
+        redirect(APP_BASE_PATH . '/catalogo/empresas/ver?id=' . $empresaId . '&toast=jefe_creado');
     }
 
     public function actualizarEmpresaJefe(): void

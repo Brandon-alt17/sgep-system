@@ -94,6 +94,13 @@ class AprendizInfoGeneral
             return $iso === '' ? null : $iso;
         };
 
+        $presentaDiscapacidad = trim((string) ($data['presenta_discapacidad'] ?? '')) !== '';
+        if (!$presentaDiscapacidad) {
+            $data['asistencia_nombre'] = '';
+            $data['asistencia_tipo'] = '';
+            $data['asistencia_contacto'] = '';
+        }
+
         return [
             'regional' => $nullableString($data['regional'] ?? null),
             'centro_formacion' => $nullableString($data['centro_formacion'] ?? null),

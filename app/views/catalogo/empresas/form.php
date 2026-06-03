@@ -276,7 +276,6 @@ $viewLabelCls = 'm-0 text-xs font-medium uppercase tracking-wide text-app-muted'
     <?php partial('catalogo/empresas/_jefes', [
         'jefes' => $jefes,
         'eid' => $eid,
-        'verUrl' => $verUrl,
         'newJefeDraft' => (bool) ($newJefeDraft ?? false),
         'autoEditJefeId' => (int) ($autoEditJefeId ?? 0),
         'viewLabelCls' => $viewLabelCls,

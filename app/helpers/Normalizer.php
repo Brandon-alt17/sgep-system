@@ -28,6 +28,28 @@ class Normalizer
         return $row;
     }
 
+    /**
+     * Valida correo institucional SENA (@soy.sena.edu.co o subdominio de @sena.edu.co).
+     * Vacío/null se considera válido (campo opcional).
+     */
+    public static function isCorreoInstitucionalSenaValid(?string $email): bool
+    {
+        if ($email === null) {
+            return true;
+        }
+
+        $normalized = strtolower(trim($email));
+        if ($normalized === '') {
+            return true;
+        }
+
+        if (filter_var($normalized, FILTER_VALIDATE_EMAIL) === false) {
+            return false;
+        }
+
+        return preg_match('/@(?:[\w-]+\.)*sena\.edu\.co$/i', $normalized) === 1;
+    }
+
     public static function normalizeProgramaNombre(string $value): string
     {
         $text = trim($value);

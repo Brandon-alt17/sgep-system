@@ -1,8 +1,8 @@
 <!-- POPUP LATERAL -->
-<div id="documentPopup" class="fixed top-0 right-0 h-full w-96 bg-white shadow-2xl z-50 transition-transform duration-300 ease-in-out" style="transform: translateX(100%);">
-    
-    <!-- HEADER -->
-    <div class="p-4 border-b border-gray-200 bg-slate-50 sticky top-0 z-10">
+<div id="popupOverlay" class="fixed inset-0 bg-black bg-opacity-50 hidden transition-opacity duration-300" style="z-index: 9998;"></div>
+<div id="documentPopup" class="fixed top-0 right-0 h-full w-96 bg-white shadow-2xl transition-transform duration-300 ease-in-out flex flex-col" style="z-index: 9999; transform: translateX(100%);">
+    <!-- HEADER (sin cambios) -->
+    <div class="p-4 border-b border-gray-200 bg-slate-50 flex-shrink-0">
         <div class="flex items-start justify-between gap-4">
             <div>
                 <h2 class="text-lg font-semibold text-gray-900">
@@ -20,8 +20,8 @@
         </div>
     </div>
 
-    <!-- CONTENT - CON SCROLL -->
-    <div class="flex-1 overflow-y-auto p-4 space-y-4" style="height: calc(100% - 130px);">
+    <!-- CONTENT - CON SCROLL CORRECTO -->
+    <div class="flex-1 overflow-y-auto p-4 space-y-4" style="min-height: 0;">
         
         <!-- SECTION 1 -->
         <div class="border border-gray-200 rounded-xl overflow-hidden">
@@ -73,6 +73,7 @@
                     "cert_cumplimiento" => "Certificado cumplimiento",
                     "cert_ape" => "APE",
                     "cert_carnet" => "Destrucción carnet",
+                    "cert_saber_tyt" => "Saber T&T",
                 ];
                 foreach ($docCertificacion as $key => $label):
                 ?>
@@ -141,10 +142,12 @@
             </div>
         </div>
 
+        <!-- Espacio adicional para que el contenido no quede pegado al footer -->
+        <div class="h-4"></div>
     </div>
 
-    <!-- FOOTER -->
-    <div class="p-4 border-t border-gray-200 bg-white sticky bottom-0">
+    <!-- FOOTER - sin sticky, ya que el contenedor padre maneja el flex -->
+    <div class="p-4 border-t border-gray-200 bg-white flex-shrink-0">
         <div class="flex justify-end gap-3">
             <button id="cancelPopupBtn" class="px-4 h-10 rounded-lg border border-gray-300 text-sm hover:bg-gray-50 cursor-pointer">
                 Cancelar
@@ -155,9 +158,6 @@
         </div>
     </div>
 </div>
-
-<!-- Overlay -->
-<div id="popupOverlay" class="fixed inset-0 bg-black bg-opacity-50 z-40 hidden transition-opacity duration-300"></div>
 
 <style>
 /* Estilos para los checkboxes */
@@ -192,23 +192,66 @@
 <script>
 // Inicializar checkboxes visuales
 document.addEventListener('DOMContentLoaded', function() {
-    // Configurar checkboxes personalizados
-    document.querySelectorAll('.doc-checkbox').forEach(checkbox => {
+    // Función para actualizar el estado visual de un switch
+    function updateSwitchVisual(checkbox) {
         const toggleDiv = checkbox.nextElementSibling;
         if (toggleDiv) {
-            toggleDiv.addEventListener('click', function(e) {
-                e.stopPropagation();
-                checkbox.checked = !checkbox.checked;
-                if (checkbox.checked) {
-                    this.style.backgroundColor = '#059669';
-                    this.querySelector('div').style.transform = 'translateX(20px)';
-                } else {
-                    this.style.backgroundColor = '#e5e7eb';
-                    this.querySelector('div').style.transform = 'translateX(0px)';
+            if (checkbox.checked) {
+                toggleDiv.style.backgroundColor = '#059669';
+                const innerDiv = toggleDiv.querySelector('div');
+                if (innerDiv) innerDiv.style.transform = 'translateX(20px)';
+            } else {
+                toggleDiv.style.backgroundColor = '#e5e7eb';
+                const innerDiv = toggleDiv.querySelector('div');
+                if (innerDiv) innerDiv.style.transform = 'translateX(0px)';
+            }
+        }
+    }
+
+    // Configurar todos los switches existentes
+    function setupSwitch(checkbox) {
+        const toggleDiv = checkbox.nextElementSibling;
+        if (!toggleDiv) return;
+        
+        // Actualizar visual inicial
+        updateSwitchVisual(checkbox);
+        
+        // Remover event listeners anteriores para evitar duplicados
+        const newToggleDiv = toggleDiv.cloneNode(true);
+        toggleDiv.parentNode.replaceChild(newToggleDiv, toggleDiv);
+        
+        // Crear nuevo evento
+        newToggleDiv.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            checkbox.checked = !checkbox.checked;
+            updateSwitchVisual(checkbox);
+            // Disparar evento change para que otros listeners se enteren
+            const changeEvent = new Event('change', { bubbles: true });
+            checkbox.dispatchEvent(changeEvent);
+        });
+    }
+
+    // Configurar todos los checkboxes existentes
+    document.querySelectorAll('.doc-checkbox').forEach(checkbox => {
+        setupSwitch(checkbox);
+    });
+    
+    // Observer para nuevos checkboxes que puedan agregarse dinámicamente
+    const observer = new MutationObserver(function(mutations) {
+        mutations.forEach(function(mutation) {
+            mutation.addedNodes.forEach(function(node) {
+                if (node.nodeType === 1) { // Element node
+                    if (node.classList && node.classList.contains('doc-checkbox')) {
+                        setupSwitch(node);
+                    }
+                    node.querySelectorAll && node.querySelectorAll('.doc-checkbox').forEach(setupSwitch);
                 }
             });
-        }
+        });
     });
+    
+    observer.observe(document.body, { childList: true, subtree: true });
     
     // Configurar toggles de secciones
     document.querySelectorAll('.section-toggle').forEach(btn => {

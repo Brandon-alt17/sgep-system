@@ -158,35 +158,64 @@ class Aprendiz
 
     public static function create(array $data): int
     {
-        $sql = 'INSERT INTO aprendices (nombre_completo, tipo_documento, numero_documento, telefono, correo_personal, correo_institucional, programa_id, ficha, estado, created_at, updated_at)
-                VALUES (:nombre_completo, :tipo_documento, :numero_documento, :telefono, :correo_personal, :correo_institucional, :programa_id, :ficha, :estado, NOW(), NOW())';
+        $empresaId = (int) ($data['empresa_id'] ?? 0);
+        $jefeId = $empresaId > 0 ? self::nullablePositiveInt($data['jefe_id'] ?? null) : null;
+
+        $direccionDom = normalize_multiline_text((string) ($data['direccion_domicilio'] ?? ''));
+        if (mb_strlen($direccionDom) > 255) {
+            $direccionDom = mb_substr($direccionDom, 0, 255);
+        }
+
+        $sql = 'INSERT INTO aprendices (
+                    nombre_completo, tipo_documento, numero_documento, telefono, correo_personal, correo_institucional,
+                    programa_id, ficha, estado, direccion_domicilio, alternativa_ep,
+                    nombre_instructor_seguimiento, telefono_instructor_seguimiento, jefe_grupo, coordinacion,
+                    empresa_id, jefe_id, created_at, updated_at
+                ) VALUES (
+                    :nombre_completo, :tipo_documento, :numero_documento, :telefono, :correo_personal, :correo_institucional,
+                    :programa_id, :ficha, :estado, :direccion_domicilio, :alternativa_ep,
+                    :nombre_instructor_seguimiento, :telefono_instructor_seguimiento, :jefe_grupo, :coordinacion,
+                    :empresa_id, :jefe_id, NOW(), NOW()
+                )';
         $pdo = Database::connection();
         $stmt = $pdo->prepare($sql);
         $stmt->execute([
-            'nombre_completo' => $data['nombre_completo'],
-            'tipo_documento' => $data['tipo_documento'],
-            'numero_documento' => $data['numero_documento'],
-            'telefono' => $data['telefono'] ?? null,
-            'correo_personal' => $data['correo_personal'] ?? null,
-            'correo_institucional' => $data['correo_institucional'] ?? null,
-            'programa_id' => $data['programa_id'] ?? null,
-            'ficha' => $data['ficha'] ?? null,
-            'estado' => $data['estado'] ?? 'Pendiente por iniciar',
+            'nombre_completo' => trim((string) ($data['nombre_completo'] ?? '')),
+            'tipo_documento' => trim((string) ($data['tipo_documento'] ?? '')),
+            'numero_documento' => trim((string) ($data['numero_documento'] ?? '')),
+            'telefono' => self::nullableTrim($data['telefono'] ?? null),
+            'correo_personal' => self::nullableTrim($data['correo_personal'] ?? null),
+            'correo_institucional' => self::nullableTrim($data['correo_institucional'] ?? null),
+            'programa_id' => self::nullablePositiveInt($data['programa_id'] ?? null),
+            'ficha' => self::nullableTrim($data['ficha'] ?? null),
+            'estado' => trim((string) ($data['estado'] ?? 'Pendiente por iniciar')),
+            'direccion_domicilio' => $direccionDom === '' ? null : $direccionDom,
+            'alternativa_ep' => self::nullableTrim($data['alternativa_ep'] ?? null),
+            'nombre_instructor_seguimiento' => self::nullableTrim($data['nombre_instructor_seguimiento'] ?? null),
+            'telefono_instructor_seguimiento' => self::nullableTrim($data['telefono_instructor_seguimiento'] ?? null),
+            'jefe_grupo' => self::nullableTrim($data['jefe_grupo'] ?? null),
+            'coordinacion' => self::nullableTrim($data['coordinacion'] ?? null),
+            'empresa_id' => $empresaId > 0 ? $empresaId : null,
+            'jefe_id' => $jefeId,
         ]);
+
         return (int) $pdo->lastInsertId();
     }
 
     public static function update(int $id, array $data): void
     {
-        $empresaId = (int) ($data['empresa_id'] ?? 0);
-        if ($empresaId <= 0) {
+        if (array_key_exists('empresa_id', $data)) {
+            $empresaId = (int) $data['empresa_id'];
+        } else {
             $stmt = Database::connection()->prepare('SELECT empresa_id FROM aprendices WHERE id = :id LIMIT 1');
             $stmt->execute(['id' => $id]);
             $row = $stmt->fetch();
             $empresaId = (int) ($row['empresa_id'] ?? 0);
         }
 
-        $jefeIdResolved = self::resolveJefeIdFromUpdatePayload($empresaId, $data);
+        $jefeIdResolved = $empresaId > 0
+            ? self::resolveJefeIdFromUpdatePayload($empresaId, $data)
+            : null;
 
         $direccionDom = normalize_multiline_text((string) ($data['direccion_domicilio'] ?? ''));
         if (mb_strlen($direccionDom) > 255) {
@@ -203,9 +232,13 @@ class Aprendiz
             direccion_domicilio=:direccion_domicilio,
             alternativa_ep=:alternativa_ep,
             ficha=:ficha,
+            programa_id=:programa_id,
+            jefe_grupo=:jefe_grupo,
+            coordinacion=:coordinacion,
             nombre_instructor_seguimiento=:nombre_instructor_seguimiento,
             telefono_instructor_seguimiento=:telefono_instructor_seguimiento,
             estado=:estado,
+            empresa_id=:empresa_id,
             jefe_id=:jefe_id,
             updated_at=NOW()
             WHERE id=:id';
@@ -220,35 +253,15 @@ class Aprendiz
             'direccion_domicilio' => $direccionDom === '' ? null : $direccionDom,
             'alternativa_ep' => self::nullableTrim($data['alternativa_ep'] ?? null),
             'ficha' => self::nullableTrim($data['ficha'] ?? null),
+            'programa_id' => self::nullablePositiveInt($data['programa_id'] ?? null),
+            'jefe_grupo' => self::nullableTrim($data['jefe_grupo'] ?? null),
+            'coordinacion' => self::nullableTrim($data['coordinacion'] ?? null),
             'nombre_instructor_seguimiento' => self::nullableTrim($data['nombre_instructor_seguimiento'] ?? null),
             'telefono_instructor_seguimiento' => self::nullableTrim($data['telefono_instructor_seguimiento'] ?? null),
             'estado' => trim((string) ($data['estado'] ?? 'Pendiente por iniciar')),
+            'empresa_id' => $empresaId > 0 ? $empresaId : null,
             'jefe_id' => $jefeIdResolved,
         ]);
-
-        if ($empresaId > 0) {
-            $emp = Empresa::findById($empresaId);
-            if ($emp !== null) {
-                $nombreEmp = trim((string) ($data['empresa_nombre'] ?? ''));
-                if ($nombreEmp === '') {
-                    $nombreEmp = trim((string) ($emp['nombre'] ?? ''));
-                }
-                $direccionEmp = normalize_multiline_text((string) ($data['direccion'] ?? (string) ($emp['direccion'] ?? '')));
-                if (mb_strlen($direccionEmp) > 180) {
-                    $direccionEmp = mb_substr($direccionEmp, 0, 180);
-                }
-                Empresa::update($empresaId, [
-                    'nombre' => $nombreEmp !== '' ? $nombreEmp : (string) ($emp['nombre'] ?? 'Empresa'),
-                    'nit' => array_key_exists('nit', $data) ? $data['nit'] : ($emp['nit'] ?? ''),
-                    'direccion' => $direccionEmp === '' ? null : $direccionEmp,
-                    'ciudad' => $emp['ciudad'] ?? '',
-                    'correo_org' => $emp['correo_org'] ?? '',
-                    'nombre_contacto2' => $emp['nombre_contacto2'] ?? '',
-                    'correo_contacto2' => $emp['correo_contacto2'] ?? '',
-                    'direccion_practica' => $emp['direccion_practica'] ?? '',
-                ]);
-            }
-        }
     }
 
     private static function nullableTrim(mixed $value): ?string
@@ -256,6 +269,13 @@ class Aprendiz
         $s = trim((string) ($value ?? ''));
 
         return $s === '' ? null : $s;
+    }
+
+    private static function nullablePositiveInt(mixed $value): ?int
+    {
+        $id = (int) $value;
+
+        return $id > 0 ? $id : null;
     }
 
     /**
