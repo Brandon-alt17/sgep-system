@@ -9,18 +9,23 @@ document.querySelectorAll("[data-max]").forEach(function (element) {
 });
 
 // Toast global reutilizable (cuando existe data-toast-root en la vista).
-var showGlobalToast = function (message) {
+var showGlobalToast = function (message, variant) {
   var toastRoot = document.querySelector("[data-toast-root]");
   var toast = toastRoot ? toastRoot.querySelector("[data-toast]") : null;
   if (!toast) return;
   var textNode = toast.querySelector("p");
-  if (textNode) textNode.textContent = message;
+  if (textNode) textNode.textContent = message || "";
+  toast.classList.remove("sg-toast--error", "sg-toast--warning");
+  if (variant === "error") toast.classList.add("sg-toast--error");
+  else if (variant === "warning") toast.classList.add("sg-toast--warning");
+  var hideMs = variant === "error" ? 7000 : variant === "warning" ? 4200 : 3200;
   toast.classList.add("sg-toast-visible");
   window.clearTimeout(toast.__hideTimer);
   toast.__hideTimer = window.setTimeout(function () {
     toast.classList.remove("sg-toast-visible");
-  }, 3200);
+  }, hideMs);
 };
+window.showGlobalToast = showGlobalToast;
 
 // Textareas que ajustan su altura al contenido (atributo data-auto-resize-textarea).
 var sgAutoResizeTextarea = function (el) {

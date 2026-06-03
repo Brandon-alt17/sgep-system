@@ -84,18 +84,27 @@ class AprendizController
 
     public function create(): void
     {
-        view('aprendices/create', ['programas' => Programa::all()]);
+        view('aprendices/create', [
+            'programasOptions' => Programa::all(),
+            'empresasOptions' => Empresa::catalogo(),
+        ]);
     }
 
     public function store(): void
     {
         $errors = Validator::required($_POST, ['nombre_completo', 'tipo_documento', 'numero_documento']);
+        $formData = [
+            'programasOptions' => Programa::all(),
+            'empresasOptions' => Empresa::catalogo(),
+            'old' => $_POST,
+        ];
         if ($errors !== []) {
-            view('aprendices/create', ['errors' => $errors, 'programas' => Programa::all()]);
+            view('aprendices/create', array_merge($formData, ['errors' => $errors]));
+
             return;
         }
-        Aprendiz::create($_POST);
-        redirect(APP_BASE_PATH . '/aprendices');
+        $id = Aprendiz::create($_POST);
+        redirect(APP_BASE_PATH . '/aprendices/show?id=' . $id . '&toast=aprendiz_creado');
     }
 
     public function show(): void
@@ -196,6 +205,9 @@ class AprendizController
             'info_f023_guardada' => ['message' => 'Información general F-023 guardada correctamente.', 'variant' => 'success'],
             'momento_guardado' => ['message' => 'Momento guardado correctamente.', 'variant' => 'success'],
             'momento_actualizado' => ['message' => 'Momento actualizado correctamente.', 'variant' => 'success'],
+            'aprendiz_actualizado' => ['message' => 'Datos del aprendiz actualizados correctamente.', 'variant' => 'success'],
+            'aprendiz_creado' => ['message' => 'Aprendiz registrado correctamente.', 'variant' => 'success'],
+            'visitas_actualizadas' => ['message' => 'Visitas programadas correctamente.', 'variant' => 'success'],
         ];
 
         return $map[$key] ?? null;
@@ -205,7 +217,7 @@ class AprendizController
     {
         $id = (int) ($_POST['id'] ?? 0);
         Aprendiz::update($id, $_POST);
-        redirect(APP_BASE_PATH . '/aprendices/show?id=' . $id);
+        redirect(APP_BASE_PATH . '/aprendices/show?id=' . $id . '&toast=aprendiz_actualizado');
     }
 
     public function updateVisitas(): void

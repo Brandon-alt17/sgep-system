@@ -182,6 +182,18 @@ document.addEventListener('DOMContentLoaded', () => {
         chk2.addEventListener('change', () => toggleM3(chk2.checked));
     }
 
+    function showVisitasToast(message, variant) {
+        const text = (message || '').trim();
+        if (text === '') return;
+        if (typeof window.sgToastShow === 'function' && document.querySelector('#aprendiz-page-toast')) {
+            window.sgToastShow('#aprendiz-page-toast', text, variant || 'success');
+            return;
+        }
+        if (typeof window.showGlobalToast === 'function') {
+            window.showGlobalToast(text, variant || 'success');
+        }
+    }
+
     // AJAX Submit
     const form = document.getElementById('form-visitas');
     if(form) {
@@ -199,15 +211,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 const data = await res.json();
                 
                 if (data.ok) {
-                    alert('✅ Visitas actualizadas correctamente');
                     cerrarModalVisitas();
-                    location.reload();
-                } else {
-                    alert('❌ Error: ' + (data.error || 'No se pudo guardar'));
+                    const url = new URL(window.location.href);
+                    url.searchParams.set('toast', 'visitas_actualizadas');
+                    window.location.href = url.pathname + url.search;
+                    return;
                 }
+                showVisitasToast(data.error || 'No se pudo guardar las visitas.', 'error');
             } catch (err) {
                 console.error(err);
-                alert('️ Error de conexión o del servidor');
+                showVisitasToast('Error de conexión o del servidor.', 'error');
             } finally {
                 btn.disabled = false;
                 btn.textContent = originalText;

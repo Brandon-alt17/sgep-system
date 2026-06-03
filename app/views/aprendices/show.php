@@ -205,11 +205,17 @@
 
 <?php
 $pageToast = $pageToast ?? null;
-if (is_array($pageToast) && trim((string) ($pageToast['message'] ?? '')) !== ''):
-    partial('components/toast', [
-        'message' => (string) $pageToast['message'],
-        'variant' => (string) ($pageToast['variant'] ?? 'success'),
-        'positionClass' => 'bottom-6 left-4 right-4 z-[65] max-w-none sm:bottom-6 sm:left-auto sm:right-6 sm:max-w-sm',
-    ]);
-endif;
+$toastMessage = '';
+$toastVariant = 'success';
+if (is_array($pageToast) && trim((string) ($pageToast['message'] ?? '')) !== '') {
+    $toastMessage = (string) $pageToast['message'];
+    $toastVariant = (string) ($pageToast['variant'] ?? 'success');
+}
+partial('components/toast', [
+    'message' => $toastMessage,
+    'variant' => $toastVariant,
+    'toastRootId' => 'aprendiz-page-toast',
+    'positionClass' => 'bottom-6 left-4 right-4 z-[65] max-w-none sm:bottom-6 sm:left-auto sm:right-6 sm:max-w-sm',
+]);
 ?>
+<script src="<?= e(APP_BASE_PATH) ?>/js/ui-toast.js"></script>
