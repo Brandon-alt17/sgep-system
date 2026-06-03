@@ -369,6 +369,15 @@
                             <?php endforeach; ?>
                         </select>
                     </div>
+
+                    <div class="form-field">
+                        <label class="form-label">Jefe de grupo</label>
+                        <input type="text" name="jefe_grupo" value="<?= e($aprendiz['jefe_grupo'] ?? '') ?>" class="form-input">
+                    </div>
+                    <div class="form-field">
+                        <label class="form-label">Area de coordinacion</label>
+                        <input type="text" name="area_coordinacion" value="<?= e($aprendiz['coordinacion'] ?? '') ?>" class="form-input">
+                    </div>
                 </div>
             </div>
 
