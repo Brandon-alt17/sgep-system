@@ -76,6 +76,51 @@ class ReporteController
         redirect(APP_BASE_PATH . '/reportes/maestro');
     }
 
+    public function sync(): void
+    {
+        $raw = file_get_contents('php://input');
+        $decoded = json_decode($raw !== false ? $raw : '', true);
+        if (!is_array($decoded)) {
+            $this->respondSync(false, 'Payload inválido.');
+
+            return;
+        }
+
+        $rows = $decoded['rows'] ?? null;
+        if (!is_array($rows)) {
+            $aprendizId = (int) ($decoded['aprendiz_id'] ?? 0);
+            $campos = $decoded['campos'] ?? null;
+            if ($aprendizId > 0 && is_array($campos)) {
+                $rows = [['aprendiz_id' => $aprendizId, 'campos' => $campos]];
+            } else {
+                $this->respondSync(false, 'Sin filas para sincronizar.');
+
+                return;
+            }
+        }
+
+        try {
+            foreach ($rows as $row) {
+                if (!is_array($row)) {
+                    continue;
+                }
+                $aprendizId = (int) ($row['aprendiz_id'] ?? 0);
+                $campos = $row['campos'] ?? null;
+                if ($aprendizId <= 0 || !is_array($campos)) {
+                    continue;
+                }
+                ReporteMaestroData::persistCampos($aprendizId, $campos);
+            }
+        } catch (\Throwable $e) {
+            log_error('Reporte maestro sync: ' . $e->getMessage());
+            $this->respondSync(false, 'No se pudieron guardar los cambios.');
+
+            return;
+        }
+
+        $this->respondSync(true);
+    }
+
     public function export(): void
     {
         try {
@@ -127,5 +172,15 @@ class ReporteController
         }
 
         return $filters;
+    }
+
+    private function respondSync(bool $ok, string $message = ''): void
+    {
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode([
+            'ok' => $ok,
+            'message' => $message,
+        ], JSON_UNESCAPED_UNICODE);
+        exit;
     }
 }

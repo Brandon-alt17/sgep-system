@@ -43,6 +43,7 @@ $routes = [
     ['POST', '/documentos/info', [DocumentoController::class, 'saveInfo']],
     ['GET', '/reportes/maestro', [ReporteController::class, 'index']],
     ['POST', '/reportes/update', [ReporteController::class, 'update']],
+    ['POST', '/reportes/sync', [ReporteController::class, 'sync']],
     ['GET', '/reportes/exportar', [ReporteController::class, 'export']],
     ['GET', '/catalogo/programas', [CatalogoController::class, 'programas']],
     ['GET', '/catalogo/programas/pendientes', [CatalogoController::class, 'pendientesPrograma']],
