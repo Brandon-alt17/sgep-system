@@ -10,7 +10,8 @@ declare(strict_types=1);
  * `m1.docx` usa `F023M1TemplateMacroInjector` con el mismo criterio (columnas de `momentos` + marcas de modalidad).
  * Las claves en `info_placeholders` deben coincidir con esos nombres. Momentos añaden columnas
  * de la tabla `momentos` y factores:
- *   factor_{0..12}_valoracion, factor_{0..12}_observacion (orden en config/factores.php: 8 técnicos + 5 actitudinales).
+ *   factor_{0..12}_valoracion_s, factor_{0..12}_valoracion_pm (X según valoración),
+ *   factor_{0..12}_observacion (orden en config/factores.php: 8 técnicos + 5 actitudinales).
  *
  * @return array{
  *   info_template: string,

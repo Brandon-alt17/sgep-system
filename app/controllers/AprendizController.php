@@ -103,7 +103,20 @@ class AprendizController
 
             return;
         }
-        $id = Aprendiz::create($_POST);
+        try {
+            $id = Aprendiz::create($_POST);
+        } catch (\PDOException $e) {
+            $msg = strtolower($e->getMessage());
+            $isDuplicate = str_contains($msg, 'duplicate') || str_contains($msg, 'uq_aprendiz_documento');
+            if (!$isDuplicate) {
+                throw $e;
+            }
+            view('aprendices/create', array_merge($formData, [
+                'errors' => ['Ya existe un aprendiz con ese número de documento.'],
+            ]));
+
+            return;
+        }
         redirect(APP_BASE_PATH . '/aprendices/show?id=' . $id . '&toast=aprendiz_creado');
     }
 
@@ -216,7 +229,21 @@ class AprendizController
     public function update(): void
     {
         $id = (int) ($_POST['id'] ?? 0);
-        Aprendiz::update($id, $_POST);
+        if ($id <= 0 || Aprendiz::findById($id) === null) {
+            abort_404('/aprendices/update');
+        }
+        try {
+            Aprendiz::update($id, $_POST);
+        } catch (\PDOException $e) {
+            $msg = strtolower($e->getMessage());
+            $isDuplicate = str_contains($msg, 'duplicate') || str_contains($msg, 'uq_aprendiz_documento');
+            if (!$isDuplicate) {
+                throw $e;
+            }
+            redirect(APP_BASE_PATH . '/aprendices/show?id=' . $id);
+
+            return;
+        }
         redirect(APP_BASE_PATH . '/aprendices/show?id=' . $id . '&toast=aprendiz_actualizado');
     }
 

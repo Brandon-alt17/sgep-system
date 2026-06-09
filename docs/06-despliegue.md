@@ -143,6 +143,18 @@ echo Actualizacion completada. Recargue el navegador.
 pause
 ```
 
+**`abrir_sgep.bat`** (abrir la aplicación en el navegador):
+
+```bat
+@echo off
+set "SGEP_URL=http://localhost/sgep/public"
+start "" "%SGEP_URL%"
+```
+
+Doble clic después de instalar. Si WAMP no está en verde, la página no cargará; el icono WAMP debe estar activo.
+
+**`SGEP.url`** — acceso directo de Windows (Internet Shortcut). Copiar al escritorio o anclar a la barra de tareas; al hacer doble clic abre `http://localhost/sgep/public` en el navegador predeterminado.
+
 ### Paso 5 — Empaquetar en ZIP
 
 Estructura del ZIP de distribución:
@@ -159,9 +171,13 @@ SGEP_v1.0.zip
 │   ├── vendor/                 ← INCLUIDA (dependencias PHP)
 │   ├── .env.example
 │   ├── router.php
+│   ├── instalar.bat
+│   ├── actualizar.bat
+│   ├── abrir_sgep.bat          ← Abre el navegador en la URL del SGEP
+│   ├── SGEP.url                ← Acceso directo (copiar al escritorio)
 │   └── database/run_migrations.php
-├── instalar.bat                ← Script de primera instalación
-├── actualizar.bat              ← Script de actualizaciones
+├── instalar.bat                ← (legacy: puede ir solo dentro de sgep/)
+├── actualizar.bat
 └── INSTRUCCIONES.pdf           ← Guía de 1 página para el directivo
 ```
 
@@ -197,10 +213,15 @@ SGEP_v1.0.zip
 
 5. Hacer doble clic en "instalar.bat"
    → Esperar a que aparezca "INSTALACION COMPLETADA"
+   → Responder S para abrir el navegador, o usar el atajo abajo
 
 6. Abrir el navegador:
    → http://localhost/sgep/public
+   → O doble clic en "abrir_sgep.bat"
+   → O copiar "SGEP.url" al escritorio y usarlo cada día
 ```
+
+**Uso diario:** WAMP en verde → doble clic en `SGEP.url` o `abrir_sgep.bat` (no hace falta volver a ejecutar `instalar.bat`).
 
 > **Exportación PDF:** solo si el directivo va a generar F-023 en PDF, instale LibreOffice en el mismo PC (ver [LibreOffice para exportar PDF](#libreoffice-para-exportar-pdf-opcional)). Word (.docx) funciona sin LibreOffice.
 

@@ -5,15 +5,21 @@ declare(strict_types=1);
 namespace App\Exports;
 
 /**
- * Concatena el cuerpo principal (word/document.xml) de varios .docx en uno,
- * conservando el sectPr del primer archivo. Útil cuando cada bloque F-023 es una plantilla separada.
+ * Une varios .docx F-023 en un solo archivo.
+ *
+ * Con más de un segmento se incrustan las partes adicionales como w:altChunk (OOXML).
+ * Concatenar word/document.xml rompe estilos y tablas; altChunk preserva cada plantilla.
  */
 final class F023DocxMerge
 {
+    private const AFCHUNK_REL_TYPE = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/aFChunk';
+
+    private const EMBEDDED_DOCX_CONTENT_TYPE = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+
     /**
      * @param list<string> $docxPaths       rutas absolutas a .docx ya generados
-     * @param bool              $m3CompactLayout aplicar compactación tras fusionar si hay segmentos M3
-     * @param list<bool>|null   $m3SegmentMask   por índice: true = plantilla m3_p1 / m3_p2
+     * @param bool              $m3CompactLayout ignorado (compatibilidad con llamadas existentes)
+     * @param list<bool>|null   $m3SegmentMask   ignorado
      */
     public static function mergeInto(
         string $targetPath,
@@ -33,38 +39,53 @@ final class F023DocxMerge
             return;
         }
 
-        $mask = $m3SegmentMask ?? array_fill(0, count($docxPaths), false);
-        $m3StartOffset = $mask[0] ? 0 : null;
+        self::mergeWithAltChunks($targetPath, $docxPaths);
+    }
 
-        $firstXml = self::readZipEntry($docxPaths[0], 'word/document.xml');
+    /**
+     * @param list<string> $docxPaths
+     */
+    private static function mergeWithAltChunks(string $targetPath, array $docxPaths): void
+    {
+        if (!copy($docxPaths[0], $targetPath)) {
+            throw new \RuntimeException('No se pudo preparar el archivo de salida.');
+        }
+
+        $firstXml = self::readZipEntry($targetPath, 'word/document.xml');
         $firstParts = self::splitBody($firstXml);
-        $accum = self::normalizeSegmentForMerge($firstParts['content'], (bool) $mask[0]);
+        $bodyContent = $firstParts['content'];
         $sectPr = $firstParts['sectPr'];
 
+        $relsPath = 'word/_rels/document.xml.rels';
+        $relsXml = self::readZipEntry($targetPath, $relsPath);
+        $contentTypesXml = self::readZipEntry($targetPath, '[Content_Types].xml');
+        $nextRId = self::maxRelationshipId($relsXml) + 1;
+
+        $insertions = '';
+        $embeddings = [];
+
         for ($i = 1, $n = count($docxPaths); $i < $n; $i++) {
-            $xml = self::readZipEntry($docxPaths[$i], 'word/document.xml');
-            $parts = self::splitBody($xml);
-            $segment = self::normalizeSegmentForMerge($parts['content'], (bool) $mask[$i]);
-
-            if ($mask[$i] && $m3StartOffset === null) {
-                $m3StartOffset = strlen($accum);
+            $embedName = 'f023_part_' . $i . '.docx';
+            $embedZipPath = 'word/embeddings/' . $embedName;
+            $embedPartName = '/word/embeddings/' . $embedName;
+            $embedBytes = file_get_contents($docxPaths[$i]);
+            if ($embedBytes === false) {
+                throw new \RuntimeException('No se pudo leer segmento: ' . $docxPaths[$i]);
             }
 
-            if (self::needsPageBreakBeforeSegment($mask, $i, $docxPaths[$i])) {
-                $segment = self::withPageBreakBefore($segment);
-            }
+            $embeddings[$embedZipPath] = $embedBytes;
 
-            $accum .= $segment;
+            $rId = 'rId' . $nextRId;
+            ++$nextRId;
+
+            $relsXml = self::appendRelationship($relsXml, $rId, self::AFCHUNK_REL_TYPE, 'embeddings/' . $embedName);
+            $contentTypesXml = self::ensureEmbeddedDocxContentType($contentTypesXml, $embedPartName);
+
+            $insertions .= '<w:p><w:r><w:br w:type="page"/></w:r></w:p>';
+            $insertions .= '<w:altChunk r:id="' . $rId . '"/>';
         }
 
-        if ($m3CompactLayout && $m3StartOffset !== null) {
-            $prefix = substr($accum, 0, $m3StartOffset);
-            $m3Body = substr($accum, $m3StartOffset);
-            $m3Body = self::applyM3CompactLayout($m3Body);
-            $accum = $prefix . $m3Body;
-        }
-
-        $newInner = $accum . $sectPr;
+        $newInner = $bodyContent . $insertions . $sectPr;
         $bodyOpen = strpos($firstXml, '<w:body>');
         if ($bodyOpen === false) {
             throw new \RuntimeException('document.xml del primer archivo no contiene w:body.');
@@ -78,16 +99,62 @@ final class F023DocxMerge
             . $newInner
             . substr($firstXml, $bodyClose);
 
-        if (!copy($docxPaths[0], $targetPath)) {
-            throw new \RuntimeException('No se pudo preparar el archivo de salida.');
-        }
-
         $zip = new \ZipArchive();
         if ($zip->open($targetPath) !== true) {
             throw new \RuntimeException('No se pudo abrir el zip de salida.');
         }
+
+        foreach ($embeddings as $path => $bytes) {
+            $zip->addFromString($path, $bytes);
+        }
         $zip->addFromString('word/document.xml', $mergedXml);
+        $zip->addFromString($relsPath, $relsXml);
+        $zip->addFromString('[Content_Types].xml', $contentTypesXml);
         $zip->close();
+    }
+
+    private static function maxRelationshipId(string $relsXml): int
+    {
+        if (!preg_match_all('/\bId="rId(\d+)"/', $relsXml, $matches)) {
+            return 0;
+        }
+
+        $max = 0;
+        foreach ($matches[1] as $num) {
+            $max = max($max, (int) $num);
+        }
+
+        return $max;
+    }
+
+    private static function appendRelationship(
+        string $relsXml,
+        string $rId,
+        string $type,
+        string $target
+    ): string {
+        $relationship = '<Relationship Id="' . $rId . '" Type="' . $type . '" Target="' . $target . '"/>';
+        $pos = strrpos($relsXml, '</Relationships>');
+        if ($pos === false) {
+            throw new \RuntimeException('document.xml.rels sin cierre </Relationships>.');
+        }
+
+        return substr($relsXml, 0, $pos) . $relationship . substr($relsXml, $pos);
+    }
+
+    private static function ensureEmbeddedDocxContentType(string $contentTypesXml, string $partName): string
+    {
+        if (str_contains($contentTypesXml, 'PartName="' . $partName . '"')) {
+            return $contentTypesXml;
+        }
+
+        $override = '<Override PartName="' . $partName . '" ContentType="' . self::EMBEDDED_DOCX_CONTENT_TYPE . '"/>';
+        $pos = strrpos($contentTypesXml, '</Types>');
+        if ($pos === false) {
+            throw new \RuntimeException('[Content_Types].xml sin cierre </Types>.');
+        }
+
+        return substr($contentTypesXml, 0, $pos) . $override . substr($contentTypesXml, $pos);
     }
 
     private static function applyM3CompactLayout(string $content): string

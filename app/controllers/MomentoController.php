@@ -16,8 +16,14 @@ class MomentoController
     public function create(): void
     {
         $aprendizId = (int) ($_GET['aprendiz_id'] ?? 0);
+        if ($aprendizId <= 0) {
+            abort_404('/momentos/create');
+        }
         $tipo = $this->normalizeTipo((string) ($_GET['tipo'] ?? 'M1'));
         $aprendiz = Aprendiz::findById($aprendizId);
+        if ($aprendiz === null) {
+            abort_404('/momentos/create?aprendiz_id=' . $aprendizId);
+        }
         $momentoExistente = $aprendiz ? Momento::findOneByAprendizTipo($aprendizId, $tipo) : null;
         $factoresExistentes = [];
         if ($momentoExistente !== null) {
@@ -28,7 +34,7 @@ class MomentoController
             $programaContenido = ProgramaContenido::competenciasConResultados((int) $aprendiz['programa_id']);
         }
 
-        $defaultMomento = $this->buildDefaultMomentoData($aprendiz ?? [], $tipo, $momentoExistente, $programaContenido);
+        $defaultMomento = $this->buildDefaultMomentoData($aprendiz, $tipo, $momentoExistente, $programaContenido);
         $limites = require base_path('config/f023_limites.php');
         $modoEdicion = $momentoExistente !== null;
         $accion = APP_BASE_PATH . ($modoEdicion ? '/momentos/update' : '/momentos/store');
@@ -68,6 +74,9 @@ class MomentoController
     public function store(): void
     {
         $aprendizId = (int) ($_POST['aprendiz_id'] ?? 0);
+        if ($aprendizId <= 0 || Aprendiz::findById($aprendizId) === null) {
+            abort_404('/momentos/store');
+        }
         $tipo = $this->normalizeTipo((string) ($_POST['tipo'] ?? ''));
         $_POST['tipo'] = $tipo;
         $_POST = $this->normalizeMomentoDateFields($_POST);
@@ -139,7 +148,8 @@ class MomentoController
             redirect(APP_BASE_PATH . '/aprendices/show?id=' . $aprendizId . '&toast=momento_guardado');
         } catch (\Throwable $e) {
             $pdo->rollBack();
-            throw $e;
+            log_error('Momento store: ' . $e->getMessage());
+            redirect(APP_BASE_PATH . '/aprendices/show?id=' . $aprendizId);
         }
     }
 
@@ -147,6 +157,13 @@ class MomentoController
     {
         $id = (int) ($_POST['id'] ?? 0);
         $aprendizId = (int) ($_POST['aprendiz_id'] ?? 0);
+        if ($id <= 0 || $aprendizId <= 0) {
+            redirect(APP_BASE_PATH . '/aprendices');
+        }
+        $momentoRow = Momento::findById($id);
+        if ($momentoRow === null || (int) ($momentoRow['aprendiz_id'] ?? 0) !== $aprendizId) {
+            redirect(APP_BASE_PATH . '/aprendices/show?id=' . max(0, $aprendizId));
+        }
         $_POST = $this->normalizeMomentoDateFields($_POST);
         $limites = require base_path('config/f023_limites.php');
         $_POST = $this->applyTextLimits($_POST, $limites);
@@ -196,11 +213,12 @@ class MomentoController
                     ]);
             }
             $pdo->commit();
+            redirect(APP_BASE_PATH . '/aprendices/show?id=' . $aprendizId . '&toast=momento_actualizado');
         } catch (\Throwable $e) {
             $pdo->rollBack();
-            throw $e;
+            log_error('Momento update: ' . $e->getMessage());
+            redirect(APP_BASE_PATH . '/aprendices/show?id=' . $aprendizId);
         }
-        redirect(APP_BASE_PATH . '/aprendices/show?id=' . $aprendizId . '&toast=momento_actualizado');
     }
 
     /** @param array<string,mixed> $post @return array<string,mixed> */

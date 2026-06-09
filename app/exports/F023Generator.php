@@ -89,6 +89,10 @@ class F023Generator
                     $path = F023M1TemplateMacroInjector::patchToTemp($path);
                     $tempCleanup[] = $path;
                 }
+                if (!empty($seg['patch_m2_macros'])) {
+                    $path = F023M2TemplateMacroInjector::patchToTemp($path);
+                    $tempCleanup[] = $path;
+                }
                 if (!empty($seg['patch_m3_macros'])) {
                     $path = F023M3TemplateMacroInjector::patchToTemp($path);
                     $tempCleanup[] = $path;
@@ -120,28 +124,16 @@ class F023Generator
                 mkdir($dir, 0775, true);
             }
 
+            if ($formato === 'pdf') {
+                return $this->exportPdfFromSegments($aprendizId, $mergeInputs);
+            }
+
             F023DocxMerge::mergeInto(
                 $out,
                 $mergeInputs,
                 $this->segmentsIncludeM3($segments),
                 $this->m3SegmentMask($segments)
             );
-
-            if ($formato === 'pdf') {
-                try {
-                    $pdfPath = F023DocxToPdf::convert($out);
-                } catch (\Throwable $e) {
-                    if (is_file($out)) {
-                        @unlink($out);
-                    }
-                    throw $e;
-                }
-                if (is_file($out)) {
-                    @unlink($out);
-                }
-
-                return $pdfPath;
-            }
 
             return $out;
         } finally {
@@ -203,7 +195,7 @@ class F023Generator
         if ($tipo === 'M2' || $tipo === 'EX') {
             $file = $tipo === 'EX' ? ($map['ex_template'] ?? 'm2.docx') : ($map['m2_template'] ?? 'm2.docx');
 
-            return [['path' => $tplDir . $file, 'vars' => $vars]];
+            return [['path' => $tplDir . $file, 'vars' => $vars, 'patch_m2_macros' => true]];
         }
         if ($tipo === 'M3') {
             $out = [];
@@ -348,18 +340,69 @@ class F023Generator
         $i = 0;
         foreach ($cfg['tecnicos'] as $nombre) {
             $r = $byNombre[$nombre] ?? null;
-            $out['factor_' . $i . '_valoracion'] = $r ? trim((string) ($r['valoracion'] ?? '')) : '';
-            $out['factor_' . $i . '_observacion'] = $r ? trim((string) ($r['observacion'] ?? '')) : '';
+            $out = array_merge($out, self::factorValoracionMarks($i, $r));
             $i++;
         }
         foreach ($cfg['actitudinales'] as $nombre) {
             $r = $byNombre[$nombre] ?? null;
-            $out['factor_' . $i . '_valoracion'] = $r ? trim((string) ($r['valoracion'] ?? '')) : '';
-            $out['factor_' . $i . '_observacion'] = $r ? trim((string) ($r['observacion'] ?? '')) : '';
+            $out = array_merge($out, self::factorValoracionMarks($i, $r));
             $i++;
         }
 
         return $out;
+    }
+
+    /**
+     * @param array<string,mixed>|null $factorRow
+     * @return array<string,string>
+     */
+    private function factorValoracionMarks(int $index, ?array $factorRow): array
+    {
+        $valoracion = $factorRow ? strtoupper(trim((string) ($factorRow['valoracion'] ?? ''))) : '';
+        $isSatisfactorio = $valoracion === 'S';
+        $isPorMejorar = $valoracion === 'PM';
+
+        return [
+            'factor_' . $index . '_valoracion_s' => $isSatisfactorio ? 'X' : '',
+            'factor_' . $index . '_valoracion_pm' => $isPorMejorar ? 'X' : '',
+            'factor_' . $index . '_observacion' => $factorRow
+                ? trim((string) ($factorRow['observacion'] ?? ''))
+                : '',
+        ];
+    }
+
+    /**
+     * PDF por segmento: cada plantilla se convierte sola y luego se unen los PDF.
+     * LibreOffice deforma tablas cuando el .docx fue armado por concatenación XML.
+     *
+     * @param list<string> $segmentDocxPaths
+     *
+     * @throws \RuntimeException
+     */
+    private function exportPdfFromSegments(int $aprendizId, array $segmentDocxPaths): string
+    {
+        $pdfParts = [];
+        try {
+            foreach ($segmentDocxPaths as $docxPath) {
+                $pdfParts[] = F023DocxToPdf::convert($docxPath);
+            }
+
+            $out = base_path('storage/documents/F023_' . $aprendizId . '_' . time() . '.pdf');
+            $dir = dirname($out);
+            if (!is_dir($dir)) {
+                mkdir($dir, 0775, true);
+            }
+
+            F023PdfMerge::merge($pdfParts, $out);
+
+            return $out;
+        } finally {
+            foreach ($pdfParts as $part) {
+                if (is_file($part)) {
+                    @unlink($part);
+                }
+            }
+        }
     }
 
     /** @return array<string,mixed>|null */

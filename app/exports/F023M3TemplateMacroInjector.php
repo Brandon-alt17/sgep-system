@@ -66,6 +66,7 @@ final class F023M3TemplateMacroInjector
                 );
             }
             $xml = self::ensureFactorTableBorders($xml);
+            $xml = F023FactorValoracionMacroSupport::injectIntoDocumentXml($xml);
         } else {
             $xml = self::normalizeFooterParagraphs($xml);
             $xml = self::insertSpacerParagraphsBeforeFooter($xml, 3);

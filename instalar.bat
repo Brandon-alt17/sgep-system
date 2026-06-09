@@ -43,5 +43,15 @@ if exist database\seeds\aprendices_sample.sql (
 )
 
 :done
+echo.
 echo Instalacion finalizada.
+echo.
+echo Abra el SGEP en el navegador:
+echo   http://localhost/sgep/public
+echo.
+echo Atajo: doble clic en abrir_sgep.bat
+echo        o copie SGEP.url al escritorio.
+echo.
+set /p OPEN=Abrir en el navegador ahora? (S/N):
+if /i "%OPEN%"=="S" start "" "http://localhost/sgep/public"
 pause

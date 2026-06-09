@@ -59,8 +59,17 @@ class ImportacionController
             return;
         }
 
-        $resultado = (new AprendicesImport())->import($tmpPath);
-        ProgramaEnlacePendiente::syncAprendicesSinVinculoValido();
+        try {
+            $resultado = (new AprendicesImport())->import($tmpPath);
+            ProgramaEnlacePendiente::syncAprendicesSinVinculoValido();
+        } catch (\Throwable $e) {
+            log_error('Import process: ' . $e->getMessage());
+            $this->respondImportValidationFailed([
+                'No se pudo procesar el archivo. Verifique el formato e intente de nuevo.',
+            ]);
+
+            return;
+        }
         $processed = (int) ($resultado['inserted'] ?? 0) + (int) ($resultado['updated'] ?? 0);
         $errorCount = count($resultado['errors'] ?? []);
         $status = $errorCount > 0

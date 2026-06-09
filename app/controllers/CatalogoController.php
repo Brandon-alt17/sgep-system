@@ -506,8 +506,17 @@ class CatalogoController
         $tmpPath = (string) $_FILES['archivo_pdf']['tmp_name'];
         $name = (string) ($_FILES['archivo_pdf']['name'] ?? 'programa.pdf');
         $extension = strtolower(pathinfo($name, PATHINFO_EXTENSION));
-        $extracted = ProgramaPdfTextExtractor::extract($tmpPath, $extension);
-        $parsed = ProgramaPdfParser::parsePages((array) ($extracted['pages'] ?? []));
+        try {
+            $extracted = ProgramaPdfTextExtractor::extract($tmpPath, $extension);
+            $parsed = ProgramaPdfParser::parsePages((array) ($extracted['pages'] ?? []));
+        } catch (\Throwable $e) {
+            log_error('Import programa PDF: ' . $e->getMessage());
+            view('catalogo/programas/importar', [
+                'error' => 'No se pudo leer el archivo. Verifique que no esté dañado o protegido.',
+            ]);
+
+            return;
+        }
         $parsedMeta = (array) ($parsed['meta'] ?? []);
         $nameFallbackApplied = false;
         if (trim((string) ($parsedMeta['nombre'] ?? '')) === '') {
@@ -542,6 +551,8 @@ class CatalogoController
         $decoded = json_decode(base64_decode($encoded, true) ?: '{}', true);
         if (!is_array($decoded)) {
             redirect(APP_BASE_PATH . '/catalogo/programas/importar');
+
+            return;
         }
 
         $meta = (array) ($decoded['meta'] ?? []);
@@ -602,8 +613,12 @@ class CatalogoController
 
         if ($errors !== []) {
             if ($programaId > 0) {
+                $programaRow = Programa::findById($programaId);
+                if ($programaRow === null) {
+                    abort_404('/catalogo/programas/ver?id=' . $programaId);
+                }
                 view('catalogo/programas/show', [
-                    'programa' => Programa::findById($programaId),
+                    'programa' => $programaRow,
                     'fileName' => 'Registro manual',
                     'parsed' => [
                         'meta' => $meta,
@@ -650,8 +665,12 @@ class CatalogoController
                     'errors' => ['No se pudo guardar: ya existe un programa con el mismo nombre y nivel (restricción en base de datos).'],
                 ]);
             } else {
+                $programaRow = Programa::findById($programaId);
+                if ($programaRow === null) {
+                    abort_404('/catalogo/programas/ver?id=' . $programaId);
+                }
                 view('catalogo/programas/show', [
-                    'programa' => Programa::findById($programaId),
+                    'programa' => $programaRow,
                     'fileName' => 'Registro manual',
                     'parsed' => [
                         'meta' => $meta,

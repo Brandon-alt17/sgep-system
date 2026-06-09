@@ -74,19 +74,6 @@ function updateTableRowForExport(row, data) {
     }
 }
 
-// Interceptar el clic en el botón de exportar para incluir datos de localStorage
-document.addEventListener('DOMContentLoaded', function() {
-    const exportBtn = document.querySelector('a[href*="exportar"]');
-    if (exportBtn) {
-        exportBtn.addEventListener('click', function(e) {
-            prepareExportData();
-            // Dar tiempo para que se actualice la tabla
-            setTimeout(() => {
-                // El enlace se abrirá normalmente después de este pequeño delay
-            }, 100);
-        });
-    }
-});
 </script>
 
 <!-- CONTENEDOR PRINCIPAL CON ANCHO FIJO Y OVERFLOW ESCONDIDO -->
@@ -151,7 +138,14 @@ document.addEventListener('DOMContentLoaded', function() {
         $exportUrl = APP_BASE_PATH . '/reportes/exportar'
             . ($exportQuery === [] ? '' : '?' . http_build_query($exportQuery));
         ?>
-        <a href="<?= e($exportUrl) ?>" class="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium px-4 h-10 rounded-lg transition-colors" id="exportBtn">
+        <a
+            href="<?= e($exportUrl) ?>"
+            class="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium px-4 h-10 rounded-lg transition-colors"
+            id="exportBtn"
+            data-download-link
+            data-download-before="prepareExportData"
+            data-download-label="Exportando reporte maestro"
+        >
             Exportar a Excel
         </a>
     </form>

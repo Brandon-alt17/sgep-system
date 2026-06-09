@@ -142,6 +142,18 @@
     z-index: 80;
   }
 
+  .sg-download-overlay {
+    @apply fixed inset-0 z-[90] flex items-center justify-center bg-black/40 p-4;
+  }
+
+  .sg-download-overlay.hidden {
+    display: none;
+  }
+
+  .sg-download-overlay__panel {
+    @apply w-full max-w-md rounded-xl border border-app-border bg-app-panel p-5 shadow-lg;
+  }
+
   .modal-panel {
     @apply relative flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-xl border border-app-border bg-app-panel p-6 shadow-lg;
   }
