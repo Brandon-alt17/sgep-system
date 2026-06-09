@@ -14,6 +14,8 @@ class ReporteMaestroData
      */
     public static function rows(array $filters = []): array
     {
+        self::migrateOrphanedReporteCampos();
+
         $raw = self::fetchBaseRows($filters);
         if ($raw === []) {
             return [];
@@ -327,6 +329,126 @@ class ReporteMaestroData
         }
 
         return date_iso_to_dmY($raw);
+    }
+
+    /**
+     * Persiste campos editables del panel lateral (switches, certificación, novedades).
+     *
+     * @param array<string, mixed> $campos claves del formulario (con alias de UI)
+     */
+    public static function persistCampos(int $aprendizId, array $campos): void
+    {
+        $aprendizId = self::resolveAprendizId($aprendizId);
+        if ($aprendizId <= 0 || $campos === []) {
+            return;
+        }
+
+        /** @var array<string, mixed> $map */
+        $map = require base_path('config/reporte_maestro_map.php');
+        $allowed = array_keys((array) ($map['columns'] ?? []));
+        $allowed = array_merge($allowed, [
+            'cambio_modalidad',
+            'observaciones_novedad',
+            'arl',
+            'referencia_modalidad',
+            'semaforo_vencimiento',
+            'llamados_atencion',
+            'otros_novedad',
+            'comite_evaluacion',
+        ]);
+        /** @var list<string> $boolKeys */
+        $boolKeys = array_values((array) ($map['boolean_keys'] ?? []));
+
+        $aliases = [
+            'fecha_entrega' => 'fecha_entrega_admin',
+            'observaciones' => 'observaciones_cert',
+            'reingreso' => 'reingreso_vencimiento',
+        ];
+
+        $stmt = Database::connection()->prepare(
+            'INSERT INTO reporte_campos (aprendiz_id, campo, valor, updated_at)
+             VALUES (:aprendiz_id, :campo, :valor, NOW())
+             ON DUPLICATE KEY UPDATE valor = VALUES(valor), updated_at = NOW()'
+        );
+
+        foreach ($campos as $rawKey => $value) {
+            if (!is_string($rawKey) && !is_int($rawKey)) {
+                continue;
+            }
+            $key = $aliases[(string) $rawKey] ?? (string) $rawKey;
+            if (!in_array($key, $allowed, true)) {
+                continue;
+            }
+
+            $stored = self::normalizeStoredCampoValor($key, $value, $boolKeys);
+            $stmt->execute([
+                'aprendiz_id' => $aprendizId,
+                'campo' => $key,
+                'valor' => $stored,
+            ]);
+        }
+    }
+
+    /**
+     * Reasigna filas guardadas con cédula en lugar del id interno del aprendiz.
+     */
+    private static function migrateOrphanedReporteCampos(): void
+    {
+        try {
+            Database::connection()->exec(
+                'UPDATE reporte_campos rc
+                 INNER JOIN aprendices a ON a.numero_documento = CAST(rc.aprendiz_id AS CHAR)
+                 SET rc.aprendiz_id = a.id
+                 WHERE NOT EXISTS (
+                     SELECT 1 FROM aprendices valid WHERE valid.id = rc.aprendiz_id
+                 )'
+            );
+        } catch (\Throwable $e) {
+            log_error('Reporte maestro migrate campos: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Acepta id interno o número de documento (datos legacy del panel lateral).
+     */
+    private static function resolveAprendizId(int $rawId): int
+    {
+        if ($rawId <= 0) {
+            return 0;
+        }
+
+        $pdo = Database::connection();
+        $byPk = $pdo->prepare('SELECT id FROM aprendices WHERE id = :id LIMIT 1');
+        $byPk->execute(['id' => $rawId]);
+        if ($byPk->fetchColumn()) {
+            return $rawId;
+        }
+
+        $byDoc = $pdo->prepare('SELECT id FROM aprendices WHERE numero_documento = :doc LIMIT 1');
+        $byDoc->execute(['doc' => (string) $rawId]);
+        $resolved = (int) ($byDoc->fetchColumn() ?: 0);
+
+        return $resolved > 0 ? $resolved : $rawId;
+    }
+
+    /**
+     * @param list<string> $boolKeys
+     */
+    private static function normalizeStoredCampoValor(string $key, mixed $value, array $boolKeys): string
+    {
+        if (in_array($key, $boolKeys, true)) {
+            if (is_bool($value)) {
+                return $value ? '1' : '0';
+            }
+            $v = strtolower(trim((string) $value));
+            if ($v === '' || $v === '0' || $v === 'false' || $v === 'no') {
+                return '0';
+            }
+
+            return '1';
+        }
+
+        return trim((string) $value);
     }
 
     /**

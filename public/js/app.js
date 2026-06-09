@@ -1844,15 +1844,25 @@ document.querySelectorAll("[data-jefe-form]").forEach(function (form) {
     link.addEventListener("click", function (event) {
       event.preventDefault();
       var beforeName = link.getAttribute("data-download-before");
+      var startDownload = function () {
+        downloadWithProgress({
+          url: link.href,
+          method: "GET",
+          label: link.getAttribute("data-download-label") || "Exportando archivo...",
+          processingStatus: "Generando Excel...",
+        });
+      };
       if (beforeName && typeof window[beforeName] === "function") {
-        window[beforeName]();
+        var beforeResult = window[beforeName]();
+        if (beforeResult && typeof beforeResult.then === "function") {
+          beforeResult.then(startDownload).catch(function (err) {
+            console.error(err);
+            showGlobalToast("No se pudieron sincronizar los datos antes de exportar.", "error");
+          });
+          return;
+        }
       }
-      downloadWithProgress({
-        url: link.href,
-        method: "GET",
-        label: link.getAttribute("data-download-label") || "Exportando archivo...",
-        processingStatus: "Generando Excel...",
-      });
+      startDownload();
     });
   });
 })();

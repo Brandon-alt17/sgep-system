@@ -3,6 +3,21 @@
     'use strict';
     let currentAprendizId = null;
 
+    function localStorageKeyForRow(row) {
+        const id = row.dataset.id || '';
+        const currentKey = 'formulario_' + id;
+        const legacyId = row.dataset.identificacion || '';
+        const legacyKey = legacyId ? 'formulario_' + legacyId : '';
+        if (legacyKey && legacyKey !== currentKey) {
+            const legacyData = localStorage.getItem(legacyKey);
+            if (legacyData && !localStorage.getItem(currentKey)) {
+                localStorage.setItem(currentKey, legacyData);
+                localStorage.removeItem(legacyKey);
+            }
+        }
+        return currentKey;
+    }
+
     function init() {
         console.log('Inicializando popup...');
         setupEventListeners();
@@ -15,7 +30,7 @@
         console.log('Cargando datos guardados...');
         document.querySelectorAll('tr[data-id]').forEach(row => {
             const aprendizId = row.dataset.id;
-            const saved = localStorage.getItem(`formulario_${aprendizId}`);
+            const saved = localStorage.getItem(localStorageKeyForRow(row));
             if (saved) {
                 try {
                     const data = JSON.parse(saved);
@@ -326,6 +341,59 @@
         if (reingreso) reingreso.checked = false;
     }
 
+    function collectRowsFromLocalStorage() {
+        const rows = [];
+        document.querySelectorAll('tr[data-id]').forEach(function (row) {
+            const aprendizId = parseInt(row.dataset.id || '0', 10);
+            if (!aprendizId) return;
+            const saved = localStorage.getItem(localStorageKeyForRow(row));
+            if (!saved) return;
+            try {
+                rows.push({ aprendiz_id: aprendizId, campos: JSON.parse(saved) });
+            } catch (e) {
+                console.error('Error leyendo localStorage para aprendiz', aprendizId, e);
+            }
+        });
+        return rows;
+    }
+
+    function syncReporteCamposToServer(rows) {
+        const payload = rows || collectRowsFromLocalStorage();
+        if (!payload.length) {
+            return Promise.resolve();
+        }
+        const base = window.APP_BASE_PATH || '';
+        return fetch(base + '/reportes/sync', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+            body: JSON.stringify({ rows: payload }),
+        }).then(function (response) {
+            return response.json().catch(function () {
+                return { ok: false };
+            }).then(function (data) {
+                if (!response.ok || !data.ok) {
+                    throw new Error(data.message || 'No se pudieron sincronizar los datos del reporte.');
+                }
+                return data;
+            });
+        });
+    }
+
+    window.prepareExportData = function () {
+        const rows = collectRowsFromLocalStorage();
+        rows.forEach(function (entry) {
+            const row = document.querySelector('tr[data-id="' + entry.aprendiz_id + '"]');
+            if (row) {
+                updateTableRow(row, entry.campos);
+            }
+        });
+        return syncReporteCamposToServer(rows);
+    };
+
     function saveData() {
         if (!currentAprendizId) {
             showNotification('Error: No hay aprendiz seleccionado', 'error');
@@ -359,21 +427,23 @@
             console.log(`Guardando reingreso: ${reingreso.checked}`);
         }
         
-        // Guardar en localStorage
         localStorage.setItem(`formulario_${currentAprendizId}`, JSON.stringify(formData));
-        console.log('Datos guardados en localStorage:', formData);
-        
-        // Actualizar la tabla inmediatamente
+
         const row = document.querySelector(`tr[data-id="${currentAprendizId}"]`);
         if (row) {
-            console.log('Actualizando fila en la tabla...');
             updateTableRow(row, formData);
-        } else {
-            console.error('No se encontró la fila con data-id:', currentAprendizId);
         }
-        
-        showNotification('Datos guardados correctamente', 'success');
-        closePopup();
+
+        const aprendizId = parseInt(currentAprendizId, 10);
+        syncReporteCamposToServer([{ aprendiz_id: aprendizId, campos: formData }])
+            .then(function () {
+                showNotification('Datos guardados correctamente', 'success');
+                closePopup();
+            })
+            .catch(function (err) {
+                console.error(err);
+                showNotification('Guardado local OK, pero falló la sincronización con el servidor.', 'error');
+            });
     }
 
     function showNotification(message, type = 'success') {
