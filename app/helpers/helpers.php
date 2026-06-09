@@ -98,6 +98,34 @@ function redirect(string $url): void
     exit;
 }
 
+function abort_404(string $uri = ''): never
+{
+    http_response_code(404);
+    view('errors/404', ['uri' => $uri]);
+    exit;
+}
+
+function app_handle_exception(Throwable $e): void
+{
+    if (http_response_code() < 400) {
+        http_response_code(500);
+    }
+    log_error($e->getMessage() . ' @ ' . $e->getFile() . ':' . $e->getLine());
+
+    $debugMessage = (defined('APP_DEBUG') && APP_DEBUG) ? $e->getMessage() : null;
+    if (!headers_sent()) {
+        try {
+            view('errors/500', ['message' => $debugMessage]);
+
+            return;
+        } catch (Throwable) {
+            // layout o vista no disponible
+        }
+    }
+
+    echo 'Error interno del servidor.';
+}
+
 function log_error(string $message): void
 {
     $dir = base_path('storage/logs');

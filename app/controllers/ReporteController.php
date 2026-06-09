@@ -13,8 +13,21 @@ class ReporteController
 {
     public function index(): void
     {
+        try {
+            $rows = ReporteMaestroData::rows($this->filtersFromRequest());
+        } catch (\Throwable $e) {
+            log_error('Reporte maestro index: ' . $e->getMessage());
+            view('errors/500', [
+                'message' => (defined('APP_DEBUG') && APP_DEBUG)
+                    ? $e->getMessage()
+                    : 'No se pudo cargar el reporte maestro.',
+            ]);
+
+            return;
+        }
+
         view('reports/maestro', [
-            'rows' => ReporteMaestroData::rows($this->filtersFromRequest()),
+            'rows' => $rows,
         ]);
     }
 
@@ -22,11 +35,11 @@ class ReporteController
     {
         $aprendizId = (int) ($_POST['aprendiz_id'] ?? 0);
 
-        $campo = (string) ($_POST['campo'] ?? '');
+        $campo = trim((string) ($_POST['campo'] ?? ''));
 
         $valor = (string) ($_POST['valor'] ?? '');
 
-        if ($campo === '') {
+        if ($campo === '' || $aprendizId <= 0) {
             redirect(APP_BASE_PATH . '/reportes/maestro');
         }
 
@@ -48,13 +61,17 @@ class ReporteController
                 updated_at = NOW()
         ';
 
-        Database::connection()
-            ->prepare($sql)
-            ->execute([
-                'aprendiz_id' => $aprendizId,
-                'campo' => $campo,
-                'valor' => $valor,
-            ]);
+        try {
+            Database::connection()
+                ->prepare($sql)
+                ->execute([
+                    'aprendiz_id' => $aprendizId,
+                    'campo' => $campo,
+                    'valor' => $valor,
+                ]);
+        } catch (\Throwable $e) {
+            log_error('Reporte maestro update: ' . $e->getMessage());
+        }
 
         redirect(APP_BASE_PATH . '/reportes/maestro');
     }
@@ -66,6 +83,12 @@ class ReporteController
                 ->export($this->filtersFromRequest());
         } catch (RuntimeException $e) {
             log_error('Reporte maestro export: ' . $e->getMessage());
+            redirect(APP_BASE_PATH . '/reportes/maestro');
+
+            return;
+        }
+
+        if (!is_file($path)) {
             redirect(APP_BASE_PATH . '/reportes/maestro');
 
             return;

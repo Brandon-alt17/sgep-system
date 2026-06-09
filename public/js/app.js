@@ -1623,3 +1623,236 @@ document.querySelectorAll("[data-jefe-form]").forEach(function (form) {
     }
   });
 });
+
+// Descargas largas (F-023 Word/PDF, reporte Excel): barra de progreso con fetch + blob.
+(function () {
+  var fakeTimer = null;
+  var activeController = null;
+
+  var getOverlay = function () {
+    return document.querySelector("[data-download-overlay]");
+  };
+
+  var setOverlayProgress = function (title, status, percent) {
+    var root = getOverlay();
+    if (!root) return;
+    var labelEl = root.querySelector("[data-download-overlay-label]");
+    var statusEl = root.querySelector("[data-download-overlay-status]");
+    var percentEl = root.querySelector("[data-download-overlay-percent]");
+    var bar = root.querySelector("[data-download-overlay-bar]");
+    var safe = Math.max(0, Math.min(100, Math.round(percent || 0)));
+    if (labelEl && title) labelEl.textContent = title;
+    if (statusEl && status) statusEl.textContent = status;
+    if (percentEl) percentEl.textContent = safe + "%";
+    if (bar) bar.style.width = safe + "%";
+  };
+
+  var showOverlay = function (title) {
+    var root = getOverlay();
+    if (!root) return;
+    root.classList.remove("hidden");
+    root.setAttribute("aria-hidden", "false");
+    setOverlayProgress(title || "Preparando descarga...", "Iniciando...", 3);
+  };
+
+  var hideOverlay = function () {
+    var root = getOverlay();
+    if (!root) return;
+    root.classList.add("hidden");
+    root.setAttribute("aria-hidden", "true");
+    if (fakeTimer) {
+      window.clearInterval(fakeTimer);
+      fakeTimer = null;
+    }
+  };
+
+  var startFakeProgress = function (statusText) {
+    var pct = 5;
+    if (fakeTimer) window.clearInterval(fakeTimer);
+    fakeTimer = window.setInterval(function () {
+      pct = Math.min(pct + 1.5, 88);
+      setOverlayProgress(null, statusText, pct);
+    }, 350);
+  };
+
+  var stopFakeProgress = function () {
+    if (fakeTimer) {
+      window.clearInterval(fakeTimer);
+      fakeTimer = null;
+    }
+  };
+
+  var parseFilename = function (contentDisposition) {
+    if (!contentDisposition) return "descarga";
+    var match = /filename\*?=(?:UTF-8''|")?([^";]+)/i.exec(contentDisposition);
+    if (!match) return "descarga";
+    return decodeURIComponent(match[1].replace(/"/g, ""));
+  };
+
+  var isBinaryDownloadResponse = function (contentType) {
+    if (!contentType) return false;
+    var ct = contentType.toLowerCase();
+    return (
+      ct.indexOf("application/pdf") !== -1 ||
+      ct.indexOf("officedocument") !== -1 ||
+      ct.indexOf("octet-stream") !== -1 ||
+      ct.indexOf("vnd.ms-excel") !== -1
+    );
+  };
+
+  var triggerBlobDownload = function (blob, filename) {
+    var objectUrl = URL.createObjectURL(blob);
+    var anchor = document.createElement("a");
+    anchor.href = objectUrl;
+    anchor.download = filename;
+    anchor.style.display = "none";
+    document.body.appendChild(anchor);
+    anchor.click();
+    window.setTimeout(function () {
+      URL.revokeObjectURL(objectUrl);
+      anchor.remove();
+    }, 200);
+  };
+
+  var handleHtmlErrorResponse = function (response) {
+    var url = response.url || "";
+    if (url.indexOf("error=") !== -1) {
+      window.location.href = url;
+      return;
+    }
+    hideOverlay();
+    showGlobalToast("No se pudo completar la descarga. Inténtelo de nuevo.", "error");
+  };
+
+  var downloadWithProgress = function (options) {
+    var url = options.url;
+    var method = (options.method || "GET").toUpperCase();
+    var body = options.body || null;
+    var title = options.label || "Preparando descarga...";
+    var processingStatus = options.processingStatus || "Generando archivo...";
+    var downloadingStatus = options.downloadingStatus || "Descargando...";
+
+    if (!url) return Promise.reject(new Error("URL requerida"));
+
+    showOverlay(title);
+    startFakeProgress(processingStatus);
+
+    if (activeController) activeController.abort();
+    activeController = new AbortController();
+
+    return fetch(url, {
+      method: method,
+      body: body,
+      credentials: "same-origin",
+      signal: activeController.signal,
+      headers: body instanceof FormData ? { "X-Requested-With": "XMLHttpRequest" } : undefined,
+    })
+      .then(function (response) {
+        var contentType = response.headers.get("Content-Type") || "";
+        if (!response.ok || !isBinaryDownloadResponse(contentType)) {
+          stopFakeProgress();
+          if (contentType.indexOf("text/html") !== -1 || response.redirected) {
+            handleHtmlErrorResponse(response);
+            return;
+          }
+          hideOverlay();
+          showGlobalToast("No se pudo completar la descarga.", "error");
+          return;
+        }
+
+        var disposition = response.headers.get("Content-Disposition");
+        var filename = parseFilename(disposition);
+        var contentLength = parseInt(response.headers.get("Content-Length") || "0", 10);
+
+        if (!response.body || typeof response.body.getReader !== "function") {
+          stopFakeProgress();
+          return response.blob().then(function (blob) {
+            setOverlayProgress(title, "Descarga lista", 100);
+            triggerBlobDownload(blob, filename);
+            window.setTimeout(hideOverlay, 600);
+          });
+        }
+
+        var reader = response.body.getReader();
+        var chunks = [];
+        var received = 0;
+
+        var pump = function () {
+          return reader.read().then(function (result) {
+            if (result.done) {
+              stopFakeProgress();
+              var blob = new Blob(chunks, { type: contentType });
+              setOverlayProgress(title, "Descarga lista", 100);
+              triggerBlobDownload(blob, filename);
+              window.setTimeout(hideOverlay, 600);
+              return;
+            }
+            chunks.push(result.value);
+            received += result.value.length;
+            if (contentLength > 0) {
+              var dlPct = Math.round((received / contentLength) * 100);
+              setOverlayProgress(null, downloadingStatus, Math.max(90, Math.min(99, dlPct)));
+            }
+            return pump();
+          });
+        };
+
+        stopFakeProgress();
+        setOverlayProgress(null, downloadingStatus, 90);
+        return pump();
+      })
+      .catch(function (err) {
+        stopFakeProgress();
+        hideOverlay();
+        if (err && err.name === "AbortError") return;
+        showGlobalToast("Error de red durante la descarga.", "error");
+      })
+      .finally(function () {
+        activeController = null;
+      });
+  };
+
+  window.sgDownloadWithProgress = downloadWithProgress;
+
+  document.querySelectorAll("[data-download-form]").forEach(function (form) {
+    form.addEventListener("submit", function (event) {
+      event.preventDefault();
+      if (form.querySelector('input[name="partes[]"]')) {
+        var checked = form.querySelectorAll('input[name="partes[]"]:checked');
+        if (!checked.length) {
+          showGlobalToast("Seleccione al menos un bloque a incluir en el documento.", "warning");
+          return;
+        }
+      }
+      var formatoInput = form.querySelector('input[name="formato"]:checked');
+      var formato = formatoInput ? formatoInput.value : "docx";
+      var processing =
+        formato === "pdf"
+          ? "Generando PDF (puede tardar unos segundos)..."
+          : "Generando documento Word...";
+      downloadWithProgress({
+        url: form.getAttribute("action") || window.location.href,
+        method: "POST",
+        body: new FormData(form),
+        label: form.getAttribute("data-download-label") || "Generando documento...",
+        processingStatus: processing,
+      });
+    });
+  });
+
+  document.querySelectorAll("[data-download-link]").forEach(function (link) {
+    link.addEventListener("click", function (event) {
+      event.preventDefault();
+      var beforeName = link.getAttribute("data-download-before");
+      if (beforeName && typeof window[beforeName] === "function") {
+        window[beforeName]();
+      }
+      downloadWithProgress({
+        url: link.href,
+        method: "GET",
+        label: link.getAttribute("data-download-label") || "Exportando archivo...",
+        processingStatus: "Generando Excel...",
+      });
+    });
+  });
+})();

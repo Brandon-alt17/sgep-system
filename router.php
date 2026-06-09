@@ -74,7 +74,12 @@ $routes = [
 foreach ($routes as [$routeMethod, $routePath, $handler]) {
     if ($method === $routeMethod && $uri === $routePath) {
         [$class, $action] = $handler;
-        (new $class())->{$action}();
+        try {
+            (new $class())->{$action}();
+        } catch (Throwable $e) {
+            app_handle_exception($e);
+        }
+
         return;
     }
 }

@@ -88,9 +88,13 @@ class DashboardController
                 'totales' => $totales
             ]);
 
-        } catch (\Exception $e) {
-            error_log("DashboardController error: " . $e->getMessage());
-            die("Error en Dashboard: " . $e->getMessage());
+        } catch (\Throwable $e) {
+            log_error('DashboardController: ' . $e->getMessage());
+            view('errors/500', [
+                'message' => (defined('APP_DEBUG') && APP_DEBUG)
+                    ? $e->getMessage()
+                    : 'No se pudo cargar el panel. Verifique que MySQL esté activo.',
+            ]);
         }
     }
 }

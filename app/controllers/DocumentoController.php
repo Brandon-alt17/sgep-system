@@ -109,14 +109,25 @@ class DocumentoController
             return;
         }
 
-        Database::connection()->prepare(
-            'INSERT INTO documentos_generados (aprendiz_id, partes, formato, ruta_archivo, created_at) VALUES (:aprendiz_id, :partes, :formato, :ruta, NOW())'
-        )->execute([
-            'aprendiz_id' => $aprendizId,
-            'partes' => json_encode($partes, JSON_UNESCAPED_UNICODE),
-            'formato' => $formato,
-            'ruta' => $path,
-        ]);
+        if (!is_file($path)) {
+            redirect(APP_BASE_PATH . '/documentos/generar?aprendiz_id=' . $aprendizId . '&error=export_failed');
+
+            return;
+        }
+
+        try {
+            Database::connection()->prepare(
+                'INSERT INTO documentos_generados (aprendiz_id, partes, formato, ruta_archivo, created_at) VALUES (:aprendiz_id, :partes, :formato, :ruta, NOW())'
+            )->execute([
+                'aprendiz_id' => $aprendizId,
+                'partes' => json_encode($partes, JSON_UNESCAPED_UNICODE),
+                'formato' => $formato,
+                'ruta' => $path,
+            ]);
+        } catch (\Throwable $e) {
+            log_error('F023 historial: ' . $e->getMessage());
+            // El archivo ya se generó; se entrega aunque falle el registro en historial.
+        }
 
         $mime = $formato === 'pdf'
             ? 'application/pdf'

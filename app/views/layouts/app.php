@@ -61,6 +61,7 @@ $pageTitle = $titles[$pathForTitle] ?? $titles[$currentPath] ?? 'SGEP';
     </div>
 </div>
 <?php partial('components/confirm_modal'); ?>
+<?php partial('components/download_progress_overlay'); ?>
 <script src="<?= e(APP_BASE_PATH) ?>/js/app.js"></script>
 <script>window.APP_BASE_PATH = "<?= e((string) APP_BASE_PATH) ?>";</script>
 <script src="<?= e(APP_BASE_PATH) ?>/js/modal-manager.js"></script>

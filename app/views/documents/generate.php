@@ -44,7 +44,13 @@ $rowClass = 'flex gap-3 py-2.5';
         </div>
     <?php endif; ?>
 
-    <form method="post" action="<?= e(APP_BASE_PATH) ?>/documentos/generar" class="flex w-full max-w-none flex-col gap-6">
+    <form
+        method="post"
+        action="<?= e(APP_BASE_PATH) ?>/documentos/generar"
+        class="flex w-full max-w-none flex-col gap-6"
+        data-download-form
+        data-download-label="Generando formato GFPI-F-023"
+    >
         <input type="hidden" name="aprendiz_id" value="<?= $aprendizId ?>">
 
         <?php
