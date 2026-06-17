@@ -28,6 +28,22 @@
 .badge-success { background: #d1fae5; color: #065f46; }
 .badge-warning { background: #fef3c7; color: #92400e; }
 </style>
+<?php
+$visitaProgramadaM1 = trim((string) ($aprendiz['visita_programada_m1'] ?? ''));
+if ($visitaProgramadaM1 === '') {
+    $visitaProgramadaM1 = trim((string) ($aprendiz['proxima_visita'] ?? ''));
+}
+$visitaProgramadaM2 = trim((string) ($aprendiz['visita_programada_m2'] ?? ''));
+$visitaProgramadaM3 = trim((string) ($aprendiz['visita_programada_m3'] ?? ''));
+$modalidadVisitaM1 = trim((string) ($aprendiz['modalidad_visita_m1'] ?? 'Presencial'));
+$modalidadVisitaM2 = trim((string) ($aprendiz['modalidad_visita_m2'] ?? 'Presencial'));
+$modalidadVisitaM3 = trim((string) ($aprendiz['modalidad_visita_m3'] ?? 'Presencial'));
+$visitaM1Completada = !empty($aprendiz['visita_m1_completada']);
+$visitaM2Completada = !empty($aprendiz['visita_m2_completada']);
+$modalidadVisitaSelected = static function (string $current, string $option): string {
+    return strcasecmp($current, $option) === 0 ? ' selected' : '';
+};
+?>
 
 <div id="modal-visitas" class="hidden">
     <div id="modal-overlay-visitas" onclick="cerrarModalVisitas()"></div>
@@ -42,7 +58,7 @@
                         Programar visitas
                     </h2>
                     <p class="text-sm text-gray-500 mt-1">
-                        La fecha del Momento 1 se guarda como la próxima visita.
+                        Puede programar las tres visitas a la vez. La próxima visita mostrada será la del primer momento pendiente.
                     </p>
                 </div>
                 <button onclick="cerrarModalVisitas()" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
@@ -61,71 +77,72 @@
                     <div class="flex items-center justify-between mb-3">
                         <span class="text-sm font-medium text-gray-700">Momento 1</span>
                         <label class="flex items-center gap-2 text-sm cursor-pointer">
-                            <!-- Checkbox para marcar completado -->
-                            <input type="checkbox" name="completado_momento1" id="chk-m1" 
-                                   class="rounded border-gray-300">
-                            <span class="badge badge-warning">Pendiente</span>
+                            <input type="checkbox" name="completado_momento1" id="chk-m1"
+                                   class="rounded border-gray-300"<?= $visitaM1Completada ? ' checked' : '' ?>>
+                            <span class="badge <?= $visitaM1Completada ? 'badge-success' : 'badge-warning' ?>"><?= $visitaM1Completada ? 'Completado' : 'Pendiente' ?></span>
                         </label>
                     </div>
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
                         <div>
                             <label class="form-label">Fecha</label>
                             <input type="text" name="fecha_momento1" id="fecha-m1"
-                                   value="<?= e(date_iso_to_dmY((string) ($aprendiz['proxima_visita'] ?? ''))) ?>"
+                                   value="<?= e(date_iso_to_dmY($visitaProgramadaM1)) ?>"
                                    class="form-input" placeholder="dd/mm/aaaa" title="Formato día/mes/año (dd/mm/aaaa)" inputmode="numeric" maxlength="10" spellcheck="false" autocomplete="off" data-date-input="dmy">
                         </div>
                         <div>
                             <label class="form-label">Modalidad</label>
                             <select name="modalidad_momento1" class="form-input">
-                                <option value="Presencial">Presencial</option>
-                                <option value="Virtual">Virtual</option>
+                                <option value="Presencial"<?= $modalidadVisitaSelected($modalidadVisitaM1, 'Presencial') ?>>Presencial</option>
+                                <option value="Virtual"<?= $modalidadVisitaSelected($modalidadVisitaM1, 'Virtual') ?>>Virtual</option>
                             </select>
                         </div>
                     </div>
                 </div>
 
-                <!-- MOMENTO 2 (Deshabilitado hasta que M1 se marque como completado) -->
-                <div class="visita-card disabled" id="card-m2">
+                <!-- MOMENTO 2 -->
+                <div class="visita-card" id="card-m2">
                     <div class="flex items-center justify-between mb-3">
                         <span class="text-sm font-medium text-gray-700">Momento 2</span>
                         <label class="flex items-center gap-2 text-sm cursor-pointer">
-                            <input type="checkbox" name="completado_momento2" id="chk-m2" 
-                                   class="rounded border-gray-300" disabled>
-                            <span class="badge badge-warning">Bloqueado</span>
+                            <input type="checkbox" name="completado_momento2" id="chk-m2"
+                                   class="rounded border-gray-300"<?= $visitaM2Completada ? ' checked' : '' ?>>
+                            <span class="badge <?= $visitaM2Completada ? 'badge-success' : 'badge-warning' ?>"><?= $visitaM2Completada ? 'Completado' : 'Pendiente' ?></span>
                         </label>
                     </div>
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
                         <div>
                             <label class="form-label">Fecha</label>
-                            <input type="text" name="fecha_momento2" id="fecha-m2" value=""
-                                   class="form-input" placeholder="dd/mm/aaaa" title="Formato día/mes/año (dd/mm/aaaa)" inputmode="numeric" maxlength="10" spellcheck="false" autocomplete="off" data-date-input="dmy" disabled>
+                            <input type="text" name="fecha_momento2" id="fecha-m2"
+                                   value="<?= e(date_iso_to_dmY($visitaProgramadaM2)) ?>"
+                                   class="form-input" placeholder="dd/mm/aaaa" title="Formato día/mes/año (dd/mm/aaaa)" inputmode="numeric" maxlength="10" spellcheck="false" autocomplete="off" data-date-input="dmy">
                         </div>
                         <div>
                             <label class="form-label">Modalidad</label>
-                            <select name="modalidad_momento2" class="form-input" disabled>
-                                <option value="Presencial">Presencial</option>
-                                <option value="Virtual">Virtual</option>
+                            <select name="modalidad_momento2" class="form-input">
+                                <option value="Presencial"<?= $modalidadVisitaSelected($modalidadVisitaM2, 'Presencial') ?>>Presencial</option>
+                                <option value="Virtual"<?= $modalidadVisitaSelected($modalidadVisitaM2, 'Virtual') ?>>Virtual</option>
                             </select>
                         </div>
                     </div>
                 </div>
 
                 <!-- MOMENTO 3 -->
-                <div class="visita-card disabled" id="card-m3">
+                <div class="visita-card" id="card-m3">
                     <div class="flex items-center justify-between mb-3">
                         <span class="text-sm font-medium text-gray-700">Momento 3</span>
                     </div>
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
                         <div>
                             <label class="form-label">Fecha</label>
-                            <input type="text" name="fecha_momento3" id="fecha-m3" value=""
-                                   class="form-input" placeholder="dd/mm/aaaa" title="Formato día/mes/año (dd/mm/aaaa)" inputmode="numeric" maxlength="10" spellcheck="false" autocomplete="off" data-date-input="dmy" disabled>
+                            <input type="text" name="fecha_momento3" id="fecha-m3"
+                                   value="<?= e(date_iso_to_dmY($visitaProgramadaM3)) ?>"
+                                   class="form-input" placeholder="dd/mm/aaaa" title="Formato día/mes/año (dd/mm/aaaa)" inputmode="numeric" maxlength="10" spellcheck="false" autocomplete="off" data-date-input="dmy">
                         </div>
                         <div>
                             <label class="form-label">Modalidad</label>
-                            <select name="modalidad_momento3" class="form-input" disabled>
-                                <option value="Presencial">Presencial</option>
-                                <option value="Virtual">Virtual</option>
+                            <select name="modalidad_momento3" class="form-input">
+                                <option value="Presencial"<?= $modalidadVisitaSelected($modalidadVisitaM3, 'Presencial') ?>>Presencial</option>
+                                <option value="Virtual"<?= $modalidadVisitaSelected($modalidadVisitaM3, 'Virtual') ?>>Virtual</option>
                             </select>
                         </div>
                     </div>
@@ -171,14 +188,12 @@ document.addEventListener('DOMContentLoaded', () => {
         inputsM3.forEach(el => el.disabled = !enabled);
     }
 
-    // Activar M2 si M1 está checkeado
-    if(chk1) {
+    if (chk1) {
         chk1.addEventListener('change', () => toggleM2(chk1.checked));
-        // Verificar estado inicial
         toggleM2(chk1.checked);
     }
-    
-    if(chk2) {
+
+    if (chk2) {
         chk2.addEventListener('change', () => toggleM3(chk2.checked));
     }
 
@@ -189,12 +204,15 @@ document.addEventListener('DOMContentLoaded', () => {
             window.sgToastShow('#aprendiz-page-toast', text, variant || 'success');
             return;
         }
+        if (typeof window.sgToastNotify === 'function') {
+            window.sgToastNotify(text, variant || 'success');
+            return;
+        }
         if (typeof window.showGlobalToast === 'function') {
             window.showGlobalToast(text, variant || 'success');
         }
     }
 
-    // AJAX Submit
     const form = document.getElementById('form-visitas');
     if(form) {
         form.addEventListener('submit', async (e) => {
@@ -211,10 +229,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 const data = await res.json();
                 
                 if (data.ok) {
+                    showVisitasToast('Visitas actualizadas correctamente.', 'success');
                     cerrarModalVisitas();
-                    const url = new URL(window.location.href);
-                    url.searchParams.set('toast', 'visitas_actualizadas');
-                    window.location.href = url.pathname + url.search;
+                    window.setTimeout(function () {
+                        location.reload();
+                    }, 1800);
                     return;
                 }
                 showVisitasToast(data.error || 'No se pudo guardar las visitas.', 'error');

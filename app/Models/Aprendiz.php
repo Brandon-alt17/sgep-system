@@ -222,6 +222,10 @@ class Aprendiz
             $direccionDom = mb_substr($direccionDom, 0, 255);
         }
 
+        $coordinacionRaw = trim((string) ($data['coordinacion'] ?? $data['area_coordinacion'] ?? ''));
+        $jefeGrupo = trim((string) ($data['jefe_grupo'] ?? ''));
+        [$jefeGrupo, $coordinacion] = self::normalizeJefeGrupoCoordinacion($jefeGrupo, $coordinacionRaw);
+
         $sql = 'UPDATE aprendices SET
             nombre_completo=:nombre_completo,
             tipo_documento=:tipo_documento,
@@ -254,14 +258,40 @@ class Aprendiz
             'alternativa_ep' => self::nullableTrim($data['alternativa_ep'] ?? null),
             'ficha' => self::nullableTrim($data['ficha'] ?? null),
             'programa_id' => self::nullablePositiveInt($data['programa_id'] ?? null),
-            'jefe_grupo' => self::nullableTrim($data['jefe_grupo'] ?? null),
-            'coordinacion' => self::nullableTrim($data['coordinacion'] ?? null),
+            'jefe_grupo' => $jefeGrupo === '' ? null : $jefeGrupo,
+            'coordinacion' => $coordinacion === '' ? null : $coordinacion,
             'nombre_instructor_seguimiento' => self::nullableTrim($data['nombre_instructor_seguimiento'] ?? null),
             'telefono_instructor_seguimiento' => self::nullableTrim($data['telefono_instructor_seguimiento'] ?? null),
             'estado' => trim((string) ($data['estado'] ?? 'Pendiente por iniciar')),
             'empresa_id' => $empresaId > 0 ? $empresaId : null,
             'jefe_id' => $jefeIdResolved,
         ]);
+    }
+
+    /**
+     * Evita guardar el mismo texto en jefe de grupo y área de coordinación
+     * (suele ocurrir en importaciones con columnas repetidas).
+     *
+     * @return array{0: string, 1: string}
+     */
+    public static function normalizeJefeGrupoCoordinacion(string $jefeGrupo, string $coordinacion): array
+    {
+        $jefeGrupo = trim($jefeGrupo);
+        $coordinacion = trim($coordinacion);
+
+        if ($jefeGrupo !== '' && $coordinacion !== '' && self::coordComparableKey($jefeGrupo) === self::coordComparableKey($coordinacion)) {
+            $coordinacion = '';
+        }
+
+        return [$jefeGrupo, $coordinacion];
+    }
+
+    private static function coordComparableKey(string $value): string
+    {
+        $normalized = mb_strtolower(trim($value));
+        $normalized = preg_replace('/\s+/u', ' ', $normalized) ?? $normalized;
+
+        return $normalized;
     }
 
     private static function nullableTrim(mixed $value): ?string
@@ -381,7 +411,34 @@ class Aprendiz
     }
 
     /**
-     * Guarda la próxima visita desde el modal de agendamiento (fechas en dd/mm/aaaa o ISO).
+     * Próxima visita a mostrar en listados: primer momento pendiente con fecha programada.
+     */
+    public static function resolveProximaVisitaFromProgramadas(
+        ?string $visitaM1,
+        ?string $visitaM2,
+        ?string $visitaM3,
+        bool $m1Completada,
+        bool $m2Completada,
+    ): ?string {
+        $d1 = self::nullableDateString($visitaM1);
+        $d2 = self::nullableDateString($visitaM2);
+        $d3 = self::nullableDateString($visitaM3);
+
+        if (!$m1Completada && $d1 !== null) {
+            return $d1;
+        }
+        if ($m1Completada && !$m2Completada && $d2 !== null) {
+            return $d2;
+        }
+        if ($m1Completada && $m2Completada && $d3 !== null) {
+            return $d3;
+        }
+
+        return null;
+    }
+
+    /**
+     * Guarda las visitas programadas desde el modal de agendamiento (fechas en dd/mm/aaaa o ISO).
      *
      * @param array<string, mixed> $data
      */
@@ -392,27 +449,56 @@ class Aprendiz
         }
         $pdo = Database::connection();
 
-        $m1Done = isset($data['completado_momento1']);
-        $m2Done = isset($data['completado_momento2']);
+        $m1Completada = isset($data['completado_momento1']);
+        $m2Completada = isset($data['completado_momento2']);
 
-        $d1 = date_post_to_iso($data['fecha_momento1'] ?? '');
-        $d2 = date_post_to_iso($data['fecha_momento2'] ?? '');
-        $d3 = date_post_to_iso($data['fecha_momento3'] ?? '');
+        $d1 = self::nullableDateString(date_post_to_iso($data['fecha_momento1'] ?? ''));
+        $d2 = self::nullableDateString(date_post_to_iso($data['fecha_momento2'] ?? ''));
+        $d3 = self::nullableDateString(date_post_to_iso($data['fecha_momento3'] ?? ''));
 
-        $proximaVisita = null;
-        if (!$m1Done && $d1 !== '') {
-            $proximaVisita = $d1;
-        } elseif ($m1Done && !$m2Done && $d2 !== '') {
-            $proximaVisita = $d2;
-        } elseif ($m1Done && $m2Done && $d3 !== '') {
-            $proximaVisita = $d3;
-        }
+        $proximaVisita = self::resolveProximaVisitaFromProgramadas($d1, $d2, $d3, $m1Completada, $m2Completada);
 
-        $sql = 'UPDATE aprendices SET proxima_visita = :proxima_visita, updated_at = NOW() WHERE id = :id';
+        $sql = 'UPDATE aprendices SET
+                    visita_programada_m1 = :visita_programada_m1,
+                    visita_programada_m2 = :visita_programada_m2,
+                    visita_programada_m3 = :visita_programada_m3,
+                    modalidad_visita_m1 = :modalidad_visita_m1,
+                    modalidad_visita_m2 = :modalidad_visita_m2,
+                    modalidad_visita_m3 = :modalidad_visita_m3,
+                    visita_m1_completada = :visita_m1_completada,
+                    visita_m2_completada = :visita_m2_completada,
+                    proxima_visita = :proxima_visita,
+                    updated_at = NOW()
+                WHERE id = :id';
 
         return $pdo->prepare($sql)->execute([
+            'visita_programada_m1' => $d1,
+            'visita_programada_m2' => $d2,
+            'visita_programada_m3' => $d3,
+            'modalidad_visita_m1' => self::normalizeModalidadVisita($data['modalidad_momento1'] ?? null),
+            'modalidad_visita_m2' => self::normalizeModalidadVisita($data['modalidad_momento2'] ?? null),
+            'modalidad_visita_m3' => self::normalizeModalidadVisita($data['modalidad_momento3'] ?? null),
+            'visita_m1_completada' => $m1Completada ? 1 : 0,
+            'visita_m2_completada' => $m2Completada ? 1 : 0,
             'proxima_visita' => $proximaVisita,
             'id' => $id,
         ]);
+    }
+
+    private static function nullableDateString(?string $value): ?string
+    {
+        $value = trim((string) $value);
+
+        return $value === '' ? null : $value;
+    }
+
+    private static function normalizeModalidadVisita(mixed $value): ?string
+    {
+        $modalidad = trim((string) $value);
+        if ($modalidad === '') {
+            return null;
+        }
+
+        return strcasecmp($modalidad, 'Virtual') === 0 ? 'Virtual' : 'Presencial';
     }
 }

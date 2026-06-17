@@ -2,17 +2,9 @@
 setlocal EnableDelayedExpansion
 echo === Instalador SGEP (PHP puro) ===
 
-set "PHP_EXE=php"
-php --version >nul 2>&1
+call "%~dp0scripts\php.cmd" --version >nul 2>&1
 if %errorlevel% neq 0 (
-  if exist "C:\wamp64\bin\php\php8.3.28\php.exe" set "PHP_EXE=C:\wamp64\bin\php\php8.3.28\php.exe"
-  if exist "C:\wamp64\bin\php\php8.2.29\php.exe" set "PHP_EXE=C:\wamp64\bin\php\php8.2.29\php.exe"
-  if exist "C:\wamp64\bin\php\php8.4.15\php.exe" set "PHP_EXE=C:\wamp64\bin\php\php8.4.15\php.exe"
-)
-
-"%PHP_EXE%" --version >nul 2>&1
-if %errorlevel% neq 0 (
-  echo ERROR: No se encontro PHP. Verifique que WAMP este en verde.
+  echo ERROR: No se encontro PHP 8.3+ en PATH ni en WAMP.
   pause
   exit /b 1
 )
@@ -24,7 +16,7 @@ if not exist .env (
 
 set /p DBPASS=Ingrese la contrasena de MySQL (root, enter si vacia): 
 
-"%PHP_EXE%" -r "require 'vendor/autoload.php';"
+call "%~dp0scripts\php.cmd" -r "require 'vendor/autoload.php';"
 if %errorlevel% neq 0 (
   echo ERROR: No se pudo cargar autoload de Composer.
   pause
@@ -32,14 +24,14 @@ if %errorlevel% neq 0 (
 )
 
 echo Creando base de datos sgep (si no existe)...
-"%PHP_EXE%" database/ensure_database.php
+call "%~dp0scripts\php.cmd" database/ensure_database.php
 if %errorlevel% neq 0 (
   echo ERROR: No se pudo crear la base de datos. Verifique WAMP en verde.
   pause
   exit /b 1
 )
 
-"%PHP_EXE%" database/run_migrations.php
+call "%~dp0scripts\php.cmd" database/run_migrations.php
 if %errorlevel% neq 0 (
   echo ERROR: Fallaron las migraciones.
   pause

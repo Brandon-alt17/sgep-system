@@ -8,8 +8,12 @@ document.querySelectorAll("[data-max]").forEach(function (element) {
   });
 });
 
-// Toast global reutilizable (cuando existe data-toast-root en la vista).
-var showGlobalToast = function (message, variant) {
+// Toast global reutilizable (contenedor #sg-app-toast-root en el layout).
+var showGlobalToast = function (message, variant, ms) {
+  if (typeof window.sgToastNotify === "function") {
+    window.sgToastNotify(message, variant || "success", ms);
+    return;
+  }
   var toastRoot = document.querySelector("[data-toast-root]");
   var toast = toastRoot ? toastRoot.querySelector("[data-toast]") : null;
   if (!toast) return;
@@ -23,7 +27,7 @@ var showGlobalToast = function (message, variant) {
   window.clearTimeout(toast.__hideTimer);
   toast.__hideTimer = window.setTimeout(function () {
     toast.classList.remove("sg-toast-visible");
-  }, hideMs);
+  }, typeof ms === "number" && ms >= 1200 ? ms : hideMs);
 };
 window.showGlobalToast = showGlobalToast;
 
@@ -82,7 +86,9 @@ document.querySelectorAll("input, textarea").forEach(function (field) {
     input.hasAttribute("data-combobox-input") ||
     input.hasAttribute("data-inline-input") ||
     input.closest("[data-inline-edit-form].hidden") ||
-    input.closest(".modal-overlay")
+    input.closest(".modal-overlay") ||
+    input.closest("#modal-editar-aprendiz") ||
+    input.closest("#modal-visitas")
   ) {
     return;
   }

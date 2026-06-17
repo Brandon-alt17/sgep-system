@@ -25,3 +25,25 @@ window.sgToastShow = function (rootSelector, message, variant, ms) {
     toast.classList.remove("sg-toast-visible");
   }, hideMs);
 };
+
+/**
+ * Toast de la aplicación: usa el contenedor global (#sg-app-toast-root) o el primero disponible.
+ * @param {string} message
+ * @param {'success'|'warning'|'error'} [variant]
+ * @param {number} [ms]
+ */
+window.sgToastNotify = function (message, variant, ms) {
+  var text = (message || "").trim();
+  if (!text || typeof window.sgToastShow !== "function") return;
+
+  var root = document.getElementById("sg-app-toast-root");
+  if (root) {
+    window.sgToastShow("#sg-app-toast-root", text, variant || "success", ms);
+    return;
+  }
+
+  var anyRoot = document.querySelector("[data-toast-root][id]");
+  if (anyRoot) {
+    window.sgToastShow("#" + anyRoot.id, text, variant || "success", ms);
+  }
+};
