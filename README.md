@@ -21,7 +21,7 @@ Sistema de Gestión de Etapa Productiva para SENA CDITI, migrado a PHP puro con 
 4. Ejecutar migraciones SQL:
    - `php database/run_migrations.php`
 5. Configurar Apache DocumentRoot a `public/`.
-6. Abrir `http://localhost/sgep/public`.
+6. Abrir `http://localhost/sgep/`.
 
 ## Estructura clave
 
@@ -41,3 +41,4 @@ Sistema de Gestión de Etapa Productiva para SENA CDITI, migrado a PHP puro con 
 
 - Instalación rápida Windows: `instalar.bat`
 - Actualización incremental: `actualizar.bat`
+- Abrir SGEP en el navegador: `abrir_sgep.bat` o `SGEP.url` (copiar al escritorio)

@@ -11,9 +11,9 @@ class Grupo
 {
     /**
      * @param array{q?: string, programa_id?: int|string} $filters
-     * @return list<array{ficha: string, programa_id: int|null, programa_nombre: string, aprendices_count: int}>
+     * @return array{where: list<string>, params: array<string, int|string>}
      */
-    public static function catalogo(array $filters = []): array
+    private static function catalogoWhere(array $filters): array
     {
         $q = trim((string) ($filters['q'] ?? ''));
         $programaId = (int) ($filters['programa_id'] ?? 0);
@@ -32,6 +32,38 @@ class Grupo
             $params['programa_id'] = $programaId;
         }
 
+        return ['where' => $where, 'params' => $params];
+    }
+
+    /**
+     * @param array{q?: string, programa_id?: int|string} $filters
+     */
+    public static function countCatalogo(array $filters = []): int
+    {
+        ['where' => $where, 'params' => $params] = self::catalogoWhere($filters);
+        $sql = '
+            SELECT COUNT(*) FROM (
+                SELECT TRIM(a.ficha) AS ficha, a.programa_id
+                FROM aprendices a
+                LEFT JOIN programas p ON p.id = a.programa_id
+                WHERE ' . implode(' AND ', $where) . '
+                GROUP BY TRIM(a.ficha), a.programa_id
+            ) grouped
+        ';
+        $stmt = Database::connection()->prepare($sql);
+        $stmt->execute($params);
+
+        return (int) ($stmt->fetchColumn() ?: 0);
+    }
+
+    /**
+     * @param array{q?: string, programa_id?: int|string} $filters
+     * @return list<array{ficha: string, programa_id: int|null, programa_nombre: string, aprendices_count: int}>
+     */
+    public static function catalogo(array $filters = [], int $limit = 0, int $offset = 0): array
+    {
+        ['where' => $where, 'params' => $params] = self::catalogoWhere($filters);
+
         $sql = '
             SELECT
                 TRIM(a.ficha) AS ficha,
@@ -44,9 +76,19 @@ class Grupo
             GROUP BY TRIM(a.ficha), a.programa_id
             ORDER BY TRIM(a.ficha) ASC, programa_nombre ASC
         ';
+        if ($limit > 0) {
+            $sql .= ' LIMIT :limit OFFSET :offset';
+        }
 
         $stmt = Database::connection()->prepare($sql);
-        $stmt->execute($params);
+        foreach ($params as $key => $value) {
+            $stmt->bindValue(':' . $key, $value);
+        }
+        if ($limit > 0) {
+            $stmt->bindValue(':limit', $limit, \PDO::PARAM_INT);
+            $stmt->bindValue(':offset', max(0, $offset), \PDO::PARAM_INT);
+        }
+        $stmt->execute();
         $rows = $stmt->fetchAll();
 
         $out = [];

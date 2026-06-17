@@ -165,6 +165,54 @@ $modalidadVisitaSelected = static function (string $current, string $option): st
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
+    const chk1 = document.getElementById('chk-m1');
+    const chk2 = document.getElementById('chk-m2');
+    const card2 = document.getElementById('card-m2');
+    const card3 = document.getElementById('card-m3');
+    const inputsM2 = card2.querySelectorAll('input, select');
+    const inputsM3 = card3.querySelectorAll('input, select');
+
+    function toggleM2(enabled) {
+        card2.classList.toggle('disabled', !enabled);
+        inputsM2.forEach(el => el.disabled = !enabled);
+        chk2.disabled = !enabled;
+        if (!enabled) {
+            chk2.checked = false;
+            inputsM2.forEach(el => el.value = '');
+            toggleM3(false);
+        }
+    }
+
+    function toggleM3(enabled) {
+        card3.classList.toggle('disabled', !enabled);
+        inputsM3.forEach(el => el.disabled = !enabled);
+    }
+
+    if (chk1) {
+        chk1.addEventListener('change', () => toggleM2(chk1.checked));
+        toggleM2(chk1.checked);
+    }
+
+    if (chk2) {
+        chk2.addEventListener('change', () => toggleM3(chk2.checked));
+    }
+
+    function showVisitasToast(message, variant) {
+        const text = (message || '').trim();
+        if (text === '') return;
+        if (typeof window.sgToastShow === 'function' && document.querySelector('#aprendiz-page-toast')) {
+            window.sgToastShow('#aprendiz-page-toast', text, variant || 'success');
+            return;
+        }
+        if (typeof window.sgToastNotify === 'function') {
+            window.sgToastNotify(text, variant || 'success');
+            return;
+        }
+        if (typeof window.showGlobalToast === 'function') {
+            window.showGlobalToast(text, variant || 'success');
+        }
+    }
+
     const form = document.getElementById('form-visitas');
     if(form) {
         form.addEventListener('submit', async (e) => {
@@ -181,23 +229,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 const data = await res.json();
                 
                 if (data.ok) {
-                    if (typeof window.sgToastNotify === "function") {
-                        window.sgToastNotify("Visitas actualizadas correctamente.", "success", 2200);
-                    }
+                    showVisitasToast('Visitas actualizadas correctamente.', 'success');
                     cerrarModalVisitas();
                     window.setTimeout(function () {
                         location.reload();
                     }, 1800);
-                } else {
-                    if (typeof window.sgToastNotify === "function") {
-                        window.sgToastNotify(data.error || "No se pudo guardar las visitas.", "error");
-                    }
+                    return;
                 }
+                showVisitasToast(data.error || 'No se pudo guardar las visitas.', 'error');
             } catch (err) {
                 console.error(err);
-                if (typeof window.sgToastNotify === "function") {
-                    window.sgToastNotify("Error de conexión o del servidor.", "error");
-                }
+                showVisitasToast('Error de conexión o del servidor.', 'error');
             } finally {
                 btn.disabled = false;
                 btn.textContent = originalText;

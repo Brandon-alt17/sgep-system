@@ -24,6 +24,8 @@ require BASE_PATH . '/config/app.php';
 use App\Helpers\Database;
 
 $pdo = Database::connection();
+ensureInnoDbTables($pdo);
+
 $files = glob(__DIR__ . '/migrations/*.sql');
 sort($files);
 
@@ -57,4 +59,33 @@ foreach ($files as $file) {
         }
     }
     echo 'Ejecutado: ' . basename($file) . PHP_EOL;
+}
+
+/**
+ * WAMP puede crear tablas en MyISAM; las FK de migraciones 021+ requieren InnoDB.
+ */
+function ensureInnoDbTables(\PDO $pdo): void
+{
+    $stmt = $pdo->query(
+        "SELECT TABLE_NAME
+         FROM information_schema.TABLES
+         WHERE TABLE_SCHEMA = DATABASE()
+           AND TABLE_TYPE = 'BASE TABLE'
+           AND ENGINE = 'MyISAM'"
+    );
+    if ($stmt === false) {
+        return;
+    }
+
+    $tables = $stmt->fetchAll(\PDO::FETCH_COLUMN);
+    $stmt->closeCursor();
+
+    foreach ($tables as $table) {
+        if (!is_string($table) || $table === '') {
+            continue;
+        }
+        $safeTable = str_replace('`', '``', $table);
+        $pdo->exec("ALTER TABLE `{$safeTable}` ENGINE=InnoDB");
+        echo 'Convertido a InnoDB: ' . $table . PHP_EOL;
+    }
 }

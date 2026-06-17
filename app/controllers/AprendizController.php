@@ -7,6 +7,7 @@ namespace App\Controllers;
 use App\Helpers\ImportHistory;
 use App\Helpers\Validator;
 use App\Models\Aprendiz;
+use App\Models\Empresa;
 use App\Models\EmpresaJefe;
 use App\Models\Momento;
 use App\Models\Programa;
@@ -83,18 +84,40 @@ class AprendizController
 
     public function create(): void
     {
-        view('aprendices/create', ['programas' => Programa::all()]);
+        view('aprendices/create', [
+            'programasOptions' => Programa::all(),
+            'empresasOptions' => Empresa::catalogo(),
+        ]);
     }
 
     public function store(): void
     {
         $errors = Validator::required($_POST, ['nombre_completo', 'tipo_documento', 'numero_documento']);
+        $formData = [
+            'programasOptions' => Programa::all(),
+            'empresasOptions' => Empresa::catalogo(),
+            'old' => $_POST,
+        ];
         if ($errors !== []) {
-            view('aprendices/create', ['errors' => $errors, 'programas' => Programa::all()]);
+            view('aprendices/create', array_merge($formData, ['errors' => $errors]));
+
             return;
         }
-        Aprendiz::create($_POST);
-        redirect(APP_BASE_PATH . '/aprendices');
+        try {
+            $id = Aprendiz::create($_POST);
+        } catch (\PDOException $e) {
+            $msg = strtolower($e->getMessage());
+            $isDuplicate = str_contains($msg, 'duplicate') || str_contains($msg, 'uq_aprendiz_documento');
+            if (!$isDuplicate) {
+                throw $e;
+            }
+            view('aprendices/create', array_merge($formData, [
+                'errors' => ['Ya existe un aprendiz con ese número de documento.'],
+            ]));
+
+            return;
+        }
+        redirect(APP_BASE_PATH . '/aprendices/show?id=' . $id . '&toast=aprendiz_creado');
     }
 
     public function show(): void
@@ -116,10 +139,40 @@ class AprendizController
         view('aprendices/show', [
             'aprendiz' => $aprendiz,
             'jefes' => $jefes,
+            'empresasOptions' => Empresa::catalogo(),
+            'programasOptions' => Programa::all(),
             'momentos' => $momentos,
             'backToListUrl' => $this->aprendicesBackUrl($_GET),
             'pageToast' => $this->toastFromQuery((string) ($_GET['toast'] ?? '')),
         ]);
+    }
+
+    public function jefesPorEmpresa(): void
+    {
+        header('Content-Type: application/json; charset=utf-8');
+        $empresaId = (int) ($_GET['empresa_id'] ?? 0);
+        if ($empresaId <= 0) {
+            echo json_encode(['ok' => true, 'jefes' => []], JSON_UNESCAPED_UNICODE);
+
+            return;
+        }
+
+        $jefes = [];
+        foreach (EmpresaJefe::listByEmpresa($empresaId) as $jefeRow) {
+            $jid = (int) ($jefeRow['id'] ?? 0);
+            if ($jid <= 0) {
+                continue;
+            }
+            $nombre = trim((string) ($jefeRow['nombre'] ?? ''));
+            $cargo = trim((string) ($jefeRow['cargo'] ?? ''));
+            $label = $nombre !== '' ? $nombre : 'Supervisor #' . $jid;
+            if ($cargo !== '') {
+                $label .= ' — ' . $cargo;
+            }
+            $jefes[] = ['id' => $jid, 'label' => $label];
+        }
+
+        echo json_encode(['ok' => true, 'jefes' => $jefes], JSON_UNESCAPED_UNICODE);
     }
 
     /**
@@ -166,6 +219,8 @@ class AprendizController
             'momento_guardado' => ['message' => 'Momento guardado correctamente.', 'variant' => 'success'],
             'momento_actualizado' => ['message' => 'Momento actualizado correctamente.', 'variant' => 'success'],
             'aprendiz_actualizado' => ['message' => 'Datos del aprendiz actualizados correctamente.', 'variant' => 'success'],
+            'aprendiz_creado' => ['message' => 'Aprendiz registrado correctamente.', 'variant' => 'success'],
+            'visitas_actualizadas' => ['message' => 'Visitas programadas correctamente.', 'variant' => 'success'],
         ];
 
         return $map[$key] ?? null;
@@ -174,7 +229,21 @@ class AprendizController
     public function update(): void
     {
         $id = (int) ($_POST['id'] ?? 0);
-        Aprendiz::update($id, $_POST);
+        if ($id <= 0 || Aprendiz::findById($id) === null) {
+            abort_404('/aprendices/update');
+        }
+        try {
+            Aprendiz::update($id, $_POST);
+        } catch (\PDOException $e) {
+            $msg = strtolower($e->getMessage());
+            $isDuplicate = str_contains($msg, 'duplicate') || str_contains($msg, 'uq_aprendiz_documento');
+            if (!$isDuplicate) {
+                throw $e;
+            }
+            redirect(APP_BASE_PATH . '/aprendices/show?id=' . $id);
+
+            return;
+        }
         redirect(APP_BASE_PATH . '/aprendices/show?id=' . $id . '&toast=aprendiz_actualizado');
     }
 

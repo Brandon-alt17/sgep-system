@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Controllers;
 
+use App\Exports\F023DocxToPdf;
 use App\Exports\F023Generator;
 use App\Helpers\Database;
 use App\Models\Aprendiz;
@@ -53,6 +54,8 @@ class DocumentoController
             'export_momentos' => $exportMomentos,
             'info_faltantes_count' => $faltantes,
             'error' => (string) ($_GET['error'] ?? ''),
+            'pdf_available' => F023DocxToPdf::isAvailable(),
+            'pdf_availability_message' => F023DocxToPdf::availabilityMessage(),
         ]);
     }
 
@@ -93,25 +96,44 @@ class DocumentoController
             $path = (new F023Generator())->generate($aprendizId, $partes, $formato);
         } catch (\Throwable $e) {
             log_error('F023 export: ' . $e->getMessage());
+            $errorKey = 'export_failed';
+            if ($formato === 'pdf') {
+                if (!F023DocxToPdf::isAvailable()) {
+                    $errorKey = 'pdf_libreoffice';
+                } elseif (str_contains($e->getMessage(), 'LibreOffice')) {
+                    $errorKey = 'pdf_convert_failed';
+                }
+            }
+            redirect(APP_BASE_PATH . '/documentos/generar?aprendiz_id=' . $aprendizId . '&error=' . $errorKey);
+
+            return;
+        }
+
+        if (!is_file($path)) {
             redirect(APP_BASE_PATH . '/documentos/generar?aprendiz_id=' . $aprendizId . '&error=export_failed');
 
             return;
         }
 
-        Database::connection()->prepare(
-            'INSERT INTO documentos_generados (aprendiz_id, partes, formato, ruta_archivo, created_at) VALUES (:aprendiz_id, :partes, :formato, :ruta, NOW())'
-        )->execute([
-            'aprendiz_id' => $aprendizId,
-            'partes' => json_encode($partes, JSON_UNESCAPED_UNICODE),
-            'formato' => $formato,
-            'ruta' => $path,
-        ]);
+        try {
+            Database::connection()->prepare(
+                'INSERT INTO documentos_generados (aprendiz_id, partes, formato, ruta_archivo, created_at) VALUES (:aprendiz_id, :partes, :formato, :ruta, NOW())'
+            )->execute([
+                'aprendiz_id' => $aprendizId,
+                'partes' => json_encode($partes, JSON_UNESCAPED_UNICODE),
+                'formato' => $formato,
+                'ruta' => $path,
+            ]);
+        } catch (\Throwable $e) {
+            log_error('F023 historial: ' . $e->getMessage());
+            // El archivo ya se generó; se entrega aunque falle el registro en historial.
+        }
 
         $mime = $formato === 'pdf'
             ? 'application/pdf'
             : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
         header('Content-Type: ' . $mime);
-        header('Content-Disposition: attachment; filename="' . basename($path) . '"');
+        header('Content-Disposition: ' . content_disposition_attachment(basename($path)));
         readfile($path);
         exit;
     }
@@ -157,44 +179,24 @@ class DocumentoController
         $nombreInstructor = trim((string) ($_POST['nombre_instructor_seguimiento'] ?? ''));
         $telefonoInstructor = trim((string) ($_POST['telefono_instructor_seguimiento'] ?? ''));
         $correoInstructor = trim((string) ($_POST['correo_instructor_seguimiento'] ?? ''));
-        $pdo = Database::connection();
-        $hasCorreoInstructorColumn = false;
-        try {
-            $check = $pdo->query("SHOW COLUMNS FROM aprendices LIKE 'correo_instructor_seguimiento'");
-            $hasCorreoInstructorColumn = $check !== false && (bool) $check->fetch();
-        } catch (\Throwable) {
-            $hasCorreoInstructorColumn = false;
-        }
+        $tipoAsistencia = AprendizInfoGeneral::tipoAsistenciaAprendizFromPost($_POST);
 
-        if ($hasCorreoInstructorColumn) {
-            $pdo->prepare(
-                'UPDATE aprendices
-                 SET
-                    nombre_instructor_seguimiento = :nombre_instructor_seguimiento,
-                    telefono_instructor_seguimiento = :telefono_instructor_seguimiento,
-                    correo_instructor_seguimiento = :correo_instructor_seguimiento,
-                    updated_at = NOW()
-                 WHERE id = :id'
-            )->execute([
-                'id' => $aprendizId,
-                'nombre_instructor_seguimiento' => $nombreInstructor === '' ? null : $nombreInstructor,
-                'telefono_instructor_seguimiento' => $telefonoInstructor === '' ? null : $telefonoInstructor,
-                'correo_instructor_seguimiento' => $correoInstructor === '' ? null : $correoInstructor,
-            ]);
-        } else {
-            $pdo->prepare(
-                'UPDATE aprendices
-                 SET
-                    nombre_instructor_seguimiento = :nombre_instructor_seguimiento,
-                    telefono_instructor_seguimiento = :telefono_instructor_seguimiento,
-                    updated_at = NOW()
-                 WHERE id = :id'
-            )->execute([
-                'id' => $aprendizId,
-                'nombre_instructor_seguimiento' => $nombreInstructor === '' ? null : $nombreInstructor,
-                'telefono_instructor_seguimiento' => $telefonoInstructor === '' ? null : $telefonoInstructor,
-            ]);
-        }
+        Database::connection()->prepare(
+            'UPDATE aprendices
+             SET
+                nombre_instructor_seguimiento = :nombre_instructor_seguimiento,
+                telefono_instructor_seguimiento = :telefono_instructor_seguimiento,
+                correo_instructor_seguimiento = :correo_instructor_seguimiento,
+                tipo_asistencia = :tipo_asistencia,
+                updated_at = NOW()
+             WHERE id = :id'
+        )->execute([
+            'id' => $aprendizId,
+            'nombre_instructor_seguimiento' => $nombreInstructor === '' ? null : $nombreInstructor,
+            'telefono_instructor_seguimiento' => $telefonoInstructor === '' ? null : $telefonoInstructor,
+            'correo_instructor_seguimiento' => $correoInstructor === '' ? null : $correoInstructor,
+            'tipo_asistencia' => $tipoAsistencia,
+        ]);
 
         redirect(APP_BASE_PATH . '/aprendices/show?id=' . $aprendizId . '&toast=info_f023_guardada');
     }

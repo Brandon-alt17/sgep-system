@@ -13,7 +13,57 @@ class Programa
         return Database::connection()->query('SELECT * FROM programas ORDER BY nombre ASC')->fetchAll();
     }
 
-    public static function catalogo(array $filters = []): array
+    public static function catalogo(array $filters = [], int $limit = 0, int $offset = 0): array
+    {
+        ['where' => $where, 'params' => $params] = self::catalogoWhere($filters);
+
+        $sql = 'SELECT id, codigo, nombre, nivel FROM programas';
+        if ($where !== []) {
+            $sql .= ' WHERE ' . implode(' AND ', $where);
+        }
+        $sql .= ' ORDER BY nombre ASC';
+        if ($limit > 0) {
+            $sql .= ' LIMIT :limit OFFSET :offset';
+        }
+
+        $stmt = Database::connection()->prepare($sql);
+        foreach ($params as $key => $value) {
+            $stmt->bindValue(':' . $key, $value);
+        }
+        if ($limit > 0) {
+            $stmt->bindValue(':limit', $limit, \PDO::PARAM_INT);
+            $stmt->bindValue(':offset', max(0, $offset), \PDO::PARAM_INT);
+        }
+        $stmt->execute();
+        $programas = $stmt->fetchAll();
+        if ($programas === []) {
+            return [];
+        }
+
+        return self::attachHorasTotal($programas);
+    }
+
+    /**
+     * @param array{q?: string, nivel?: string} $filters
+     */
+    public static function countCatalogo(array $filters = []): int
+    {
+        ['where' => $where, 'params' => $params] = self::catalogoWhere($filters);
+        $sql = 'SELECT COUNT(*) FROM programas';
+        if ($where !== []) {
+            $sql .= ' WHERE ' . implode(' AND ', $where);
+        }
+        $stmt = Database::connection()->prepare($sql);
+        $stmt->execute($params);
+
+        return (int) ($stmt->fetchColumn() ?: 0);
+    }
+
+    /**
+     * @param array{q?: string, nivel?: string} $filters
+     * @return array{where: list<string>, params: array<string, string>}
+     */
+    private static function catalogoWhere(array $filters): array
     {
         $where = [];
         $params = [];
@@ -32,19 +82,12 @@ class Programa
             $params['nivel'] = $nivel;
         }
 
-        $sql = 'SELECT id, codigo, nombre, nivel FROM programas';
-        if ($where !== []) {
-            $sql .= ' WHERE ' . implode(' AND ', $where);
-        }
-        $sql .= ' ORDER BY nombre ASC';
+        return ['where' => $where, 'params' => $params];
+    }
 
-        $stmt = Database::connection()->prepare($sql);
-        $stmt->execute($params);
-        $programas = $stmt->fetchAll();
-        if ($programas === []) {
-            return [];
-        }
-
+    /** @param list<array<string, mixed>> $programas @return list<array<string, mixed>> */
+    private static function attachHorasTotal(array $programas): array
+    {
         foreach ($programas as &$programa) {
             $programa['horas_total'] = '';
         }

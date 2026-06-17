@@ -18,9 +18,8 @@
   }
 
   /*
-   * Cursor y caret: forzar flecha estándar en contenedores y tablas.
-   * Solo los campos editables (input, textarea, [contenteditable]) conservan
-   * el caret parpadeante; el resto lo suprime con caret-color: transparent.
+   * Cursor y caret: flecha estándar en contenedores; sin caret parpadeante
+   * fuera de campos editables. El texto de datos es seleccionable para copiar.
    */
   table,
   thead,
@@ -46,11 +45,24 @@
     caret-color: transparent;
   }
 
-  input,
+  label:has(input[type="checkbox"]),
+  label:has(input[type="radio"]) {
+    cursor: pointer;
+  }
+
+  input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="file"]):not([type="image"]):not([type="range"]):not([type="color"]),
   textarea,
   select,
   [contenteditable="true"] {
     caret-color: auto;
+    user-select: text;
+  }
+
+  input[type="checkbox"],
+  input[type="radio"] {
+    caret-color: transparent;
+    cursor: pointer;
+    user-select: none;
   }
 
   a {
@@ -123,6 +135,22 @@
 
   .modal-overlay:not(.hidden) {
     @apply flex;
+  }
+
+  .modal-overlay--confirm {
+    z-index: 80;
+  }
+
+  .sg-download-overlay {
+    @apply fixed inset-0 z-[90] flex items-center justify-center bg-black/40 p-4;
+  }
+
+  .sg-download-overlay.hidden {
+    display: none;
+  }
+
+  .sg-download-overlay__panel {
+    @apply w-full max-w-md rounded-xl border border-app-border bg-app-panel p-5 shadow-lg;
   }
 
   .modal-panel {
@@ -283,4 +311,37 @@
   [data-inline-competencia-drawer] {
     transition: none;
   }
+}
+
+/* Reporte maestro: scroll horizontal fijo en la parte baja del viewport */
+.reporte-maestro-table-scroll {
+  overflow-x: auto;
+  overflow-y: visible;
+  width: 100%;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.reporte-maestro-table-scroll::-webkit-scrollbar {
+  display: none;
+  height: 0;
+}
+
+.reporte-maestro-hscroll-bar {
+  position: fixed;
+  z-index: 30;
+  overflow-x: auto;
+  overflow-y: hidden;
+  height: 14px;
+  background: rgb(255 255 255 / 0.97);
+  border-top: 1px solid rgb(229 231 235 / 1);
+  box-shadow: 0 -4px 12px rgba(16, 24, 40, 0.06);
+}
+
+.reporte-maestro-hscroll-spacer {
+  height: 1px;
+}
+
+.reporte-maestro-hscroll-bar.is-hidden {
+  display: none;
 }

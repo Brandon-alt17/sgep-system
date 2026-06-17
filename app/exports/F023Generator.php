@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Exports;
 
+use App\Helpers\Normalizer;
 use App\Models\Aprendiz;
 use App\Models\AprendizInfoGeneral;
 use App\Models\Empresa;
@@ -82,11 +83,20 @@ class F023Generator
             foreach ($segments as $seg) {
                 $path = (string) $seg['path'];
                 if (!empty($seg['patch_info_macros'])) {
-                    $path = F023InfoTemplateMacroInjector::patchToTemp($path);
+                    $preserveInfoHeader = ($formato === 'docx');
+                    $path = F023InfoTemplateMacroInjector::patchToTemp($path, $preserveInfoHeader);
                     $tempCleanup[] = $path;
                 }
                 if (!empty($seg['patch_m1_macros'])) {
                     $path = F023M1TemplateMacroInjector::patchToTemp($path);
+                    $tempCleanup[] = $path;
+                }
+                if (!empty($seg['patch_m2_macros'])) {
+                    $path = F023M2TemplateMacroInjector::patchToTemp($path);
+                    $tempCleanup[] = $path;
+                }
+                if (!empty($seg['patch_m3_macros'])) {
+                    $path = F023M3TemplateMacroInjector::patchToTemp($path);
                     $tempCleanup[] = $path;
                 }
                 if (!is_file($path)) {
@@ -106,33 +116,50 @@ class F023Generator
                     throw new \RuntimeException('No se pudo preparar segmento .docx.');
                 }
                 $tpl->saveAs($tmpDocx);
+                if (!empty($seg['patch_info_macros'])) {
+                    F023InfoTemplateMacroInjector::applyLayoutToSavedDocx($tmpDocx, $formato === 'docx');
+                }
+                if (!empty($seg['patch_m1_macros'])) {
+                    F023M1TemplateMacroInjector::applyLayoutToSavedDocx($tmpDocx);
+                }
                 $tempCleanup[] = $tmpDocx;
                 $mergeInputs[] = $tmpDocx;
             }
 
-            $out = base_path('storage/documents/F023_' . $aprendizId . '_' . time() . '.docx');
-            $dir = dirname($out);
+            $dir = base_path('storage/documents');
             if (!is_dir($dir)) {
                 mkdir($dir, 0775, true);
             }
 
-            F023DocxMerge::mergeInto($out, $mergeInputs);
-
             if ($formato === 'pdf') {
-                try {
-                    $pdfPath = F023DocxToPdf::convert($out);
-                } catch (\Throwable $e) {
-                    if (is_file($out)) {
-                        @unlink($out);
-                    }
-                    throw $e;
-                }
-                if (is_file($out)) {
-                    @unlink($out);
-                }
+                $pdfBasename = f023_export_basename(
+                    (string) ($info['nombre_completo'] ?? ''),
+                    (string) ($info['numero_grupo'] ?? ''),
+                    'pdf'
+                );
 
-                return $pdfPath;
+                $pdfOut = $this->exportPdfFromSegments(
+                    $mergeInputs,
+                    resolve_unique_storage_path($dir, $pdfBasename)
+                );
+                return $pdfOut;
             }
+
+            $out = resolve_unique_storage_path(
+                $dir,
+                f023_export_basename(
+                    (string) ($info['nombre_completo'] ?? ''),
+                    (string) ($info['numero_grupo'] ?? ''),
+                    'docx'
+                )
+            );
+
+            F023DocxMerge::mergeInto(
+                $out,
+                $mergeInputs,
+                false,
+                $this->m3SegmentMask($segments)
+            );
 
             return $out;
         } finally {
@@ -180,7 +207,7 @@ class F023Generator
             ['nombre_aprendiz' => (string) ($aprendiz['nombre_completo'] ?? '')],
             $this->momentoRowTemplateVars($momento),
             $this->factorTemplateVars(Momento::factoresByMomento((int) $momento['id'])),
-            $this->m1DiligenciamientoTemplateVars($momento)
+            $this->diligenciamientoMarcasTemplateVars($momento)
         );
 
         $tplDir = base_path('storage/templates/');
@@ -194,18 +221,74 @@ class F023Generator
         if ($tipo === 'M2' || $tipo === 'EX') {
             $file = $tipo === 'EX' ? ($map['ex_template'] ?? 'm2.docx') : ($map['m2_template'] ?? 'm2.docx');
 
-            return [['path' => $tplDir . $file, 'vars' => $vars]];
+            return [['path' => $tplDir . $file, 'vars' => $vars, 'patch_m2_macros' => true]];
         }
         if ($tipo === 'M3') {
+            $vars = array_merge($this->m3PlaceholderDefaults(), $vars);
             $out = [];
             foreach ($map['m3_templates'] ?? ['m3_p1.docx', 'm3_p2.docx'] as $rel) {
-                $out[] = ['path' => $tplDir . $rel, 'vars' => $vars];
+                $out[] = [
+                    'path' => $tplDir . $rel,
+                    'vars' => $vars,
+                    'patch_m3_macros' => true,
+                ];
             }
 
             return $out;
         }
 
         return [];
+    }
+
+    /**
+     * Marcadores M3 (p1 + p2) con valor vacío si no hay fila en BD o el momento sintético no trae datos.
+     *
+     * @return array<string, string>
+     */
+    private function m3PlaceholderDefaults(): array
+    {
+        $out = [
+            'fecha_inicio_etapa' => '',
+            'fecha_fin_etapa' => '',
+            'numero_visitas_realizadas' => '',
+            'enlace_grabacion' => '',
+            'ciudad_diligenciamiento' => '',
+            'fecha_diligenciamiento' => date('d/m/Y'),
+            'm3_marca_presencial' => '___',
+            'm3_marca_virtual' => '___',
+        ];
+
+        return array_merge($out, $this->factorTemplateVars([]));
+    }
+
+    /**
+     * @param list<array<string,mixed>> $segments
+     */
+    private function segmentsIncludeM3(array $segments): bool
+    {
+        foreach ($segments as $seg) {
+            $base = basename((string) ($seg['path'] ?? ''));
+            if (preg_match('/^m3_p[12]\.docx$/', $base)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @param list<array<string,mixed>> $segments
+     * @return list<bool>
+     */
+    private function m3SegmentMask(array $segments): array
+    {
+        $mask = [];
+        foreach ($segments as $seg) {
+            $base = basename((string) ($seg['path'] ?? ''));
+            $mask[] = (bool) preg_match('/^m3_p[12]\.docx$/', $base);
+        }
+
+        return $mask;
     }
 
     /**
@@ -231,12 +314,14 @@ class F023Generator
             $s = trim($s);
             if (in_array($k, $dateCols, true)) {
                 $out[$k] = $s === '' ? '' : date_iso_to_dmY($s);
+            } elseif ($k === 'm1_competencias' || $k === 'm1_resultados') {
+                $out[$k] = Normalizer::normalizeCommaListSentenceCase($s);
             } else {
                 $out[$k] = $s;
             }
         }
 
-        if (($out['tipo'] ?? '') === 'M1') {
+        if (in_array($out['tipo'] ?? '', ['M1', 'M3'], true)) {
             if (($out['fecha_diligenciamiento'] ?? '') === '') {
                 $out['fecha_diligenciamiento'] = date('d/m/Y');
             }
@@ -247,23 +332,32 @@ class F023Generator
                     $out['modalidad_diligenciamiento'] = $fallbackModalidad;
                 }
             }
+
+            if (($out['ciudad_diligenciamiento'] ?? '') === '') {
+                $fallbackCiudad = trim((string) ($momento['ciudad'] ?? ''));
+                if ($fallbackCiudad !== '') {
+                    $out['ciudad_diligenciamiento'] = $fallbackCiudad;
+                }
+            }
         }
 
         return $out;
     }
 
     /**
-     * Marcas de modalidad en la línea de diligenciamiento del Momento 1.
+     * Marcas X / ___ de modalidad en el pie de diligenciamiento (M1 y M3).
      *
      * @param array<string,mixed> $momento
      * @return array<string,string>
      */
-    private function m1DiligenciamientoTemplateVars(array $momento): array
+    private function diligenciamientoMarcasTemplateVars(array $momento): array
     {
-        if ((string) ($momento['tipo'] ?? '') !== 'M1') {
+        $tipo = (string) ($momento['tipo'] ?? '');
+        if (!in_array($tipo, ['M1', 'M3'], true)) {
             return [];
         }
 
+        $prefix = strtolower($tipo);
         $modalidad = trim((string) ($momento['modalidad_diligenciamiento'] ?? ''));
         if ($modalidad === '') {
             $modalidad = trim((string) ($momento['modalidad'] ?? ''));
@@ -273,8 +367,8 @@ class F023Generator
         $isVirtual = strcasecmp($modalidad, 'Virtual') === 0;
 
         return [
-            'm1_marca_presencial' => $isPresencial ? 'X' : '___',
-            'm1_marca_virtual' => $isVirtual ? 'X' : '___',
+            $prefix . '_marca_presencial' => $isPresencial ? 'X' : '___',
+            $prefix . '_marca_virtual' => $isVirtual ? 'X' : '___',
         ];
     }
 
@@ -296,18 +390,63 @@ class F023Generator
         $i = 0;
         foreach ($cfg['tecnicos'] as $nombre) {
             $r = $byNombre[$nombre] ?? null;
-            $out['factor_' . $i . '_valoracion'] = $r ? trim((string) ($r['valoracion'] ?? '')) : '';
-            $out['factor_' . $i . '_observacion'] = $r ? trim((string) ($r['observacion'] ?? '')) : '';
+            $out = array_merge($out, self::factorValoracionMarks($i, $r));
             $i++;
         }
         foreach ($cfg['actitudinales'] as $nombre) {
             $r = $byNombre[$nombre] ?? null;
-            $out['factor_' . $i . '_valoracion'] = $r ? trim((string) ($r['valoracion'] ?? '')) : '';
-            $out['factor_' . $i . '_observacion'] = $r ? trim((string) ($r['observacion'] ?? '')) : '';
+            $out = array_merge($out, self::factorValoracionMarks($i, $r));
             $i++;
         }
 
         return $out;
+    }
+
+    /**
+     * @param array<string,mixed>|null $factorRow
+     * @return array<string,string>
+     */
+    private function factorValoracionMarks(int $index, ?array $factorRow): array
+    {
+        $valoracion = $factorRow ? strtoupper(trim((string) ($factorRow['valoracion'] ?? ''))) : '';
+        $isSatisfactorio = $valoracion === 'S';
+        $isPorMejorar = $valoracion === 'PM';
+
+        return [
+            'factor_' . $index . '_valoracion_s' => $isSatisfactorio ? 'X' : '',
+            'factor_' . $index . '_valoracion_pm' => $isPorMejorar ? 'X' : '',
+            'factor_' . $index . '_observacion' => $factorRow
+                ? trim((string) ($factorRow['observacion'] ?? ''))
+                : '',
+        ];
+    }
+
+    /**
+     * PDF por segmento: cada plantilla se convierte sola y luego se unen los PDF.
+     * LibreOffice deforma tablas cuando el .docx fue armado por concatenación XML.
+     *
+     * @param list<string> $segmentDocxPaths
+     *
+     * @throws \RuntimeException
+     */
+    private function exportPdfFromSegments(array $segmentDocxPaths, string $out): string
+    {
+        $pdfParts = [];
+        try {
+            foreach ($segmentDocxPaths as $docxPath) {
+                $pdfParts[] = F023DocxToPdf::convert($docxPath);
+            }
+
+            F023PdfMerge::merge($pdfParts, $out);
+
+            return $out;
+        } finally {
+            foreach ($pdfParts as $part) {
+                if (is_file($part)) {
+                    @unlink($part);
+                }
+            }
+        }
     }
 
     /** @return array<string,mixed>|null */

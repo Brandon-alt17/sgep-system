@@ -9,7 +9,7 @@ document.querySelectorAll("[data-max]").forEach(function (element) {
 });
 
 // Toast global reutilizable (contenedor #sg-app-toast-root en el layout).
-window.showGlobalToast = function (message, variant, ms) {
+var showGlobalToast = function (message, variant, ms) {
   if (typeof window.sgToastNotify === "function") {
     window.sgToastNotify(message, variant || "success", ms);
     return;
@@ -18,13 +18,18 @@ window.showGlobalToast = function (message, variant, ms) {
   var toast = toastRoot ? toastRoot.querySelector("[data-toast]") : null;
   if (!toast) return;
   var textNode = toast.querySelector("p");
-  if (textNode) textNode.textContent = message;
+  if (textNode) textNode.textContent = message || "";
+  toast.classList.remove("sg-toast--error", "sg-toast--warning");
+  if (variant === "error") toast.classList.add("sg-toast--error");
+  else if (variant === "warning") toast.classList.add("sg-toast--warning");
+  var hideMs = variant === "error" ? 7000 : variant === "warning" ? 4200 : 3200;
   toast.classList.add("sg-toast-visible");
   window.clearTimeout(toast.__hideTimer);
   toast.__hideTimer = window.setTimeout(function () {
     toast.classList.remove("sg-toast-visible");
-  }, typeof ms === "number" && ms >= 1200 ? ms : 3200);
+  }, typeof ms === "number" && ms >= 1200 ? ms : hideMs);
 };
+window.showGlobalToast = showGlobalToast;
 
 // Textareas que ajustan su altura al contenido (atributo data-auto-resize-textarea).
 var sgAutoResizeTextarea = function (el) {
@@ -207,6 +212,12 @@ var initComboboxes = function (scope) {
       var openUp = forceDropUp || (spaceBelow < 120 && spaceAbove > spaceBelow);
       var maxList = Math.min(210, Math.max(96, openUp ? spaceAbove : spaceBelow));
       if (listEl) listEl.style.maxHeight = maxList + "px";
+      var menuZ = 100;
+      document.querySelectorAll('[id^="modal-"]:not(.hidden), #modal-editar-aprendiz:not(.hidden)').forEach(function (el) {
+        var z = parseInt(window.getComputedStyle(el).zIndex, 10);
+        if (!isNaN(z) && z + 1 > menuZ) menuZ = z + 1;
+      });
+      menu.style.zIndex = String(menuZ);
       menu.style.position = "fixed";
       menu.style.left = Math.max(8, anchorRect.left) + "px";
       menu.style.width = anchorRect.width + "px";
@@ -259,6 +270,7 @@ var initComboboxes = function (scope) {
     var closeMenu = function () {
       menu.classList.add("hidden");
       menu.style.position = "";
+      menu.style.zIndex = "";
       menu.style.left = "";
       menu.style.top = "";
       menu.style.width = "";
@@ -301,6 +313,14 @@ var initComboboxes = function (scope) {
       syncClearAndChevron();
     };
     var clearValue = function () {
+      if (root.dataset.comboboxPreserveValueOnSearch === "1") {
+        searchInput.value = "";
+        searchInput.setCustomValidity("");
+        applyFilter();
+        openMenuIfPointerInside();
+        searchInput.focus();
+        return;
+      }
       hiddenInput.value = "";
       hiddenInput.dispatchEvent(new Event("change", { bubbles: true }));
       searchInput.value = "";
@@ -337,10 +357,15 @@ var initComboboxes = function (scope) {
     searchInput.addEventListener("blur", function () {
       window.setTimeout(function () {
         setChevronOpen(false);
+        if (root.dataset.comboboxPreserveValueOnSearch === "1") {
+          syncLabelFromValue();
+        }
       }, 0);
     });
     searchInput.addEventListener("input", function () {
-      hiddenInput.value = "";
+      if (root.dataset.comboboxPreserveValueOnSearch !== "1") {
+        hiddenInput.value = "";
+      }
       searchInput.setCustomValidity("");
       applyFilter();
       openMenuIfPointerInside();
@@ -388,6 +413,7 @@ var initComboboxes = function (scope) {
     applyFilter();
   });
 };
+window.initComboboxes = initComboboxes;
 initComboboxes(document);
 
 // Listados: actualiza solo tbody (o nodo destino) por GET + JSON; debounce en texto; replaceState sin perder foco.
@@ -1151,8 +1177,8 @@ document.querySelectorAll("[data-inline-edit-root]").forEach(function (root) {
 
   var originalValues = {};
   var isEditing = false;
-  var isCompetenciaEdit = !!form.querySelector("input[name='competencia_id']");
-  var competenciaDrawer = isCompetenciaEdit ? root.querySelector("[data-inline-competencia-drawer]") : null;
+  var isDrawerEdit = !!form.querySelector("input[name='competencia_id'], input[name='jefe_id']");
+  var competenciaDrawer = isDrawerEdit ? root.querySelector("[data-inline-competencia-drawer]") : null;
   var originalRaeRowsHtml = null;
   var originalCompetenciaSnapshot = "";
   var showToast = function (message) {
@@ -1239,7 +1265,7 @@ document.querySelectorAll("[data-inline-edit-root]").forEach(function (root) {
     openButton.classList.toggle("hidden", editing);
     saveButton.classList.toggle("hidden", !editing);
     cancelButton.classList.toggle("hidden", !editing);
-    if (isCompetenciaEdit) {
+    if (isDrawerEdit) {
       root.classList.toggle("sg-inline-editing-competencia", editing);
       if (editing) {
         root.style.borderColor = "rgb(10 139 129 / 1)";
@@ -1359,6 +1385,28 @@ document.querySelectorAll("[data-inline-edit-root]").forEach(function (root) {
   });
 
   form.addEventListener("submit", function (event) {
+    var jefeIdField = form.querySelector("input[name='jefe_id']");
+    if (jefeIdField) {
+      var jefeSubmitter = event.submitter;
+      if (jefeSubmitter && jefeSubmitter.hasAttribute("formaction") && (jefeSubmitter.getAttribute("formaction") || "").indexOf("/catalogo/empresas/eliminar-jefe") !== -1) {
+        return;
+      }
+
+      var jefeNombreInput = form.querySelector("input[name='nombre']");
+      var jefeNombre = jefeNombreInput ? (jefeNombreInput.value || "").trim() : "";
+      if (jefeNombre === "") {
+        event.preventDefault();
+        showToast("Completa al menos el nombre del supervisor.");
+        return;
+      }
+
+      if (competenciaSnapshot() === originalCompetenciaSnapshot) {
+        event.preventDefault();
+        showToast("No hay cambios para guardar en este jefe.");
+      }
+      return;
+    }
+
     var competenciaIdField = form.querySelector("input[name='competencia_id']");
     if (!competenciaIdField) return;
     var submitter = event.submitter;
@@ -1448,6 +1496,8 @@ document.querySelectorAll("[data-toast-root] [data-toast]").forEach(function (to
       cleanUrl.searchParams.delete("toast");
       cleanUrl.searchParams.delete("saved");
       cleanUrl.searchParams.delete("edit_competencia");
+      cleanUrl.searchParams.delete("edit_jefe");
+      cleanUrl.searchParams.delete("new_jefe");
       window.history.replaceState(null, "", cleanUrl.pathname + cleanUrl.search + cleanUrl.hash);
     } catch (e) {
       // no-op
@@ -1568,3 +1618,267 @@ document.querySelectorAll("[data-new-competencia-form]").forEach(function (form)
     }
   });
 });
+
+document.querySelectorAll("[data-jefe-form]").forEach(function (form) {
+  form.addEventListener("submit", function (event) {
+    var nombreInput = form.querySelector("input[name='nombre']");
+    var nombre = nombreInput ? (nombreInput.value || "").trim() : "";
+    if (nombre === "") {
+      event.preventDefault();
+      showGlobalToast("Completa al menos el nombre del supervisor.");
+    }
+  });
+});
+
+// Descargas largas (F-023 Word/PDF, reporte Excel): barra de progreso con fetch + blob.
+(function () {
+  var fakeTimer = null;
+  var activeController = null;
+
+  var getOverlay = function () {
+    return document.querySelector("[data-download-overlay]");
+  };
+
+  var setOverlayProgress = function (title, status, percent) {
+    var root = getOverlay();
+    if (!root) return;
+    var labelEl = root.querySelector("[data-download-overlay-label]");
+    var statusEl = root.querySelector("[data-download-overlay-status]");
+    var percentEl = root.querySelector("[data-download-overlay-percent]");
+    var bar = root.querySelector("[data-download-overlay-bar]");
+    var safe = Math.max(0, Math.min(100, Math.round(percent || 0)));
+    if (labelEl && title) labelEl.textContent = title;
+    if (statusEl && status) statusEl.textContent = status;
+    if (percentEl) percentEl.textContent = safe + "%";
+    if (bar) bar.style.width = safe + "%";
+  };
+
+  var showOverlay = function (title) {
+    var root = getOverlay();
+    if (!root) return;
+    root.classList.remove("hidden");
+    root.setAttribute("aria-hidden", "false");
+    setOverlayProgress(title || "Preparando descarga...", "Iniciando...", 3);
+  };
+
+  var hideOverlay = function () {
+    var root = getOverlay();
+    if (!root) return;
+    root.classList.add("hidden");
+    root.setAttribute("aria-hidden", "true");
+    if (fakeTimer) {
+      window.clearInterval(fakeTimer);
+      fakeTimer = null;
+    }
+  };
+
+  var startFakeProgress = function (statusText) {
+    var pct = 5;
+    if (fakeTimer) window.clearInterval(fakeTimer);
+    fakeTimer = window.setInterval(function () {
+      pct = Math.min(pct + 1.5, 88);
+      setOverlayProgress(null, statusText, pct);
+    }, 350);
+  };
+
+  var stopFakeProgress = function () {
+    if (fakeTimer) {
+      window.clearInterval(fakeTimer);
+      fakeTimer = null;
+    }
+  };
+
+  var parseFilename = function (contentDisposition) {
+    if (!contentDisposition) return "descarga";
+    var utf8Match = /filename\*=UTF-8''([^;]+)/i.exec(contentDisposition);
+    if (utf8Match) {
+      try {
+        return decodeURIComponent(utf8Match[1].trim());
+      } catch (e) {
+        /* fallback abajo */
+      }
+    }
+    var quotedMatch = /filename="([^"]+)"/i.exec(contentDisposition);
+    if (quotedMatch) return quotedMatch[1];
+    var plainMatch = /filename=([^;]+)/i.exec(contentDisposition);
+    if (plainMatch) return plainMatch[1].trim().replace(/^"|"$/g, "");
+    return "descarga";
+  };
+
+  var isBinaryDownloadResponse = function (contentType) {
+    if (!contentType) return false;
+    var ct = contentType.toLowerCase();
+    return (
+      ct.indexOf("application/pdf") !== -1 ||
+      ct.indexOf("officedocument") !== -1 ||
+      ct.indexOf("octet-stream") !== -1 ||
+      ct.indexOf("vnd.ms-excel") !== -1
+    );
+  };
+
+  var triggerBlobDownload = function (blob, filename) {
+    var objectUrl = URL.createObjectURL(blob);
+    var anchor = document.createElement("a");
+    anchor.href = objectUrl;
+    anchor.download = filename;
+    anchor.style.display = "none";
+    document.body.appendChild(anchor);
+    anchor.click();
+    window.setTimeout(function () {
+      URL.revokeObjectURL(objectUrl);
+      anchor.remove();
+    }, 200);
+  };
+
+  var handleHtmlErrorResponse = function (response) {
+    var url = response.url || "";
+    if (url.indexOf("error=") !== -1) {
+      window.location.href = url;
+      return;
+    }
+    hideOverlay();
+    showGlobalToast("No se pudo completar la descarga. Inténtelo de nuevo.", "error");
+  };
+
+  var downloadWithProgress = function (options) {
+    var url = options.url;
+    var method = (options.method || "GET").toUpperCase();
+    var body = options.body || null;
+    var title = options.label || "Preparando descarga...";
+    var processingStatus = options.processingStatus || "Generando archivo...";
+    var downloadingStatus = options.downloadingStatus || "Descargando...";
+
+    if (!url) return Promise.reject(new Error("URL requerida"));
+
+    showOverlay(title);
+    startFakeProgress(processingStatus);
+
+    if (activeController) activeController.abort();
+    activeController = new AbortController();
+
+    return fetch(url, {
+      method: method,
+      body: body,
+      credentials: "same-origin",
+      signal: activeController.signal,
+      headers: body instanceof FormData ? { "X-Requested-With": "XMLHttpRequest" } : undefined,
+    })
+      .then(function (response) {
+        var contentType = response.headers.get("Content-Type") || "";
+        if (!response.ok || !isBinaryDownloadResponse(contentType)) {
+          stopFakeProgress();
+          if (contentType.indexOf("text/html") !== -1 || response.redirected) {
+            handleHtmlErrorResponse(response);
+            return;
+          }
+          hideOverlay();
+          showGlobalToast("No se pudo completar la descarga.", "error");
+          return;
+        }
+
+        var disposition = response.headers.get("Content-Disposition");
+        var filename = parseFilename(disposition);
+        var contentLength = parseInt(response.headers.get("Content-Length") || "0", 10);
+
+        if (!response.body || typeof response.body.getReader !== "function") {
+          stopFakeProgress();
+          return response.blob().then(function (blob) {
+            setOverlayProgress(title, "Descarga lista", 100);
+            triggerBlobDownload(blob, filename);
+            window.setTimeout(hideOverlay, 600);
+          });
+        }
+
+        var reader = response.body.getReader();
+        var chunks = [];
+        var received = 0;
+
+        var pump = function () {
+          return reader.read().then(function (result) {
+            if (result.done) {
+              stopFakeProgress();
+              var blob = new Blob(chunks, { type: contentType });
+              setOverlayProgress(title, "Descarga lista", 100);
+              triggerBlobDownload(blob, filename);
+              window.setTimeout(hideOverlay, 600);
+              return;
+            }
+            chunks.push(result.value);
+            received += result.value.length;
+            if (contentLength > 0) {
+              var dlPct = Math.round((received / contentLength) * 100);
+              setOverlayProgress(null, downloadingStatus, Math.max(90, Math.min(99, dlPct)));
+            }
+            return pump();
+          });
+        };
+
+        stopFakeProgress();
+        setOverlayProgress(null, downloadingStatus, 90);
+        return pump();
+      })
+      .catch(function (err) {
+        stopFakeProgress();
+        hideOverlay();
+        if (err && err.name === "AbortError") return;
+        showGlobalToast("Error de red durante la descarga.", "error");
+      })
+      .finally(function () {
+        activeController = null;
+      });
+  };
+
+  window.sgDownloadWithProgress = downloadWithProgress;
+
+  document.querySelectorAll("[data-download-form]").forEach(function (form) {
+    form.addEventListener("submit", function (event) {
+      event.preventDefault();
+      if (form.querySelector('input[name="partes[]"]')) {
+        var checked = form.querySelectorAll('input[name="partes[]"]:checked');
+        if (!checked.length) {
+          showGlobalToast("Seleccione al menos un bloque a incluir en el documento.", "warning");
+          return;
+        }
+      }
+      var formatoInput = form.querySelector('input[name="formato"]:checked');
+      var formato = formatoInput ? formatoInput.value : "docx";
+      var processing =
+        formato === "pdf"
+          ? "Generando PDF (puede tardar unos segundos)..."
+          : "Generando documento Word...";
+      downloadWithProgress({
+        url: form.getAttribute("action") || window.location.href,
+        method: "POST",
+        body: new FormData(form),
+        label: form.getAttribute("data-download-label") || "Generando documento...",
+        processingStatus: processing,
+      });
+    });
+  });
+
+  document.querySelectorAll("[data-download-link]").forEach(function (link) {
+    link.addEventListener("click", function (event) {
+      event.preventDefault();
+      var beforeName = link.getAttribute("data-download-before");
+      var startDownload = function () {
+        downloadWithProgress({
+          url: link.href,
+          method: "GET",
+          label: link.getAttribute("data-download-label") || "Exportando archivo...",
+          processingStatus: "Generando Excel...",
+        });
+      };
+      if (beforeName && typeof window[beforeName] === "function") {
+        var beforeResult = window[beforeName]();
+        if (beforeResult && typeof beforeResult.then === "function") {
+          beforeResult.then(startDownload).catch(function (err) {
+            console.error(err);
+            showGlobalToast("No se pudieron sincronizar los datos antes de exportar.", "error");
+          });
+          return;
+        }
+      }
+      startDownload();
+    });
+  });
+})();

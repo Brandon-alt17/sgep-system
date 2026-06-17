@@ -1,0 +1,64 @@
+SGEP en Mac — solucion de problemas frecuentes
+==============================================
+
+ERROR: env: bash\r: No such file or directory
+---------------------------------------------
+Los scripts se copiaron desde Windows con saltos de linea incorrectos.
+
+En Terminal, dentro de scripts/macos:
+
+  cd /Applications/MAMP/htdocs/sgep/scripts/macos
+  sed -i '' 's/\r$//' instalar.sh actualizar.sh abrir_sgep.sh
+  bash instalar.sh
+
+(Use "bash instalar.sh" en lugar de "./instalar.sh" si el error persiste.)
+
+
+No veo el archivo .env en Finder
+--------------------------------
+En Mac los archivos que empiezan con punto (.) estan OCULTOS.
+
+Opcion A — Terminal:
+  cd /Applications/MAMP/htdocs/sgep
+  ls -la
+  cp scripts/macos/env.ejemplo.mamp .env
+
+Opcion B — Mostrar ocultos en Finder:
+  Cmd + Shift + .  (punto)
+
+Opcion C — Copiar plantilla visible:
+  Copie "env.ejemplo.mamp" de esta carpeta a la raiz del proyecto
+  y en Terminal:
+  cd /Applications/MAMP/htdocs/sgep
+  cp scripts/macos/env.ejemplo.mamp .env
+
+
+ERROR 404 en /dashboard, /aprendices u otras rutas
+---------------------------------------------------
+La portada (http://localhost:8888/sgep/) abre, pero el resto da 404.
+
+Causa habitual: el modulo rewrite de Apache esta desactivado en MAMP.
+
+Solucion (una sola vez):
+  1. MAMP → Stop
+  2. Abrir: /Applications/MAMP/conf/apache/httpd.conf
+  3. Buscar "rewrite_module" y quitar el # del inicio de la linea:
+       LoadModule rewrite_module modules/mod_rewrite.so
+  4. En <Directory "/Applications/MAMP/htdocs"> poner:
+       AllowOverride All
+  5. Guardar, MAMP → Start
+  6. Probar: http://localhost:8888/sgep/dashboard
+
+Ver detalle en INSTRUCCIONES-MAC.md
+
+
+Instalacion completa (orden)
+----------------------------
+1. Activar mod_rewrite en httpd.conf (ver seccion anterior)
+2. MAMP abierto → Start
+3. Terminal:
+   cd /Applications/MAMP/htdocs/sgep/scripts/macos
+   sed -i '' 's/\r$//' *.sh
+   bash instalar.sh
+4. Navegador: http://localhost:8888/sgep/
+5. Comprobar: http://localhost:8888/sgep/dashboard

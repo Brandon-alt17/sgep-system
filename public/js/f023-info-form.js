@@ -65,7 +65,27 @@
     true
   );
 
+  function clearDiscapacidadFields() {
+    ["asistencia_nombre", "asistencia_tipo", "asistencia_contacto"].forEach(function (fieldName) {
+      var input = form.querySelector('[name="' + fieldName + '"]');
+      if (input) input.value = "";
+    });
+  }
+
+  var discapacidadToggle = document.getElementById("toggle-discapacidad");
+  if (discapacidadToggle) {
+    discapacidadToggle.addEventListener("change", function () {
+      if (!discapacidadToggle.checked) {
+        clearDiscapacidadFields();
+        refreshDirty();
+      }
+    });
+  }
+
   form.addEventListener("submit", function () {
+    if (discapacidadToggle && !discapacidadToggle.checked) {
+      clearDiscapacidadFields();
+    }
     setDirty(false);
     initial = serialize();
     hideLeaveFooter();

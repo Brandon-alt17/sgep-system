@@ -92,10 +92,114 @@ function normalize_multiline_text(string $value): string
     return trim($value);
 }
 
+/** Asegura texto UTF-8 válido (p. ej. nombres desde MySQL). */
+function export_ensure_utf8(string $value): string
+{
+    if ($value === '' || mb_check_encoding($value, 'UTF-8')) {
+        return $value;
+    }
+    $converted = mb_convert_encoding($value, 'UTF-8', 'ISO-8859-1');
+
+    return is_string($converted) ? $converted : $value;
+}
+
+/** Quita caracteres no válidos en nombres de archivo (Windows / descargas HTTP). Conserva tildes. */
+function export_filename_safe(string $value): string
+{
+    $value = export_ensure_utf8(trim($value));
+    if ($value === '') {
+        return '';
+    }
+    $value = preg_replace('/[\\\\\/:*?"<>|]/u', '', $value) ?? $value;
+    $value = preg_replace('/\s+/u', ' ', $value) ?? $value;
+
+    return trim($value);
+}
+
+function f023_export_basename(string $nombreCompleto, string $numeroGrupo, string $extension): string
+{
+    $extension = strtolower(ltrim(trim($extension), '.'));
+    $nombre = export_filename_safe($nombreCompleto);
+    $grupo = export_filename_safe($numeroGrupo);
+    if ($nombre === '') {
+        $nombre = 'Aprendiz';
+    }
+    if ($grupo === '') {
+        $grupo = 'sin_grupo';
+    }
+    $base = $nombre . ' ' . $grupo;
+    if (mb_strlen($base) > 200) {
+        $base = mb_substr($base, 0, 200);
+    }
+    $base = rtrim($base, '. ');
+
+    return $base . '.' . $extension;
+}
+
+/** Cabecera Content-Disposition con soporte UTF-8 (tildes y eñes en la descarga). */
+function content_disposition_attachment(string $filename): string
+{
+    $filename = trim($filename);
+    $asciiFallback = preg_replace('/[^\x20-\x7E]/', '_', $filename) ?? $filename;
+    $asciiFallback = str_replace(['"', '\\'], '_', $asciiFallback);
+    if ($asciiFallback === '') {
+        $asciiFallback = 'descarga';
+    }
+
+    return 'attachment; filename="' . $asciiFallback . '"; filename*=UTF-8\'\'' . rawurlencode($filename);
+}
+
+function resolve_unique_storage_path(string $directory, string $basename): string
+{
+    $path = rtrim($directory, '/\\') . DIRECTORY_SEPARATOR . $basename;
+    if (!is_file($path)) {
+        return $path;
+    }
+    $info = pathinfo($basename);
+    $name = (string) ($info['filename'] ?? 'archivo');
+    $ext = isset($info['extension']) && $info['extension'] !== '' ? '.' . $info['extension'] : '';
+    for ($i = 2; $i <= 99; $i++) {
+        $candidate = rtrim($directory, '/\\') . DIRECTORY_SEPARATOR . $name . ' (' . $i . ')' . $ext;
+        if (!is_file($candidate)) {
+            return $candidate;
+        }
+    }
+
+    return rtrim($directory, '/\\') . DIRECTORY_SEPARATOR . $name . '_' . time() . $ext;
+}
+
 function redirect(string $url): void
 {
     header('Location: ' . $url);
     exit;
+}
+
+function abort_404(string $uri = ''): never
+{
+    http_response_code(404);
+    view('errors/404', ['uri' => $uri]);
+    exit;
+}
+
+function app_handle_exception(Throwable $e): void
+{
+    if (http_response_code() < 400) {
+        http_response_code(500);
+    }
+    log_error($e->getMessage() . ' @ ' . $e->getFile() . ':' . $e->getLine());
+
+    $debugMessage = (defined('APP_DEBUG') && APP_DEBUG) ? $e->getMessage() : null;
+    if (!headers_sent()) {
+        try {
+            view('errors/500', ['message' => $debugMessage]);
+
+            return;
+        } catch (Throwable) {
+            // layout o vista no disponible
+        }
+    }
+
+    echo 'Error interno del servidor.';
 }
 
 function log_error(string $message): void

@@ -14,6 +14,8 @@ class ReporteMaestroData
      */
     public static function rows(array $filters = []): array
     {
+        self::migrateOrphanedReporteCampos();
+
         $raw = self::fetchBaseRows($filters);
         if ($raw === []) {
             return [];
@@ -22,15 +24,26 @@ class ReporteMaestroData
         $ids = array_map(static fn (array $r): int => (int) ($r['id'] ?? 0), $raw);
         $reporteByAprendiz = self::loadReporteCampos($ids);
         $momentosByAprendiz = self::loadMomentosFlags($ids);
+        $raw = self::sortRowsByGrupo($raw);
 
         $out = [];
         $index = 0;
+        $currentFicha = null;
+        $numEnGrupo = 0;
         foreach ($raw as $row) {
             $index++;
+            $ficha = trim((string) ($row['ficha'] ?? ''));
+            if ($ficha !== $currentFicha) {
+                $currentFicha = $ficha;
+                $numEnGrupo = 0;
+            }
+            $numEnGrupo++;
+            $numPorGrupo = $ficha !== '' ? $numEnGrupo : '';
+
             $aprendizId = (int) ($row['id'] ?? 0);
             $rc = $reporteByAprendiz[$aprendizId] ?? [];
             $mom = $momentosByAprendiz[$aprendizId] ?? [];
-            $out[] = self::enrichRow($row, $index, $rc, $mom);
+            $out[] = self::enrichRow($row, $index, $rc, $mom, $numPorGrupo);
         }
 
         return $out;
@@ -107,7 +120,7 @@ class ReporteMaestroData
             $params['programa_id'] = $programaId;
         }
 
-        $sql .= ' ORDER BY a.nombre_completo ASC';
+        $sql .= ' ORDER BY a.ficha ASC, a.nombre_completo ASC';
 
         $stmt = Database::connection()->prepare($sql);
         $stmt->execute($params);
@@ -182,13 +195,50 @@ class ReporteMaestroData
     }
 
     /**
+     * Agrupa aprendices por ficha (grupo) y ordena alfabéticamente dentro de cada grupo.
+     *
+     * @param list<array<string, mixed>> $rows
+     * @return list<array<string, mixed>>
+     */
+    private static function sortRowsByGrupo(array $rows): array
+    {
+        usort($rows, static function (array $a, array $b): int {
+            $fichaA = trim((string) ($a['ficha'] ?? ''));
+            $fichaB = trim((string) ($b['ficha'] ?? ''));
+            if ($fichaA === '' && $fichaB !== '') {
+                return 1;
+            }
+            if ($fichaA !== '' && $fichaB === '') {
+                return -1;
+            }
+            $byFicha = strcmp($fichaA, $fichaB);
+            if ($byFicha !== 0) {
+                return $byFicha;
+            }
+
+            return strcmp(
+                (string) ($a['nombre_completo'] ?? ''),
+                (string) ($b['nombre_completo'] ?? '')
+            );
+        });
+
+        return $rows;
+    }
+
+    /**
      * @param array<string, mixed> $row
      * @param array<string, string> $rc
      * @param array{M1?: bool, M2?: bool, M3?: bool} $mom
+     * @param int|string $numPorGrupo
      * @return array<string, mixed>
      */
-    private static function enrichRow(array $row, int $index, array $rc, array $mom): array
-    {
+    private static function enrichRow(
+        array $row,
+        int $index,
+        array $rc,
+        array $mom,
+        int|string $numPorGrupo
+    ): array {
         $aprendizId = (int) ($row['id'] ?? 0);
         $hasM1 = !empty($mom['M1']);
         $hasM2 = !empty($mom['M2']);
@@ -212,7 +262,7 @@ class ReporteMaestroData
         $enriched = [
             'id' => $aprendizId,
             'num_aprendiz' => $index,
-            'num_por_grupo' => self::rc($rc, 'num_por_grupo'),
+            'num_por_grupo' => $numPorGrupo === '' ? '' : (string) $numPorGrupo,
             'ficha' => trim((string) ($row['ficha'] ?? '')),
             'programa_formacion' => trim((string) ($row['programa_formacion'] ?? '')),
             'codigo_programa' => trim((string) ($row['codigo_programa'] ?? '')),
@@ -327,6 +377,126 @@ class ReporteMaestroData
         }
 
         return date_iso_to_dmY($raw);
+    }
+
+    /**
+     * Persiste campos editables del panel lateral (switches, certificación, novedades).
+     *
+     * @param array<string, mixed> $campos claves del formulario (con alias de UI)
+     */
+    public static function persistCampos(int $aprendizId, array $campos): void
+    {
+        $aprendizId = self::resolveAprendizId($aprendizId);
+        if ($aprendizId <= 0 || $campos === []) {
+            return;
+        }
+
+        /** @var array<string, mixed> $map */
+        $map = require base_path('config/reporte_maestro_map.php');
+        $allowed = array_keys((array) ($map['columns'] ?? []));
+        $allowed = array_merge($allowed, [
+            'cambio_modalidad',
+            'observaciones_novedad',
+            'arl',
+            'referencia_modalidad',
+            'semaforo_vencimiento',
+            'llamados_atencion',
+            'otros_novedad',
+            'comite_evaluacion',
+        ]);
+        /** @var list<string> $boolKeys */
+        $boolKeys = array_values((array) ($map['boolean_keys'] ?? []));
+
+        $aliases = [
+            'fecha_entrega' => 'fecha_entrega_admin',
+            'observaciones' => 'observaciones_cert',
+            'reingreso' => 'reingreso_vencimiento',
+        ];
+
+        $stmt = Database::connection()->prepare(
+            'INSERT INTO reporte_campos (aprendiz_id, campo, valor, updated_at)
+             VALUES (:aprendiz_id, :campo, :valor, NOW())
+             ON DUPLICATE KEY UPDATE valor = VALUES(valor), updated_at = NOW()'
+        );
+
+        foreach ($campos as $rawKey => $value) {
+            if (!is_string($rawKey) && !is_int($rawKey)) {
+                continue;
+            }
+            $key = $aliases[(string) $rawKey] ?? (string) $rawKey;
+            if (!in_array($key, $allowed, true)) {
+                continue;
+            }
+
+            $stored = self::normalizeStoredCampoValor($key, $value, $boolKeys);
+            $stmt->execute([
+                'aprendiz_id' => $aprendizId,
+                'campo' => $key,
+                'valor' => $stored,
+            ]);
+        }
+    }
+
+    /**
+     * Reasigna filas guardadas con cédula en lugar del id interno del aprendiz.
+     */
+    private static function migrateOrphanedReporteCampos(): void
+    {
+        try {
+            Database::connection()->exec(
+                'UPDATE reporte_campos rc
+                 INNER JOIN aprendices a ON a.numero_documento = CAST(rc.aprendiz_id AS CHAR)
+                 SET rc.aprendiz_id = a.id
+                 WHERE NOT EXISTS (
+                     SELECT 1 FROM aprendices valid WHERE valid.id = rc.aprendiz_id
+                 )'
+            );
+        } catch (\Throwable $e) {
+            log_error('Reporte maestro migrate campos: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Acepta id interno o número de documento (datos legacy del panel lateral).
+     */
+    private static function resolveAprendizId(int $rawId): int
+    {
+        if ($rawId <= 0) {
+            return 0;
+        }
+
+        $pdo = Database::connection();
+        $byPk = $pdo->prepare('SELECT id FROM aprendices WHERE id = :id LIMIT 1');
+        $byPk->execute(['id' => $rawId]);
+        if ($byPk->fetchColumn()) {
+            return $rawId;
+        }
+
+        $byDoc = $pdo->prepare('SELECT id FROM aprendices WHERE numero_documento = :doc LIMIT 1');
+        $byDoc->execute(['doc' => (string) $rawId]);
+        $resolved = (int) ($byDoc->fetchColumn() ?: 0);
+
+        return $resolved > 0 ? $resolved : $rawId;
+    }
+
+    /**
+     * @param list<string> $boolKeys
+     */
+    private static function normalizeStoredCampoValor(string $key, mixed $value, array $boolKeys): string
+    {
+        if (in_array($key, $boolKeys, true)) {
+            if (is_bool($value)) {
+                return $value ? '1' : '0';
+            }
+            $v = strtolower(trim((string) $value));
+            if ($v === '' || $v === '0' || $v === 'false' || $v === 'no') {
+                return '0';
+            }
+
+            return '1';
+        }
+
+        return trim((string) $value);
     }
 
     /**

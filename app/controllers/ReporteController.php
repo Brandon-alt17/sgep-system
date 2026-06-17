@@ -13,8 +13,21 @@ class ReporteController
 {
     public function index(): void
     {
+        try {
+            $rows = ReporteMaestroData::rows($this->filtersFromRequest());
+        } catch (\Throwable $e) {
+            log_error('Reporte maestro index: ' . $e->getMessage());
+            view('errors/500', [
+                'message' => (defined('APP_DEBUG') && APP_DEBUG)
+                    ? $e->getMessage()
+                    : 'No se pudo cargar el reporte maestro.',
+            ]);
+
+            return;
+        }
+
         view('reports/maestro', [
-            'rows' => ReporteMaestroData::rows($this->filtersFromRequest()),
+            'rows' => $rows,
         ]);
     }
 
@@ -22,11 +35,11 @@ class ReporteController
     {
         $aprendizId = (int) ($_POST['aprendiz_id'] ?? 0);
 
-        $campo = (string) ($_POST['campo'] ?? '');
+        $campo = trim((string) ($_POST['campo'] ?? ''));
 
         $valor = (string) ($_POST['valor'] ?? '');
 
-        if ($campo === '') {
+        if ($campo === '' || $aprendizId <= 0) {
             redirect(APP_BASE_PATH . '/reportes/maestro');
         }
 
@@ -48,15 +61,64 @@ class ReporteController
                 updated_at = NOW()
         ';
 
-        Database::connection()
-            ->prepare($sql)
-            ->execute([
-                'aprendiz_id' => $aprendizId,
-                'campo' => $campo,
-                'valor' => $valor,
-            ]);
+        try {
+            Database::connection()
+                ->prepare($sql)
+                ->execute([
+                    'aprendiz_id' => $aprendizId,
+                    'campo' => $campo,
+                    'valor' => $valor,
+                ]);
+        } catch (\Throwable $e) {
+            log_error('Reporte maestro update: ' . $e->getMessage());
+        }
 
         redirect(APP_BASE_PATH . '/reportes/maestro');
+    }
+
+    public function sync(): void
+    {
+        $raw = file_get_contents('php://input');
+        $decoded = json_decode($raw !== false ? $raw : '', true);
+        if (!is_array($decoded)) {
+            $this->respondSync(false, 'Payload inválido.');
+
+            return;
+        }
+
+        $rows = $decoded['rows'] ?? null;
+        if (!is_array($rows)) {
+            $aprendizId = (int) ($decoded['aprendiz_id'] ?? 0);
+            $campos = $decoded['campos'] ?? null;
+            if ($aprendizId > 0 && is_array($campos)) {
+                $rows = [['aprendiz_id' => $aprendizId, 'campos' => $campos]];
+            } else {
+                $this->respondSync(false, 'Sin filas para sincronizar.');
+
+                return;
+            }
+        }
+
+        try {
+            foreach ($rows as $row) {
+                if (!is_array($row)) {
+                    continue;
+                }
+                $aprendizId = (int) ($row['aprendiz_id'] ?? 0);
+                $campos = $row['campos'] ?? null;
+                if ($aprendizId <= 0 || !is_array($campos)) {
+                    continue;
+                }
+                ReporteMaestroData::persistCampos($aprendizId, $campos);
+            }
+        } catch (\Throwable $e) {
+            log_error('Reporte maestro sync: ' . $e->getMessage());
+            $this->respondSync(false, 'No se pudieron guardar los cambios.');
+
+            return;
+        }
+
+        $this->respondSync(true);
     }
 
     public function export(): void
@@ -66,6 +128,12 @@ class ReporteController
                 ->export($this->filtersFromRequest());
         } catch (RuntimeException $e) {
             log_error('Reporte maestro export: ' . $e->getMessage());
+            redirect(APP_BASE_PATH . '/reportes/maestro');
+
+            return;
+        }
+
+        if (!is_file($path)) {
             redirect(APP_BASE_PATH . '/reportes/maestro');
 
             return;
@@ -104,5 +172,15 @@ class ReporteController
         }
 
         return $filters;
+    }
+
+    private function respondSync(bool $ok, string $message = ''): void
+    {
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode([
+            'ok' => $ok,
+            'message' => $message,
+        ], JSON_UNESCAPED_UNICODE);
+        exit;
     }
 }

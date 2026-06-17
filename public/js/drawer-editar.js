@@ -3,8 +3,22 @@
     'use strict';
     let currentAprendizId = null;
 
+    function localStorageKeyForRow(row) {
+        const id = row.dataset.id || '';
+        const currentKey = 'formulario_' + id;
+        const legacyId = row.dataset.identificacion || '';
+        const legacyKey = legacyId ? 'formulario_' + legacyId : '';
+        if (legacyKey && legacyKey !== currentKey) {
+            const legacyData = localStorage.getItem(legacyKey);
+            if (legacyData && !localStorage.getItem(currentKey)) {
+                localStorage.setItem(currentKey, legacyData);
+                localStorage.removeItem(legacyKey);
+            }
+        }
+        return currentKey;
+    }
+
     function init() {
-        console.log('Inicializando popup...');
         setupEventListeners();
         setupRowClicks();
         loadAllTableData(); // Cargar todos los datos guardados en la tabla al iniciar
@@ -12,14 +26,12 @@
 
     // Función para cargar todos los datos guardados en la tabla al iniciar
     function loadAllTableData() {
-        console.log('Cargando datos guardados...');
         document.querySelectorAll('tr[data-id]').forEach(row => {
             const aprendizId = row.dataset.id;
-            const saved = localStorage.getItem(`formulario_${aprendizId}`);
+            const saved = localStorage.getItem(localStorageKeyForRow(row));
             if (saved) {
                 try {
                     const data = JSON.parse(saved);
-                    console.log('Cargando datos para:', aprendizId, data);
                     updateTableRow(row, data);
                 } catch(e) {
                     console.error('Error loading data for row:', e);
@@ -30,8 +42,6 @@
 
     // Función para actualizar una fila específica de la tabla usando clases
     function updateTableRow(row, data) {
-        console.log('Actualizando fila con datos:', data);
-        
         // Mapeo de IDs del formulario a las clases CSS de las celdas
         const classMapping = {
             'doc_gfpi_165': 'doc-status-gfpi-165',
@@ -67,7 +77,6 @@
                         cell.style.color = '';
                         cell.style.fontWeight = '';
                     }
-                    console.log(`Actualizado ${key} en celda .${className}:`, data[key]);
                 } else {
                     console.warn(`No se encontró celda con clase .${className}`);
                 }
@@ -96,7 +105,6 @@
             
             if (reingresoCell) {
                 reingresoCell.innerHTML = data.reingreso ? 'Sí' : 'No';
-                console.log('Actualizado reingreso:', data.reingreso);
             }
         }
         
@@ -106,7 +114,6 @@
             let cambioCell = row.querySelector('td:nth-child(33)'); // Ajusta este índice
             if (cambioCell) {
                 cambioCell.innerHTML = data.cambio_modalidad || '—';
-                console.log('Actualizado cambio modalidad:', data.cambio_modalidad);
             }
         }
         
@@ -115,7 +122,6 @@
             let novedadCell = row.querySelector('td:nth-child(34)'); // Ajusta este índice
             if (novedadCell) {
                 novedadCell.innerHTML = data.observaciones_novedad || '—';
-                console.log('Actualizado observaciones novedad');
             }
         }
         
@@ -124,7 +130,6 @@
             const fechaCell = row.querySelector('.fecha-entrega');
             if (fechaCell) {
                 fechaCell.innerHTML = data.fecha_entrega || '';
-                console.log('Actualizado fecha entrega:', data.fecha_entrega);
             }
         }
         
@@ -133,7 +138,6 @@
             const estadoCell = row.querySelector('.estado-aprendiz');
             if (estadoCell) {
                 estadoCell.innerHTML = data.estado_aprendiz || '';
-                console.log('Actualizado estado aprendiz:', data.estado_aprendiz);
             }
         }
         
@@ -142,7 +146,6 @@
             const obsCell = row.querySelector('.observaciones');
             if (obsCell) {
                 obsCell.innerHTML = data.observaciones || '—';
-                console.log('Actualizado observaciones');
             }
         }
     }
@@ -326,6 +329,59 @@
         if (reingreso) reingreso.checked = false;
     }
 
+    function collectRowsFromLocalStorage() {
+        const rows = [];
+        document.querySelectorAll('tr[data-id]').forEach(function (row) {
+            const aprendizId = parseInt(row.dataset.id || '0', 10);
+            if (!aprendizId) return;
+            const saved = localStorage.getItem(localStorageKeyForRow(row));
+            if (!saved) return;
+            try {
+                rows.push({ aprendiz_id: aprendizId, campos: JSON.parse(saved) });
+            } catch (e) {
+                console.error('Error leyendo localStorage para aprendiz', aprendizId, e);
+            }
+        });
+        return rows;
+    }
+
+    function syncReporteCamposToServer(rows) {
+        const payload = rows || collectRowsFromLocalStorage();
+        if (!payload.length) {
+            return Promise.resolve();
+        }
+        const base = window.APP_BASE_PATH || '';
+        return fetch(base + '/reportes/sync', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+            body: JSON.stringify({ rows: payload }),
+        }).then(function (response) {
+            return response.json().catch(function () {
+                return { ok: false };
+            }).then(function (data) {
+                if (!response.ok || !data.ok) {
+                    throw new Error(data.message || 'No se pudieron sincronizar los datos del reporte.');
+                }
+                return data;
+            });
+        });
+    }
+
+    window.prepareExportData = function () {
+        const rows = collectRowsFromLocalStorage();
+        rows.forEach(function (entry) {
+            const row = document.querySelector('tr[data-id="' + entry.aprendiz_id + '"]');
+            if (row) {
+                updateTableRow(row, entry.campos);
+            }
+        });
+        return syncReporteCamposToServer(rows);
+    };
+
     function saveData() {
         if (!currentAprendizId) {
             showNotification('Error: No hay aprendiz seleccionado', 'error');
@@ -338,7 +394,6 @@
         document.querySelectorAll('#documentPopup .doc-checkbox').forEach(cb => {
             if (cb.id) {
                 formData[cb.id] = cb.checked;
-                console.log(`Guardando ${cb.id}: ${cb.checked}`);
             }
         });
         
@@ -348,7 +403,6 @@
             const el = document.getElementById(id);
             if (el) {
                 formData[id] = el.value;
-                console.log(`Guardando ${id}: ${el.value}`);
             }
         });
         
@@ -356,24 +410,25 @@
         const reingreso = document.getElementById('reingreso');
         if (reingreso) {
             formData.reingreso = reingreso.checked;
-            console.log(`Guardando reingreso: ${reingreso.checked}`);
         }
         
-        // Guardar en localStorage
         localStorage.setItem(`formulario_${currentAprendizId}`, JSON.stringify(formData));
-        console.log('Datos guardados en localStorage:', formData);
-        
-        // Actualizar la tabla inmediatamente
+
         const row = document.querySelector(`tr[data-id="${currentAprendizId}"]`);
         if (row) {
-            console.log('Actualizando fila en la tabla...');
             updateTableRow(row, formData);
-        } else {
-            console.error('No se encontró la fila con data-id:', currentAprendizId);
         }
-        
-        showNotification('Datos guardados correctamente', 'success');
-        closePopup();
+
+        const aprendizId = parseInt(currentAprendizId, 10);
+        syncReporteCamposToServer([{ aprendiz_id: aprendizId, campos: formData }])
+            .then(function () {
+                showNotification('Datos guardados correctamente', 'success');
+                closePopup();
+            })
+            .catch(function (err) {
+                console.error(err);
+                showNotification('Guardado local OK, pero falló la sincronización con el servidor.', 'error');
+            });
     }
 
     function showNotification(message, type = 'success') {

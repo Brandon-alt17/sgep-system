@@ -1,93 +1,6 @@
 <script src="<?= e(APP_BASE_PATH) ?>/js/drawer-editar.js"></script>
 <?php require __DIR__ . '/drawer-editar.php'; ?>
 
-<!-- Agregar script para manejar la exportación con datos de localStorage -->
-<script>
-// Función para obtener los datos del localStorage y agregarlos a la tabla antes de exportar
-function prepareExportData() {
-    if (typeof window.exportToExcelWithLocalData === 'function') {
-        const exportData = window.exportToExcelWithLocalData();
-        
-        // Actualizar la tabla con los datos de localStorage antes de exportar
-        document.querySelectorAll('tr[data-id]').forEach(row => {
-            const aprendizId = row.dataset.id;
-            const savedData = localStorage.getItem(`formulario_${aprendizId}`);
-            if (savedData) {
-                try {
-                    const data = JSON.parse(savedData);
-                    updateTableRowForExport(row, data);
-                } catch(e) {
-                    console.error('Error:', e);
-                }
-            }
-        });
-        
-        return true;
-    }
-    return false;
-}
-
-// Función para actualizar la tabla específicamente para exportación
-function updateTableRowForExport(row, data) {
-    // Mapeo de columnas (basado en la estructura de tu tabla)
-    const columnMapping = {
-        'doc_gfpi_165': 34,
-        'doc_momento_1': 35,
-        'doc_bitacora_1': 36,
-        'doc_bitacora_2': 37,
-        'doc_bitacora_3': 38,
-        'doc_bitacora_4': 39,
-        'doc_bitacora_5': 40,
-        'doc_bitacora_6': 41,
-        'doc_momento_final': 42,
-        'cert_doc_identidad': 43,
-        'cert_paz_salvo': 44,
-        'cert_gfpi_023': 45,
-        'cert_bitacoras': 46,
-        'cert_cumplimiento': 47,
-        'cert_ape': 48,
-        'cert_carnet': 49,
-        'fecha_entrega': 51,
-        'estado_aprendiz': 52,
-        'observaciones': 53,
-        'cambio_modalidad': 32,
-        'observaciones_novedad': 33,
-        'reingreso': 31
-    };
-    
-    const cells = row.querySelectorAll('td');
-    
-    for (const [key, colIndex] of Object.entries(columnMapping)) {
-        if (data[key] !== undefined && cells[colIndex]) {
-            if (key === 'reingreso') {
-                cells[colIndex].innerHTML = data[key] ? 'Sí' : 'No';
-            } else if (key === 'doc_gfpi_165' || key === 'doc_momento_1' || key === 'doc_bitacora_1' || 
-                       key === 'doc_bitacora_2' || key === 'doc_bitacora_3' || key === 'doc_bitacora_4' || 
-                       key === 'doc_bitacora_5' || key === 'doc_bitacora_6' || key === 'doc_momento_final' ||
-                       key === 'cert_doc_identidad' || key === 'cert_paz_salvo' || key === 'cert_gfpi_023' ||
-                       key === 'cert_bitacoras' || key === 'cert_cumplimiento' || key === 'cert_ape' || key === 'cert_carnet') {
-                cells[colIndex].innerHTML = data[key] ? 'X' : '—';
-            } else {
-                cells[colIndex].innerHTML = data[key] || '—';
-            }
-        }
-    }
-}
-
-// Interceptar el clic en el botón de exportar para incluir datos de localStorage
-document.addEventListener('DOMContentLoaded', function() {
-    const exportBtn = document.querySelector('a[href*="exportar"]');
-    if (exportBtn) {
-        exportBtn.addEventListener('click', function(e) {
-            prepareExportData();
-            // Dar tiempo para que se actualice la tabla
-            setTimeout(() => {
-                // El enlace se abrirá normalmente después de este pequeño delay
-            }, 100);
-        });
-    }
-});
-</script>
 
 <!-- CONTENEDOR PRINCIPAL CON ANCHO FIJO Y OVERFLOW ESCONDIDO -->
 <div class="w-full overflow-x-hidden" style="max-width: 100vw;">
@@ -151,7 +64,14 @@ document.addEventListener('DOMContentLoaded', function() {
         $exportUrl = APP_BASE_PATH . '/reportes/exportar'
             . ($exportQuery === [] ? '' : '?' . http_build_query($exportQuery));
         ?>
-        <a href="<?= e($exportUrl) ?>" class="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium px-4 h-10 rounded-lg transition-colors" id="exportBtn">
+        <a
+            href="<?= e($exportUrl) ?>"
+            class="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium px-4 h-10 rounded-lg transition-colors"
+            id="exportBtn"
+            data-download-link
+            data-download-before="prepareExportData"
+            data-download-label="Exportando reporte maestro"
+        >
             Exportar a Excel
         </a>
     </form>
@@ -187,13 +107,13 @@ document.addEventListener('DOMContentLoaded', function() {
         </div>
     </div>
 
-    <!-- TABLA CON SCROLL HORIZONTAL -->
-    <div class="bg-white border border-gray-200 rounded-2xl">
-        <div style="overflow-x: auto; overflow-y: visible; width: 100%;">
-            <table style="min-width: 2800px; width: 100%; border-collapse: collapse;" class="text-xs">
+    <!-- SOLO LA TABLA SE DESPLAZA HORIZONTALMENTE -->
+    <div class="bg-white border border-gray-200 rounded-2xl overflow-hidden" data-reporte-maestro-root>
+        <div class="reporte-maestro-table-scroll" data-reporte-table-scroll>
+            <table style="min-width: 2800px; width: 100%; border-collapse: collapse;" class="text-xs" data-reporte-table>
                 <thead>
                     <tr>
-                        <th colspan="10" style="padding: 10px 8px; text-align: center; font-weight: 600; border: 1px solid #e5e7eb; background: #f3f4f6;">Aprendices y grupos</th>
+                        <th colspan="11" style="padding: 10px 8px; text-align: center; font-weight: 600; border: 1px solid #e5e7eb; background: #f3f4f6;">Aprendices y grupos</th>
                         <th colspan="5" style="padding: 10px 8px; text-align: center; font-weight: 600; border: 1px solid #e5e7eb; background: #f3e8ff;">Reglamento</th>
                         <th colspan="8" style="padding: 10px 8px; text-align: center; font-weight: 600; border: 1px solid #e5e7eb; background: #dbeafe;">Información del aprendiz</th>
                         <th colspan="12" style="padding: 10px 8px; text-align: center; font-weight: 600; border: 1px solid #e5e7eb; background: #ccfbf1;">Información de la etapa productiva</th>
@@ -203,6 +123,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     </tr>
                     <tr style="background: #f9fafb;">
                         <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">#</th>
+                        <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;"># por grupo</th>
                         <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">Ficha</th>
                         <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">Cód. programa</th>
                         <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">Programa</th>
@@ -266,11 +187,13 @@ document.addEventListener('DOMContentLoaded', function() {
                     <?php foreach ($rows as $index => $a): ?>
                         <tr 
                             class="cursor-pointer hover:bg-gray-50 transition apprentice-row" 
-                            data-id="<?= $a['identificacion'] ?? $a['num_aprendiz'] ?? '' ?>"
+                            data-id="<?= (int) ($a['id'] ?? 0) ?>"
+                            data-identificacion="<?= e((string) ($a['identificacion'] ?? '')) ?>"
                             data-nombre="<?= htmlspecialchars($a['nombre'] ?? '') ?>"
                             data-index="<?= $index ?>"
                         >                        
                             <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;"><?= $a['num_aprendiz'] ?? '' ?></td>
+                            <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap; text-align: center;"><?= e((string) ($a['num_por_grupo'] ?? '')) ?></td>
                             <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;"><?= $a['ficha'] ?? '' ?></td>
                             <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;"><?= $a['codigo_programa'] ?? '' ?></td>
                             <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap; max-width: 150px; overflow: hidden; text-overflow: ellipsis;"><?= $a['programa_formacion'] ?? '' ?></td>
@@ -336,16 +259,76 @@ document.addEventListener('DOMContentLoaded', function() {
                 </tbody>
             </table>
         </div>
+        <div class="reporte-maestro-hscroll-bar is-hidden" data-reporte-hscroll-bar aria-hidden="true">
+            <div class="reporte-maestro-hscroll-spacer" data-reporte-hscroll-spacer></div>
+        </div>
     </div>
 </div>
 </div>
 </div>
 
 <script>
-// Script adicional para asegurar que los datos de localStorage se carguen después de que la tabla esté lista
-document.addEventListener('DOMContentLoaded', function() {
-    // Pequeño delay para asegurar que drawer-editar.js ya se haya ejecutado
-    setTimeout(function() {
+(function () {
+  var tableScroll = document.querySelector("[data-reporte-table-scroll]");
+  var hScrollBar = document.querySelector("[data-reporte-hscroll-bar]");
+  var hScrollSpacer = document.querySelector("[data-reporte-hscroll-spacer]");
+  var main = document.querySelector("main");
+  if (!tableScroll || !hScrollBar || !hScrollSpacer || !main) return;
+
+  var syncing = false;
+
+  var syncScroll = function (source, target) {
+    if (syncing) return;
+    syncing = true;
+    target.scrollLeft = source.scrollLeft;
+    syncing = false;
+  };
+
+  var updateGeometry = function () {
+    var mainRect = main.getBoundingClientRect();
+    hScrollBar.style.left = mainRect.left + "px";
+    hScrollBar.style.width = mainRect.width + "px";
+    hScrollBar.style.bottom = Math.max(0, window.innerHeight - mainRect.bottom) + "px";
+  };
+
+  var updateBar = function () {
+    var table = tableScroll.querySelector("[data-reporte-table]");
+    var scrollWidth = table ? table.offsetWidth : tableScroll.scrollWidth;
+    hScrollSpacer.style.width = scrollWidth + "px";
+    updateGeometry();
+
+    var tableRect = tableScroll.getBoundingClientRect();
+    var mainRect = main.getBoundingClientRect();
+    var tableVisible = tableRect.bottom > mainRect.top && tableRect.top < mainRect.bottom;
+    var needsScroll = scrollWidth > tableScroll.clientWidth + 1;
+    hScrollBar.classList.toggle("is-hidden", !tableVisible || !needsScroll);
+  };
+
+  tableScroll.addEventListener("scroll", function () {
+    syncScroll(tableScroll, hScrollBar);
+  });
+  hScrollBar.addEventListener("scroll", function () {
+    syncScroll(hScrollBar, tableScroll);
+  });
+
+  main.addEventListener("scroll", updateBar, { passive: true });
+  window.addEventListener("scroll", updateBar, { passive: true });
+  window.addEventListener("resize", updateBar);
+
+  if (typeof ResizeObserver !== "undefined") {
+    var ro = new ResizeObserver(updateBar);
+    ro.observe(tableScroll);
+    var table = tableScroll.querySelector("[data-reporte-table]");
+    if (table) ro.observe(table);
+    ro.observe(main);
+  }
+
+  updateBar();
+})();
+</script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    setTimeout(function () {
         if (typeof loadAllTableData === 'function') {
             loadAllTableData();
         } else if (window.loadAllTableData) {

@@ -8,9 +8,13 @@ $info = (array) ($info ?? []);
 $exportMomentos = (array) ($export_momentos ?? []);
 $infoFaltantes = (int) ($info_faltantes_count ?? 0);
 $errorKey = (string) ($error ?? '');
+$pdfAvailable = (bool) ($pdf_available ?? true);
+$pdfAvailabilityMessage = (string) ($pdf_availability_message ?? '');
 $errorMsg = match ($errorKey) {
     'sin_partes' => 'Seleccione al menos un bloque a incluir en el documento.',
     'id_aprendiz' => 'Indique un aprendiz válido para exportar.',
+    'pdf_libreoffice' => 'La exportación PDF requiere LibreOffice en este equipo. Use Word (.docx) o pida al administrador que instale LibreOffice.',
+    'pdf_convert_failed' => 'LibreOffice no pudo convertir el documento a PDF. Pruebe con Word (.docx) o contacte al administrador.',
     'export_failed' => 'No se pudo generar el archivo. Si eligió PDF, pruebe con Word o contacte al administrador.',
     default => $errorKey !== '' ? 'No se pudo completar la solicitud. Inténtelo de nuevo.' : '',
 };
@@ -40,7 +44,13 @@ $rowClass = 'flex gap-3 py-2.5';
         </div>
     <?php endif; ?>
 
-    <form method="post" action="<?= e(APP_BASE_PATH) ?>/documentos/generar" class="flex w-full max-w-none flex-col gap-6">
+    <form
+        method="post"
+        action="<?= e(APP_BASE_PATH) ?>/documentos/generar"
+        class="flex w-full max-w-none flex-col gap-6"
+        data-download-form
+        data-download-label="Generando formato GFPI-F-023"
+    >
         <input type="hidden" name="aprendiz_id" value="<?= $aprendizId ?>">
 
         <?php
@@ -64,7 +74,8 @@ $rowClass = 'flex gap-3 py-2.5';
 
         <section class="<?= $card ?> w-full !p-6">
             <h3 class="m-0 text-left text-base font-semibold text-app-text">Seleccionar documentos a incluir</h3>
-            <p class="m-0 mt-2 text-left text-xs text-app-muted">Marque las plantillas que desea unir en un solo documento.</p>
+            <p class="m-0 mt-2 text-left text-xs text-app-muted">Por defecto se incluyen todos los bloques del formato. Desmarque los que no desee exportar.</p>
+            <p id="export-partes-resumen" class="m-0 mt-2 text-left text-xs font-medium text-app-text" aria-live="polite"></p>
             <ul class="m-0 mt-4 list-none divide-y divide-app-border border-t border-app-border p-0 text-left">
                 <li class="<?= e($rowClass) ?>">
                     <input id="parte-info" type="checkbox" name="partes[]" value="info" checked class="<?= e($chkClass) ?>">
@@ -89,16 +100,19 @@ $rowClass = 'flex gap-3 py-2.5';
                     $suffix = trim((string) ($m['status_suffix'] ?? ''));
                     $isPlaceholderTipo = str_starts_with((string) ($m['checkbox_value'] ?? ''), 'momento_tipo:');
                     $isPendiente = $isPlaceholderTipo || str_contains(strtolower($suffix), 'no iniciado');
+                    $momentoUncheckedHint = $isPlaceholderTipo
+                        ? ' — marque la casilla para incluir este bloque en la descarga'
+                        : '';
                     $lineaMomento = str_replace('—', ' - ', (string) $m['label']);
                     $momentoLabelClass = $docLabelClass . ($isPendiente
                         ? ' peer-checked:[&_.doc-status]:text-app-muted'
                         : ' peer-checked:[&_.doc-status]:text-emerald-700');
                     ?>
                     <li class="<?= e($rowClass) ?>">
-                        <input id="parte-<?= e($parteInputId) ?>" type="checkbox" name="partes[]" value="<?= e((string) $m['checkbox_value']) ?>"<?= $isPlaceholderTipo ? '' : ' checked' ?> class="<?= e($chkClass) ?>">
+                        <input id="parte-<?= e($parteInputId) ?>" type="checkbox" name="partes[]" value="<?= e((string) $m['checkbox_value']) ?>" checked class="<?= e($chkClass) ?>">
                         <label for="parte-<?= e($parteInputId) ?>" class="<?= e($momentoLabelClass) ?>">
                             <span class="doc-title font-medium"><?= e($lineaMomento) ?></span>
-                            <span class="doc-status"><?= e($suffix !== '' ? ' ' . $suffix : ' (sin estado)') ?></span>
+                            <span class="doc-status"><?= e($suffix !== '' ? ' ' . $suffix : ' (sin estado)') ?><?= e($momentoUncheckedHint) ?></span>
                         </label>
                     </li>
                 <?php endforeach; ?>
@@ -107,7 +121,11 @@ $rowClass = 'flex gap-3 py-2.5';
 
         <section class="<?= $card ?> w-full !p-6 text-left">
             <h3 class="m-0 text-left text-base font-semibold text-app-text">Formato de exportación</h3>
-            <p class="m-0 mt-2 text-sm text-app-muted">El PDF intenta primero con <strong class="font-medium text-app-text">LibreOffice</strong> en el servidor (misma lógica que abrir el Word y exportar a PDF). Si no está disponible, se usa un segundo motor; en ese caso pueden notarse diferencias menores en tablas o márgenes.</p>
+            <?php if ($pdfAvailable): ?>
+                <p class="m-0 mt-2 text-sm text-app-muted">El PDF se genera con <strong class="font-medium text-app-text">LibreOffice</strong> en este equipo (equivalente a abrir el Word y exportar a PDF).</p>
+            <?php else: ?>
+                <p class="m-0 mt-2 rounded-lg border border-amber-500/70 bg-amber-100 px-3 py-2.5 text-sm font-medium text-amber-950"><?= e($pdfAvailabilityMessage !== '' ? $pdfAvailabilityMessage : 'La exportación PDF no está disponible en este equipo.') ?></p>
+            <?php endif; ?>
             <fieldset class="m-0 mt-4 space-y-2 border-0 p-0">
                 <legend class="sr-only">Formato de archivo</legend>
                 <?php $radioFmt = 'mt-0.5 h-4 w-4 shrink-0 border-app-borderControlStrong text-app-accent focus:outline-none focus:ring-0 focus:ring-offset-0'; ?>
@@ -115,9 +133,9 @@ $rowClass = 'flex gap-3 py-2.5';
                     <input type="radio" name="formato" value="docx" checked class="<?= e($radioFmt) ?>">
                     <span>Microsoft Word (.docx)</span>
                 </label>
-                <label class="flex cursor-pointer items-start gap-3 text-left text-sm text-app-text">
-                    <input type="radio" name="formato" value="pdf" class="<?= e($radioFmt) ?>">
-                    <span>PDF (.pdf)</span>
+                <label class="flex items-start gap-3 text-left text-sm <?= $pdfAvailable ? 'cursor-pointer text-app-text' : 'cursor-not-allowed text-app-muted' ?>">
+                    <input type="radio" name="formato" value="pdf" class="<?= e($radioFmt) ?>"<?= $pdfAvailable ? '' : ' disabled' ?>>
+                    <span>PDF (.pdf)<?= $pdfAvailable ? '' : ' — no disponible sin LibreOffice' ?></span>
                 </label>
             </fieldset>
         </section>
@@ -127,3 +145,28 @@ $rowClass = 'flex gap-3 py-2.5';
             Generar y descargar
         </button>
     </form>
+    <script>
+    (function () {
+        var form = document.querySelector('[data-download-form][action*="documentos/generar"]');
+        if (!form) return;
+        var resumen = document.getElementById('export-partes-resumen');
+        function updateResumen() {
+            if (!resumen) return;
+            var checked = form.querySelectorAll('input[name="partes[]"]:checked');
+            if (!checked.length) {
+                resumen.textContent = 'Ningún bloque seleccionado.';
+                return;
+            }
+            var labels = [];
+            checked.forEach(function (input) {
+                var label = form.querySelector('label[for="' + input.id + '"] .doc-title');
+                labels.push(label ? label.textContent.trim() : input.value);
+            });
+            resumen.textContent = 'Se incluirán ' + checked.length + ' bloque(s): ' + labels.join(', ') + '.';
+        }
+        form.querySelectorAll('input[name="partes[]"]').forEach(function (input) {
+            input.addEventListener('change', updateResumen);
+        });
+        updateResumen();
+    })();
+    </script>

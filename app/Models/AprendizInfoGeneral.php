@@ -81,6 +81,23 @@ class AprendizInfoGeneral
         Database::connection()->prepare($sql)->execute($row);
     }
 
+    public static function presentaDiscapacidadEnPost(array $data): bool
+    {
+        return trim((string) ($data['presenta_discapacidad'] ?? '')) !== '';
+    }
+
+    /** Valor para `aprendices.tipo_asistencia` al guardar el F-023 (null = sin discapacidad o sin dato). */
+    public static function tipoAsistenciaAprendizFromPost(array $data): ?string
+    {
+        if (!self::presentaDiscapacidadEnPost($data)) {
+            return null;
+        }
+
+        $tipo = trim((string) ($data['asistencia_tipo'] ?? ''));
+
+        return $tipo === '' ? null : $tipo;
+    }
+
     private static function bindableRow(array $data): array
     {
         $nullableString = static function (mixed $value): ?string {
@@ -93,6 +110,12 @@ class AprendizInfoGeneral
 
             return $iso === '' ? null : $iso;
         };
+
+        if (!self::presentaDiscapacidadEnPost($data)) {
+            $data['asistencia_nombre'] = '';
+            $data['asistencia_tipo'] = '';
+            $data['asistencia_contacto'] = '';
+        }
 
         return [
             'regional' => $nullableString($data['regional'] ?? null),

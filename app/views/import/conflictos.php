@@ -28,8 +28,8 @@ $conflictsAlertBadge = $conflictsAlertUrgente
         <span class="inline-flex h-3.5 w-3.5 [&_svg]:h-3.5 [&_svg]:w-3.5"><?= ui_icon('arrow') ?></span>
     </a>
     <div class="mb-3 flex min-w-0 flex-1 flex-col gap-2 pl-4">
-        <h2 class="m-0 cursor-default select-none text-2xl font-semibold text-app-text">Conflictos de importación</h2>
-        <p class="m-0 cursor-default select-none text-sm text-app-muted">Elija por aprendiz si conserva el dato actual o el del archivo importado.</p>
+        <h2 class="m-0 cursor-default text-2xl font-semibold text-app-text">Conflictos de importación</h2>
+        <p class="m-0 cursor-default text-sm text-app-muted">Elija por aprendiz si conserva el dato actual o el del archivo importado.</p>
         <?php if ($importReturnUrl !== ''): ?>
             <?php partial('components/back_link_text', [
                 'url' => $importReturnUrl,
@@ -42,7 +42,7 @@ $conflictsAlertBadge = $conflictsAlertUrgente
 
 <?php if ($conflictsCount > 0): ?>
     <section class="<?= e($conflictsAlertSection) ?>" id="import-conflicts-alert">
-        <p class="m-0 flex cursor-default select-none items-center gap-2 text-sm font-semibold <?= e($conflictsAlertFg) ?>">
+        <p class="m-0 flex cursor-default items-center gap-2 text-sm font-semibold <?= e($conflictsAlertFg) ?>">
             <span class="inline-flex h-4 w-4 [&_svg]:h-4 [&_svg]:w-4 <?= e($conflictsAlertFg) ?>"><?= ui_icon('circle-alert') ?></span>
             Hay <span id="import-conflicts-count" class="<?= e($conflictsAlertBadge) ?>"><?= e((string) $conflictsCount) ?></span> aprendices con conflictos sin resolver.
         </p>

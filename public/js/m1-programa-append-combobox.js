@@ -4,8 +4,27 @@
  * Runs after app.js combobox init; listens to hidden [data-combobox-value] change.
  */
 (function () {
+  function normalizeSentenceCase(text) {
+    text = (text || "").toString().trim().replace(/\s+/g, " ");
+    if (!text) return "";
+    text = text.toLocaleLowerCase("es");
+    return text.replace(/(^|[.!?]+\s+)(\p{L})/gu, function (_, sep, letter) {
+      return sep + letter.toLocaleUpperCase("es");
+    });
+  }
+
+  function normalizeCommaListSentenceCase(text) {
+    text = (text || "").toString().trim();
+    if (!text) return "";
+    return text
+      .split(/\s*,\s*/)
+      .map(normalizeSentenceCase)
+      .filter(Boolean)
+      .join(", ");
+  }
+
   function appendCommaSeparated(textarea, piece) {
-    piece = (piece || "").toString().trim();
+    piece = normalizeSentenceCase(piece);
     if (!piece || !textarea) return;
     var max = parseInt(textarea.getAttribute("maxlength") || "0", 10) || 0;
     var cur = (textarea.value || "").trim();
@@ -42,6 +61,17 @@
       if (!v) return;
       appendCommaSeparated(textarea, v);
       resetComboboxUi(root);
+    });
+  });
+
+  document.querySelectorAll("#momento-m1-competencias, #momento-m1-resultados").forEach(function (textarea) {
+    if (!(textarea instanceof HTMLTextAreaElement)) return;
+    textarea.addEventListener("blur", function () {
+      var normalized = normalizeCommaListSentenceCase(textarea.value);
+      if (normalized !== textarea.value) {
+        textarea.value = normalized;
+        textarea.dispatchEvent(new Event("input", { bubbles: true }));
+      }
     });
   });
 })();

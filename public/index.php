@@ -23,9 +23,7 @@ if (class_exists(Dotenv::class) && is_readable(BASE_PATH . '/.env')) {
 require BASE_PATH . '/config/app.php';
 
 set_exception_handler(static function (Throwable $e): void {
-    http_response_code(500);
-    log_error($e->getMessage() . ' @ ' . $e->getFile() . ':' . $e->getLine());
-    echo 'Error interno del servidor.';
+    app_handle_exception($e);
 });
 
 require BASE_PATH . '/router.php';

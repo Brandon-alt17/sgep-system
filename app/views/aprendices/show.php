@@ -82,7 +82,7 @@
                 infoRow('Documento', $documentoDisplay, 'id-card');
                 infoRow('Teléfono', $aprendiz['telefono'] ?? '', 'phone');
                 infoRow('Email personal', $aprendiz['correo_personal'] ?? '', 'mail');
-                infoRow('Email institucional', $aprendiz['correo_institucional'] ?? '', 'mail');
+                infoRow('Correo institucional', $aprendiz['correo_institucional'] ?? '', 'mail');
                 infoRow('Dirección', $aprendiz['direccion_domicilio'] ?? '', 'map-pin');
                 infoRow('Alternativa etapa productiva', $aprendiz['alternativa_ep'] ?? '', 'briefcase');
                 infoRow('Programa de formación', $aprendiz['programa_nombre'] ?? '', 'graduation-cap');
@@ -105,18 +105,23 @@
         <div class="md:col-span-2 space-y-6">
             <!-- 🏢 EMPRESA -->
             <section class="<?= e($cardPaddedClass) ?>">
+                <?php
+                $empresaCardTitulo = trim((string) ($aprendiz['empresa_nombre'] ?? ''));
+                if ($empresaCardTitulo === '') {
+                    $empresaCardTitulo = 'Sin empresa co-formadora';
+                }
+                ?>
                 <div class="flex mb-6">
                     <h2 class="flex items-center gap-2 text-lg font-semibold text-gray-900">
-                        <span class=" text-app-link [&_svg]:w-5 [&_svg]:h-5">
+                        <span class="text-app-link [&_svg]:w-5 [&_svg]:h-5">
                             <?= ui_icon('building') ?>
                         </span>
-                        Empresa co-formadora
+                        <?= e($empresaCardTitulo) ?>
                     </h2>
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm mt-3">
                     <?php
-                    infoRow('Razón social', $aprendiz['empresa_nombre'] ?? '');
                     infoRow('NIT', $aprendiz['nit'] ?? '');
                     infoRow('Dirección', $aprendiz['direccion'] ?? '');
                     infoRow('Supervisor', $aprendiz['nombre_jefe'] ?? '');
@@ -200,11 +205,17 @@
 
 <?php
 $pageToast = $pageToast ?? null;
-if (is_array($pageToast) && trim((string) ($pageToast['message'] ?? '')) !== ''):
-    partial('components/toast', [
-        'message' => (string) $pageToast['message'],
-        'variant' => (string) ($pageToast['variant'] ?? 'success'),
-        'positionClass' => 'bottom-6 left-4 right-4 z-[65] max-w-none sm:bottom-6 sm:left-auto sm:right-6 sm:max-w-sm',
-    ]);
-endif;
+$toastMessage = '';
+$toastVariant = 'success';
+if (is_array($pageToast) && trim((string) ($pageToast['message'] ?? '')) !== '') {
+    $toastMessage = (string) $pageToast['message'];
+    $toastVariant = (string) ($pageToast['variant'] ?? 'success');
+}
+partial('components/toast', [
+    'message' => $toastMessage,
+    'variant' => $toastVariant,
+    'toastRootId' => 'aprendiz-page-toast',
+    'positionClass' => 'bottom-6 left-4 right-4 z-[65] max-w-none sm:bottom-6 sm:left-auto sm:right-6 sm:max-w-sm',
+]);
 ?>
+<script src="<?= e(APP_BASE_PATH) ?>/js/ui-toast.js"></script>

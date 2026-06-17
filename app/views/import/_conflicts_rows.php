@@ -29,9 +29,9 @@ $emptyMessage = trim((string) ($emptyMessage ?? 'No hay aprendices con conflicto
             tabindex="0"
             role="button"
         >
-            <td class="<?= e($tdClasses) ?> px-5 py-4 pl-6 align-middle select-none"><?= e($conflictName !== '' ? $conflictName : '—') ?></td>
-            <td class="<?= e($tdClasses) ?> px-5 py-4 align-middle select-none"><?= e($conflictDoc !== '' ? $conflictDoc : '—') ?></td>
-            <td class="<?= e($tdClasses) ?> px-5 py-4 align-middle select-none">
+            <td class="<?= e($tdClasses) ?> px-5 py-4 pl-6 align-middle"><?= e($conflictName !== '' ? $conflictName : '—') ?></td>
+            <td class="<?= e($tdClasses) ?> px-5 py-4 align-middle"><?= e($conflictDoc !== '' ? $conflictDoc : '—') ?></td>
+            <td class="<?= e($tdClasses) ?> px-5 py-4 align-middle">
                 <span class="inline-flex items-center rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-xs font-semibold text-rose-700">
                     <?= e((string) $conflictCount) ?> <?= $conflictCount === 1 ? 'conflicto' : 'conflictos' ?>
                 </span>

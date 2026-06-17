@@ -7,7 +7,6 @@ namespace App\Exports;
 use App\Services\ReporteMaestroData;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\IOFactory;
-use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 use RuntimeException;
 
@@ -76,13 +75,14 @@ class ReporteMaestroExport
 
         $lastDataRow = $excelRow - 1;
         if ($lastDataRow >= $firstDataRow) {
-            $this->extendRowStyles(
+            $this->applyDataRowStyles(
                 $sheet,
                 $firstDataRow,
                 $lastDataRow,
                 $styleSourceRow,
                 $styleRangeEnd,
-                $styleHighlightEnd
+                $styleHighlightEnd,
+                $clearLetters
             );
         }
 
@@ -106,40 +106,49 @@ class ReporteMaestroExport
 
         for ($row = $firstDataRow; $row <= $highestRow; $row++) {
             foreach ($columnLetters as $letter) {
-                $sheet->setCellValue($letter . $row, null);
+                $coord = $letter . $row;
+                $sheet->setCellValue($coord, null);
+                $sheet->getCell($coord)->setHyperlink(null);
             }
         }
     }
 
-    private function extendRowStyles(
+    /**
+     * Unifica estilo de todas las filas de datos y elimina hipervínculos vacíos de la plantilla.
+     *
+     * @param list<string> $columnLetters
+     */
+    private function applyDataRowStyles(
         Worksheet $sheet,
         int $firstDataRow,
         int $lastDataRow,
         int $styleSourceRow,
         string $styleRangeEnd,
-        string $styleHighlightEnd
+        string $styleHighlightEnd,
+        array $columnLetters
     ): void {
-        $lastTemplateStyledRow = $this->detectLastStyledDataRow($sheet, $firstDataRow, $styleSourceRow);
-        if ($lastDataRow <= $lastTemplateStyledRow) {
-            return;
-        }
-
         $highlightSource = 'A' . $styleSourceRow . ':' . $styleHighlightEnd . $styleSourceRow;
         $bodyStartCol = $this->nextColumnLetter($styleHighlightEnd);
         $bodySource = $bodyStartCol . $styleSourceRow . ':' . $styleRangeEnd . $styleSourceRow;
         $sourceHeight = $sheet->getRowDimension($styleSourceRow)->getRowHeight();
 
-        for ($row = $lastTemplateStyledRow + 1; $row <= $lastDataRow; $row++) {
-            $sheet->duplicateStyle(
-                $sheet->getStyle($highlightSource),
-                'A' . $row . ':' . $styleHighlightEnd . $row
-            );
-            $sheet->duplicateStyle(
-                $sheet->getStyle($bodySource),
-                $bodyStartCol . $row . ':' . $styleRangeEnd . $row
-            );
-            if ($sourceHeight >= 0) {
-                $sheet->getRowDimension($row)->setRowHeight($sourceHeight);
+        for ($row = $firstDataRow; $row <= $lastDataRow; $row++) {
+            if ($row !== $styleSourceRow) {
+                $sheet->duplicateStyle(
+                    $sheet->getStyle($highlightSource),
+                    'A' . $row . ':' . $styleHighlightEnd . $row
+                );
+                $sheet->duplicateStyle(
+                    $sheet->getStyle($bodySource),
+                    $bodyStartCol . $row . ':' . $styleRangeEnd . $row
+                );
+                if ($sourceHeight >= 0) {
+                    $sheet->getRowDimension($row)->setRowHeight($sourceHeight);
+                }
+            }
+
+            foreach ($columnLetters as $letter) {
+                $sheet->getCell($letter . $row)->setHyperlink(null);
             }
         }
     }
@@ -149,39 +158,6 @@ class ReporteMaestroExport
         $index = Coordinate::columnIndexFromString($column);
 
         return Coordinate::stringFromColumnIndex($index + 1);
-    }
-
-    private function detectLastStyledDataRow(
-        Worksheet $sheet,
-        int $firstDataRow,
-        int $styleSourceRow
-    ): int {
-        $referenceArgb = strtoupper(
-            (string) $sheet->getStyle('A' . $styleSourceRow)->getFill()->getStartColor()->getARGB()
-        );
-        $hasReferenceFill = $referenceArgb !== ''
-            && $referenceArgb !== 'FFFFFFFF'
-            && $referenceArgb !== '00000000'
-            && $sheet->getStyle('A' . $styleSourceRow)->getFill()->getFillType() !== Fill::FILL_NONE;
-
-        $scanLimit = max($firstDataRow, (int) $sheet->getHighestRow());
-        $lastStyled = $firstDataRow - 1;
-
-        for ($row = $firstDataRow; $row <= $scanLimit; $row++) {
-            $fillType = $sheet->getStyle('A' . $row)->getFill()->getFillType();
-            if ($fillType === Fill::FILL_NONE) {
-                break;
-            }
-
-            $argb = strtoupper((string) $sheet->getStyle('A' . $row)->getFill()->getStartColor()->getARGB());
-            if ($hasReferenceFill && $argb !== $referenceArgb) {
-                break;
-            }
-
-            $lastStyled = $row;
-        }
-
-        return max($lastStyled, $firstDataRow - 1);
     }
 
     public static function downloadFilename(): string

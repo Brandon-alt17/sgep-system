@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use App\Helpers\Database;
+use App\Helpers\Normalizer;
 use App\Models\Aprendiz;
 use App\Models\Momento;
 use App\Models\ProgramaContenido;
@@ -16,8 +17,14 @@ class MomentoController
     public function create(): void
     {
         $aprendizId = (int) ($_GET['aprendiz_id'] ?? 0);
+        if ($aprendizId <= 0) {
+            abort_404('/momentos/create');
+        }
         $tipo = $this->normalizeTipo((string) ($_GET['tipo'] ?? 'M1'));
         $aprendiz = Aprendiz::findById($aprendizId);
+        if ($aprendiz === null) {
+            abort_404('/momentos/create?aprendiz_id=' . $aprendizId);
+        }
         $momentoExistente = $aprendiz ? Momento::findOneByAprendizTipo($aprendizId, $tipo) : null;
         $factoresExistentes = [];
         if ($momentoExistente !== null) {
@@ -28,7 +35,7 @@ class MomentoController
             $programaContenido = ProgramaContenido::competenciasConResultados((int) $aprendiz['programa_id']);
         }
 
-        $defaultMomento = $this->buildDefaultMomentoData($aprendiz ?? [], $tipo, $momentoExistente, $programaContenido);
+        $defaultMomento = $this->buildDefaultMomentoData($aprendiz, $tipo, $momentoExistente, $programaContenido);
         $limites = require base_path('config/f023_limites.php');
         $modoEdicion = $momentoExistente !== null;
         $accion = APP_BASE_PATH . ($modoEdicion ? '/momentos/update' : '/momentos/store');
@@ -68,6 +75,9 @@ class MomentoController
     public function store(): void
     {
         $aprendizId = (int) ($_POST['aprendiz_id'] ?? 0);
+        if ($aprendizId <= 0 || Aprendiz::findById($aprendizId) === null) {
+            abort_404('/momentos/store');
+        }
         $tipo = $this->normalizeTipo((string) ($_POST['tipo'] ?? ''));
         $_POST['tipo'] = $tipo;
         $_POST = $this->normalizeMomentoDateFields($_POST);
@@ -139,7 +149,8 @@ class MomentoController
             redirect(APP_BASE_PATH . '/aprendices/show?id=' . $aprendizId . '&toast=momento_guardado');
         } catch (\Throwable $e) {
             $pdo->rollBack();
-            throw $e;
+            log_error('Momento store: ' . $e->getMessage());
+            redirect(APP_BASE_PATH . '/aprendices/show?id=' . $aprendizId);
         }
     }
 
@@ -147,6 +158,13 @@ class MomentoController
     {
         $id = (int) ($_POST['id'] ?? 0);
         $aprendizId = (int) ($_POST['aprendiz_id'] ?? 0);
+        if ($id <= 0 || $aprendizId <= 0) {
+            redirect(APP_BASE_PATH . '/aprendices');
+        }
+        $momentoRow = Momento::findById($id);
+        if ($momentoRow === null || (int) ($momentoRow['aprendiz_id'] ?? 0) !== $aprendizId) {
+            redirect(APP_BASE_PATH . '/aprendices/show?id=' . max(0, $aprendizId));
+        }
         $_POST = $this->normalizeMomentoDateFields($_POST);
         $limites = require base_path('config/f023_limites.php');
         $_POST = $this->applyTextLimits($_POST, $limites);
@@ -196,11 +214,12 @@ class MomentoController
                     ]);
             }
             $pdo->commit();
+            redirect(APP_BASE_PATH . '/aprendices/show?id=' . $aprendizId . '&toast=momento_actualizado');
         } catch (\Throwable $e) {
             $pdo->rollBack();
-            throw $e;
+            log_error('Momento update: ' . $e->getMessage());
+            redirect(APP_BASE_PATH . '/aprendices/show?id=' . $aprendizId);
         }
-        redirect(APP_BASE_PATH . '/aprendices/show?id=' . $aprendizId . '&toast=momento_actualizado');
     }
 
     /** @param array<string,mixed> $post @return array<string,mixed> */
@@ -235,7 +254,7 @@ class MomentoController
     private function buildDefaultMomentoData(array $aprendiz, string $tipo, ?array $momentoExistente, array $programaContenido): array
     {
         if ($momentoExistente !== null) {
-            return $momentoExistente;
+            return $this->normalizeMomentoM1TextFields($momentoExistente);
         }
 
         $primerResultado = '';
@@ -259,8 +278,8 @@ class MomentoController
             'fecha_diligenciamiento' => date('Y-m-d'),
             'modalidad_diligenciamiento' => '',
             'numero_visitas_realizadas' => null,
-            'm1_competencias' => $primerCompetencia,
-            'm1_resultados' => $primerResultado,
+            'm1_competencias' => Normalizer::normalizeCommaListSentenceCase($primerCompetencia),
+            'm1_resultados' => Normalizer::normalizeCommaListSentenceCase($primerResultado),
             'm1_actividades' => '',
             'm1_evidencias' => '',
             'm1_observaciones_adicionales' => '',
@@ -309,6 +328,9 @@ class MomentoController
                 $data[$field] = '';
                 continue;
             }
+            if (in_array($field, ['m1_competencias', 'm1_resultados'], true)) {
+                $value = Normalizer::normalizeCommaListSentenceCase($value);
+            }
             $data[$field] = mb_substr($value, 0, $limit);
         }
 
@@ -320,6 +342,19 @@ class MomentoController
             $data['factores'][$idx]['observacion'] = $obs === ''
                 ? ''
                 : mb_substr($obs, 0, (int) ($limites['compromisos'] ?? 450));
+        }
+
+        return $data;
+    }
+
+    /** @param array<string,mixed> $data */
+    private function normalizeMomentoM1TextFields(array $data): array
+    {
+        foreach (['m1_competencias', 'm1_resultados'] as $field) {
+            if (!array_key_exists($field, $data)) {
+                continue;
+            }
+            $data[$field] = Normalizer::normalizeCommaListSentenceCase(trim((string) ($data[$field] ?? '')));
         }
 
         return $data;

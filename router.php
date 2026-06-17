@@ -31,6 +31,7 @@ $routes = [
     ['GET', '/aprendices/create', [AprendizController::class, 'create']],
     ['POST', '/aprendices', [AprendizController::class, 'store']],
     ['GET', '/aprendices/show', [AprendizController::class, 'show']],
+    ['GET', '/aprendices/jefes-por-empresa', [AprendizController::class, 'jefesPorEmpresa']],
     ['POST', '/aprendices/update', [AprendizController::class, 'update']],
     ['POST', '/aprendices/update-visitas', [AprendizController::class, 'updateVisitas']],
     ['GET', '/momentos/create', [MomentoController::class, 'create']],
@@ -42,6 +43,7 @@ $routes = [
     ['POST', '/documentos/info', [DocumentoController::class, 'saveInfo']],
     ['GET', '/reportes/maestro', [ReporteController::class, 'index']],
     ['POST', '/reportes/update', [ReporteController::class, 'update']],
+    ['POST', '/reportes/sync', [ReporteController::class, 'sync']],
     ['GET', '/reportes/exportar', [ReporteController::class, 'export']],
     ['GET', '/catalogo/programas', [CatalogoController::class, 'programas']],
     ['GET', '/catalogo/programas/pendientes', [CatalogoController::class, 'pendientesPrograma']],
@@ -65,12 +67,20 @@ $routes = [
     ['GET', '/catalogo/empresas/editar', [CatalogoController::class, 'empresasEditar']],
     ['POST', '/catalogo/empresas/actualizar', [CatalogoController::class, 'empresasActualizar']],
     ['POST', '/catalogo/empresas/eliminar', [CatalogoController::class, 'empresasEliminar']],
+    ['POST', '/catalogo/empresas/agregar-jefe', [CatalogoController::class, 'agregarEmpresaJefe']],
+    ['POST', '/catalogo/empresas/actualizar-jefe', [CatalogoController::class, 'actualizarEmpresaJefe']],
+    ['POST', '/catalogo/empresas/eliminar-jefe', [CatalogoController::class, 'eliminarEmpresaJefe']],
 ];
 
 foreach ($routes as [$routeMethod, $routePath, $handler]) {
     if ($method === $routeMethod && $uri === $routePath) {
         [$class, $action] = $handler;
-        (new $class())->{$action}();
+        try {
+            (new $class())->{$action}();
+        } catch (Throwable $e) {
+            app_handle_exception($e);
+        }
+
         return;
     }
 }
