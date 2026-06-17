@@ -82,7 +82,7 @@
                 infoRow('Documento', $documentoDisplay, 'id-card');
                 infoRow('Teléfono', $aprendiz['telefono'] ?? '', 'phone');
                 infoRow('Email personal', $aprendiz['correo_personal'] ?? '', 'mail');
-                infoRow('Email institucional', $aprendiz['correo_institucional'] ?? '', 'mail');
+                infoRow('Correo institucional', $aprendiz['correo_institucional'] ?? '', 'mail');
                 infoRow('Dirección', $aprendiz['direccion_domicilio'] ?? '', 'map-pin');
                 infoRow('Alternativa etapa productiva', $aprendiz['alternativa_ep'] ?? '', 'briefcase');
                 infoRow('Programa de formación', $aprendiz['programa_nombre'] ?? '', 'graduation-cap');

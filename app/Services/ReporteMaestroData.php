@@ -24,15 +24,26 @@ class ReporteMaestroData
         $ids = array_map(static fn (array $r): int => (int) ($r['id'] ?? 0), $raw);
         $reporteByAprendiz = self::loadReporteCampos($ids);
         $momentosByAprendiz = self::loadMomentosFlags($ids);
+        $raw = self::sortRowsByGrupo($raw);
 
         $out = [];
         $index = 0;
+        $currentFicha = null;
+        $numEnGrupo = 0;
         foreach ($raw as $row) {
             $index++;
+            $ficha = trim((string) ($row['ficha'] ?? ''));
+            if ($ficha !== $currentFicha) {
+                $currentFicha = $ficha;
+                $numEnGrupo = 0;
+            }
+            $numEnGrupo++;
+            $numPorGrupo = $ficha !== '' ? $numEnGrupo : '';
+
             $aprendizId = (int) ($row['id'] ?? 0);
             $rc = $reporteByAprendiz[$aprendizId] ?? [];
             $mom = $momentosByAprendiz[$aprendizId] ?? [];
-            $out[] = self::enrichRow($row, $index, $rc, $mom);
+            $out[] = self::enrichRow($row, $index, $rc, $mom, $numPorGrupo);
         }
 
         return $out;
@@ -109,7 +120,7 @@ class ReporteMaestroData
             $params['programa_id'] = $programaId;
         }
 
-        $sql .= ' ORDER BY a.nombre_completo ASC';
+        $sql .= ' ORDER BY a.ficha ASC, a.nombre_completo ASC';
 
         $stmt = Database::connection()->prepare($sql);
         $stmt->execute($params);
@@ -184,13 +195,50 @@ class ReporteMaestroData
     }
 
     /**
+     * Agrupa aprendices por ficha (grupo) y ordena alfabéticamente dentro de cada grupo.
+     *
+     * @param list<array<string, mixed>> $rows
+     * @return list<array<string, mixed>>
+     */
+    private static function sortRowsByGrupo(array $rows): array
+    {
+        usort($rows, static function (array $a, array $b): int {
+            $fichaA = trim((string) ($a['ficha'] ?? ''));
+            $fichaB = trim((string) ($b['ficha'] ?? ''));
+            if ($fichaA === '' && $fichaB !== '') {
+                return 1;
+            }
+            if ($fichaA !== '' && $fichaB === '') {
+                return -1;
+            }
+            $byFicha = strcmp($fichaA, $fichaB);
+            if ($byFicha !== 0) {
+                return $byFicha;
+            }
+
+            return strcmp(
+                (string) ($a['nombre_completo'] ?? ''),
+                (string) ($b['nombre_completo'] ?? '')
+            );
+        });
+
+        return $rows;
+    }
+
+    /**
      * @param array<string, mixed> $row
      * @param array<string, string> $rc
      * @param array{M1?: bool, M2?: bool, M3?: bool} $mom
+     * @param int|string $numPorGrupo
      * @return array<string, mixed>
      */
-    private static function enrichRow(array $row, int $index, array $rc, array $mom): array
-    {
+    private static function enrichRow(
+        array $row,
+        int $index,
+        array $rc,
+        array $mom,
+        int|string $numPorGrupo
+    ): array {
         $aprendizId = (int) ($row['id'] ?? 0);
         $hasM1 = !empty($mom['M1']);
         $hasM2 = !empty($mom['M2']);
@@ -214,7 +262,7 @@ class ReporteMaestroData
         $enriched = [
             'id' => $aprendizId,
             'num_aprendiz' => $index,
-            'num_por_grupo' => self::rc($rc, 'num_por_grupo'),
+            'num_por_grupo' => $numPorGrupo === '' ? '' : (string) $numPorGrupo,
             'ficha' => trim((string) ($row['ficha'] ?? '')),
             'programa_formacion' => trim((string) ($row['programa_formacion'] ?? '')),
             'codigo_programa' => trim((string) ($row['codigo_programa'] ?? '')),

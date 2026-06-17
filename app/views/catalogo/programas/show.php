@@ -70,7 +70,7 @@ $errors = (array) ($errors ?? []);
         <div data-inline-view>
             <div class="flex items-start gap-2">
                 <div>
-                    <h3 class="m-0 cursor-default select-none text-2xl font-semibold text-app-text"><?= e($programName) ?></h3>
+                    <h3 class="m-0 cursor-default text-2xl font-semibold text-app-text"><?= e($programName) ?></h3>
                     <p class="mt-1 text-sm text-app-muted">Código: <?= e($programCode !== '' ? $programCode : 'No detectado') ?></p>
                 </div>
                 <button type="button" class="<?= e(ui_button_icon_classes()) ?>" data-inline-edit-open aria-label="Editar título del programa">

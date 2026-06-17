@@ -36,7 +36,7 @@ $ta = e(ui_input_classes()) . ' min-w-0 max-w-full min-h-24 resize-y py-2 leadin
 $m1CompetenciaComboboxOptions = [];
 $m1ResultadoComboboxOptions = [];
 foreach ($programaContenido as $comp) {
-    $nom = trim((string) ($comp['nombre'] ?? ''));
+    $nom = \App\Helpers\Normalizer::normalizeSentenceCase(trim((string) ($comp['nombre'] ?? '')));
     if ($nom !== '') {
         $m1CompetenciaComboboxOptions[] = [
             'value' => $nom,
@@ -45,7 +45,7 @@ foreach ($programaContenido as $comp) {
         ];
     }
     foreach ((array) ($comp['resultados'] ?? []) as $resultado) {
-        $desc = trim((string) ($resultado['descripcion'] ?? ''));
+        $desc = \App\Helpers\Normalizer::normalizeSentenceCase(trim((string) ($resultado['descripcion'] ?? '')));
         if ($desc === '') {
             continue;
         }

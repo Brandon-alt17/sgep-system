@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use App\Helpers\Database;
+use App\Helpers\Normalizer;
 use App\Models\Aprendiz;
 use App\Models\Momento;
 use App\Models\ProgramaContenido;
@@ -253,7 +254,7 @@ class MomentoController
     private function buildDefaultMomentoData(array $aprendiz, string $tipo, ?array $momentoExistente, array $programaContenido): array
     {
         if ($momentoExistente !== null) {
-            return $momentoExistente;
+            return $this->normalizeMomentoM1TextFields($momentoExistente);
         }
 
         $primerResultado = '';
@@ -277,8 +278,8 @@ class MomentoController
             'fecha_diligenciamiento' => date('Y-m-d'),
             'modalidad_diligenciamiento' => '',
             'numero_visitas_realizadas' => null,
-            'm1_competencias' => $primerCompetencia,
-            'm1_resultados' => $primerResultado,
+            'm1_competencias' => Normalizer::normalizeCommaListSentenceCase($primerCompetencia),
+            'm1_resultados' => Normalizer::normalizeCommaListSentenceCase($primerResultado),
             'm1_actividades' => '',
             'm1_evidencias' => '',
             'm1_observaciones_adicionales' => '',
@@ -327,6 +328,9 @@ class MomentoController
                 $data[$field] = '';
                 continue;
             }
+            if (in_array($field, ['m1_competencias', 'm1_resultados'], true)) {
+                $value = Normalizer::normalizeCommaListSentenceCase($value);
+            }
             $data[$field] = mb_substr($value, 0, $limit);
         }
 
@@ -338,6 +342,19 @@ class MomentoController
             $data['factores'][$idx]['observacion'] = $obs === ''
                 ? ''
                 : mb_substr($obs, 0, (int) ($limites['compromisos'] ?? 450));
+        }
+
+        return $data;
+    }
+
+    /** @param array<string,mixed> $data */
+    private function normalizeMomentoM1TextFields(array $data): array
+    {
+        foreach (['m1_competencias', 'm1_resultados'] as $field) {
+            if (!array_key_exists($field, $data)) {
+                continue;
+            }
+            $data[$field] = Normalizer::normalizeCommaListSentenceCase(trim((string) ($data[$field] ?? '')));
         }
 
         return $data;

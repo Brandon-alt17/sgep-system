@@ -102,17 +102,25 @@ final class F023M3TemplateMacroInjector
 
     private static function ensureFactorTableBorders(string $xml): string
     {
-        $start = strpos($xml, 'Factores Técnicos');
-        if ($start === false) {
+        $pos = strpos($xml, 'Factores Técnicos');
+        if ($pos === false) {
             return $xml;
         }
 
-        $end = strrpos($xml, '</w:tbl>');
-        if ($end === false || $end <= $start) {
+        $tblStart = strrpos(substr($xml, 0, $pos), '<w:tbl');
+        if ($tblStart === false) {
             return $xml;
         }
 
-        $chunk = substr($xml, $start, $end - $start);
+        $actitudinalPos = strpos($xml, 'Factores Actitudinales', $pos);
+        $searchFrom = $actitudinalPos !== false ? $actitudinalPos : $pos;
+        $tblEnd = strpos($xml, '</w:tbl>', $searchFrom);
+        if ($tblEnd === false) {
+            return $xml;
+        }
+        $tblEnd += strlen('</w:tbl>');
+
+        $chunk = substr($xml, $tblStart, $tblEnd - $tblStart);
         $bordered = str_replace('<w:tcBorders></w:tcBorders>', self::CELL_BORDERS, $chunk);
         $bordered = str_replace(
             '<w:tblBorders></w:tblBorders>',
@@ -131,7 +139,7 @@ final class F023M3TemplateMacroInjector
             return $xml;
         }
 
-        return substr($xml, 0, $start) . $bordered . substr($xml, $end);
+        return substr($xml, 0, $tblStart) . $bordered . substr($xml, $tblEnd);
     }
 
     private static function normalizeFooterParagraphs(string $xml): string

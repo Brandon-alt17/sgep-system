@@ -74,7 +74,7 @@ final class F023InfoTemplateMacroInjector
      *
      * @throws \RuntimeException
      */
-    public static function patchToTemp(string $sourceDocx): string
+    public static function patchToTemp(string $sourceDocx, bool $preserveTemplateHeader = true): string
     {
         if (!is_file($sourceDocx)) {
             throw new \RuntimeException('Plantilla info no encontrada.');
@@ -113,7 +113,7 @@ final class F023InfoTemplateMacroInjector
             );
         }
 
-        $xml = self::compactLayoutForSinglePage($xml);
+        $xml = self::compactLayoutForSinglePage($xml, $preserveTemplateHeader);
 
         if ($zip->locateName(self::DOCUMENT_XML) !== false) {
             $zip->deleteName(self::DOCUMENT_XML);
@@ -129,15 +129,210 @@ final class F023InfoTemplateMacroInjector
     }
 
     /**
-     * Ajusta el layout para exportación: tabla de encabezado en flujo normal (LibreOffice/PDF)
-     * y una sola página cuando solo se exporta info.
+     * Reaplica layout tras PhpWord TemplateProcessor::saveAs() (el XML definitivo del segmento).
      */
-    private static function compactLayoutForSinglePage(string $xml): string
+    public static function applyLayoutToSavedDocx(string $docxPath, bool $preserveTemplateHeader = true): void
+    {
+        $zip = new ZipArchive();
+        if ($zip->open($docxPath) !== true) {
+            throw new \RuntimeException('No se pudo abrir el segmento info para layout.');
+        }
+
+        $xml = $zip->getFromName(self::DOCUMENT_XML);
+        if ($xml === false || $xml === '') {
+            $zip->close();
+            throw new \RuntimeException('document.xml ilegible en segmento info guardado.');
+        }
+
+        $xml = self::compactLayoutForSinglePage($xml, $preserveTemplateHeader);
+
+        if ($zip->locateName(self::DOCUMENT_XML) !== false) {
+            $zip->deleteName(self::DOCUMENT_XML);
+        }
+        if (!$zip->addFromString(self::DOCUMENT_XML, $xml)) {
+            $zip->close();
+            throw new \RuntimeException('No se pudo escribir layout en segmento info.');
+        }
+        $zip->close();
+    }
+
+    /**
+     * Ajustes de layout del cuerpo. Con cabecera de plantilla se conserva w:tblpPr (centrado
+     * y ancho originales); solo se corrigen saltos de sección extra.
+     */
+    private static function compactLayoutForSinglePage(string $xml, bool $preserveTemplateHeader = true): string
+    {
+        if (!preg_match('#^(.*?<w:body>\s*)(.*?)(\s*</w:body>.*)$#s', $xml, $m)) {
+            return $preserveTemplateHeader ? $xml : self::compactLayoutLegacy($xml);
+        }
+
+        $inner = $m[2];
+        $sectPos = strrpos($inner, '<w:sectPr');
+        if ($sectPos === false) {
+            return $preserveTemplateHeader ? $xml : self::compactLayoutLegacy($xml);
+        }
+
+        $content = substr($inner, 0, $sectPos);
+        $sectPr = substr($inner, $sectPos);
+
+        $stripped = preg_replace('/<w:sectPr\b[^>]*>.*?<\/w:sectPr>/s', '', $content);
+        $content = is_string($stripped) ? trim($stripped) : trim($content);
+
+        if (!$preserveTemplateHeader) {
+            $content = self::inlineFirstHeaderTableInFragment($content);
+            $content = self::insertGapAfterFirstHeaderTableInFragment($content);
+            $content = self::normalizeOuterParagraphSpacing($content);
+        }
+
+        $content = self::stripTrailingEmptyParagraphsBeforeSectPr($content);
+
+        $sectPr = preg_replace('/<w:type\s+w:val="nextPage"\s*\/>/', '<w:type w:val="continuous" />', $sectPr) ?? $sectPr;
+        $sectPr = preg_replace('/<w:titlePg\s*\/>/', '', $sectPr) ?? $sectPr;
+
+        return $m[1] . $content . $sectPr . $m[3];
+    }
+
+    /** @deprecated inline path kept for callers on full document strings without body split */
+    private static function compactLayoutLegacy(string $xml): string
     {
         $xml = self::inlineFirstHeaderTable($xml);
         $xml = self::insertGapAfterFirstHeaderTable($xml);
 
         return self::removeTrailingEmptyParagraphAfterLastTable($xml);
+    }
+
+    private static function inlineFirstHeaderTableInFragment(string $content): string
+    {
+        $firstTbl = strpos($content, '<w:tbl');
+        if ($firstTbl === false) {
+            return $content;
+        }
+
+        return substr($content, 0, $firstTbl)
+            . self::inlineFirstHeaderTableTblPr(substr($content, $firstTbl));
+    }
+
+    private static function inlineFirstHeaderTableTblPr(string $fromFirstTbl): string
+    {
+        $tblPrStart = strpos($fromFirstTbl, '<w:tblPr>');
+        $tblPrEnd = strpos($fromFirstTbl, '</w:tblPr>', $tblPrStart !== false ? $tblPrStart : 0);
+        if ($tblPrStart === false || $tblPrEnd === false) {
+            return $fromFirstTbl;
+        }
+
+        $tblPrEnd += strlen('</w:tblPr>');
+        $tblPr = substr($fromFirstTbl, $tblPrStart, $tblPrEnd - $tblPrStart);
+        $centered = self::centerHeaderTableTblPr($tblPr);
+        if ($centered === null) {
+            return $fromFirstTbl;
+        }
+
+        return substr($fromFirstTbl, 0, $tblPrStart) . $centered . substr($fromFirstTbl, $tblPrEnd);
+    }
+
+    /**
+     * Cabecera PROCESO: quita flotante, centra y reduce ancho fijo para que w:jc surta efecto.
+     *
+     * @return string|null tblPr modificado, o null si no hubo cambios
+     */
+    private static function centerHeaderTableTblPr(string $tblPr): ?string
+    {
+        $changed = false;
+        $inlined = preg_replace('/<w:tblpPr\b[^>]*\/>/', '', $tblPr, -1, $tblpRemoved);
+        if (!is_string($inlined)) {
+            return null;
+        }
+        if ($tblpRemoved > 0) {
+            $changed = true;
+        }
+
+        if (!str_contains($inlined, '<w:jc')) {
+            $next = preg_replace('/(<w:tblPr>)/', '$1<w:jc w:val="center"/>', $inlined, 1);
+            if (is_string($next) && $next !== $inlined) {
+                $inlined = $next;
+                $changed = true;
+            }
+        }
+
+        if (
+            preg_match('/<w:tblW\b[^>]*w:w="(\d+)"[^>]*w:type="dxa"/', $inlined, $width)
+            && (int) $width[1] >= 8500
+        ) {
+            $next = preg_replace(
+                '/<w:tblW\b[^>]*\/>/',
+                '<w:tblW w:w="5000" w:type="pct"/>',
+                $inlined,
+                1
+            );
+            if (is_string($next) && $next !== $inlined) {
+                $inlined = $next;
+                $changed = true;
+            }
+        }
+
+        $next = preg_replace('/<w:tblInd\b[^>]*\/>/', '', $inlined);
+        if (is_string($next) && $next !== $inlined) {
+            $inlined = $next;
+            $changed = true;
+        }
+
+        return $changed ? $inlined : null;
+    }
+
+    private static function insertGapAfterFirstHeaderTableInFragment(string $content): string
+    {
+        $firstTableEnd = strpos($content, '</w:tbl>');
+        if ($firstTableEnd === false) {
+            return $content;
+        }
+        $firstTableEnd += strlen('</w:tbl>');
+        $secondTableStart = strpos($content, '<w:tbl', $firstTableEnd);
+        if ($secondTableStart === false) {
+            return $content;
+        }
+
+        $between = substr($content, $firstTableEnd, $secondTableStart - $firstTableEnd);
+        $between = preg_replace('/<w:p\b[^>]*>(?:(?!<\/w:p>).)*<\/w:p>/s', '', $between) ?? $between;
+
+        $spacer = '<w:p><w:pPr><w:spacing w:before="0" w:after="80"/></w:pPr></w:p>';
+
+        return substr($content, 0, $firstTableEnd) . $between . $spacer . substr($content, $secondTableStart);
+    }
+
+    private static function normalizeOuterParagraphSpacing(string $content): string
+    {
+        $content = str_replace('<w:spacing />', '<w:spacing w:after="0" w:before="0"/>', $content);
+        $content = preg_replace(
+            '/<w:spacing\b[^>]*\bw:after="160"[^>]*\/>/',
+            '<w:spacing w:after="0" w:before="0"/>',
+            $content
+        ) ?? $content;
+
+        return preg_replace(
+            '/<w:spacing\b[^>]*\bw:before="(\d{3,})"[^>]*\/>/',
+            '<w:spacing w:after="0" w:before="0"/>',
+            $content
+        ) ?? $content;
+    }
+
+    private static function stripTrailingEmptyParagraphsBeforeSectPr(string $content): string
+    {
+        while (preg_match('/(<w:p\b[^>]*>(?:(?!<\/w:p>).)*<\/w:p>)\s*$/s', $content, $m)) {
+            $para = $m[1];
+            if (
+                str_contains($para, '${')
+                || preg_match('/<w:t[^>]*>[^<\s][^<]*<\/w:t>/', $para)
+                || str_contains($para, '<w:drawing>')
+                || str_contains($para, '<w:pict>')
+                || str_contains($para, '<w:pageBreakBefore')
+            ) {
+                break;
+            }
+
+            $content = substr($content, 0, -strlen($m[0]));
+        }
+
+        return rtrim($content);
     }
 
     /**
@@ -159,18 +354,12 @@ final class F023InfoTemplateMacroInjector
 
         $tblPrEnd += strlen('</w:tblPr>');
         $tblPr = substr($xml, $tblPrStart, $tblPrEnd - $tblPrStart);
-        $inlined = preg_replace('/<w:tblpPr\b[^>]*\/>/', '', $tblPr);
-        if (!is_string($inlined)) {
-            return $xml;
-        }
-        if (!str_contains($inlined, '<w:jc')) {
-            $inlined = preg_replace('/(<w:tblPr>)/', '$1<w:jc w:val="center"/>', $inlined, 1) ?? $inlined;
-        }
-        if ($inlined === $tblPr && !str_contains($tblPr, '<w:tblpPr')) {
+        $centered = self::centerHeaderTableTblPr($tblPr);
+        if ($centered === null) {
             return $xml;
         }
 
-        return substr($xml, 0, $tblPrStart) . $inlined . substr($xml, $tblPrEnd);
+        return substr($xml, 0, $tblPrStart) . $centered . substr($xml, $tblPrEnd);
     }
 
     /** Párrafo espaciador entre la cabecera PROCESO y la tabla «Información general». */
@@ -189,7 +378,7 @@ final class F023InfoTemplateMacroInjector
         $between = substr($xml, $firstTableEnd, $secondTableStart - $firstTableEnd);
         $between = preg_replace('/<w:p\b[^>]*>(?:(?!<\/w:p>).)*<\/w:p>/s', '', $between) ?? $between;
 
-        $spacer = '<w:p><w:pPr><w:spacing w:before="0" w:after="200"/></w:pPr></w:p>';
+        $spacer = '<w:p><w:pPr><w:spacing w:before="0" w:after="80"/></w:pPr></w:p>';
 
         return substr($xml, 0, $firstTableEnd) . $between . $spacer . substr($xml, $secondTableStart);
     }

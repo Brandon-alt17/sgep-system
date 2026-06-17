@@ -113,7 +113,7 @@
             <table style="min-width: 2800px; width: 100%; border-collapse: collapse;" class="text-xs" data-reporte-table>
                 <thead>
                     <tr>
-                        <th colspan="10" style="padding: 10px 8px; text-align: center; font-weight: 600; border: 1px solid #e5e7eb; background: #f3f4f6;">Aprendices y grupos</th>
+                        <th colspan="11" style="padding: 10px 8px; text-align: center; font-weight: 600; border: 1px solid #e5e7eb; background: #f3f4f6;">Aprendices y grupos</th>
                         <th colspan="5" style="padding: 10px 8px; text-align: center; font-weight: 600; border: 1px solid #e5e7eb; background: #f3e8ff;">Reglamento</th>
                         <th colspan="8" style="padding: 10px 8px; text-align: center; font-weight: 600; border: 1px solid #e5e7eb; background: #dbeafe;">Información del aprendiz</th>
                         <th colspan="12" style="padding: 10px 8px; text-align: center; font-weight: 600; border: 1px solid #e5e7eb; background: #ccfbf1;">Información de la etapa productiva</th>
@@ -123,6 +123,7 @@
                     </tr>
                     <tr style="background: #f9fafb;">
                         <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">#</th>
+                        <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;"># por grupo</th>
                         <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">Ficha</th>
                         <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">Cód. programa</th>
                         <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">Programa</th>
@@ -192,6 +193,7 @@
                             data-index="<?= $index ?>"
                         >                        
                             <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;"><?= $a['num_aprendiz'] ?? '' ?></td>
+                            <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap; text-align: center;"><?= e((string) ($a['num_por_grupo'] ?? '')) ?></td>
                             <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;"><?= $a['ficha'] ?? '' ?></td>
                             <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;"><?= $a['codigo_programa'] ?? '' ?></td>
                             <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap; max-width: 150px; overflow: hidden; text-overflow: ellipsis;"><?= $a['programa_formacion'] ?? '' ?></td>

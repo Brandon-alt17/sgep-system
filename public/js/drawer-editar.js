@@ -19,7 +19,6 @@
     }
 
     function init() {
-        console.log('Inicializando popup...');
         setupEventListeners();
         setupRowClicks();
         loadAllTableData(); // Cargar todos los datos guardados en la tabla al iniciar
@@ -27,14 +26,12 @@
 
     // Función para cargar todos los datos guardados en la tabla al iniciar
     function loadAllTableData() {
-        console.log('Cargando datos guardados...');
         document.querySelectorAll('tr[data-id]').forEach(row => {
             const aprendizId = row.dataset.id;
             const saved = localStorage.getItem(localStorageKeyForRow(row));
             if (saved) {
                 try {
                     const data = JSON.parse(saved);
-                    console.log('Cargando datos para:', aprendizId, data);
                     updateTableRow(row, data);
                 } catch(e) {
                     console.error('Error loading data for row:', e);
@@ -45,8 +42,6 @@
 
     // Función para actualizar una fila específica de la tabla usando clases
     function updateTableRow(row, data) {
-        console.log('Actualizando fila con datos:', data);
-        
         // Mapeo de IDs del formulario a las clases CSS de las celdas
         const classMapping = {
             'doc_gfpi_165': 'doc-status-gfpi-165',
@@ -82,7 +77,6 @@
                         cell.style.color = '';
                         cell.style.fontWeight = '';
                     }
-                    console.log(`Actualizado ${key} en celda .${className}:`, data[key]);
                 } else {
                     console.warn(`No se encontró celda con clase .${className}`);
                 }
@@ -111,7 +105,6 @@
             
             if (reingresoCell) {
                 reingresoCell.innerHTML = data.reingreso ? 'Sí' : 'No';
-                console.log('Actualizado reingreso:', data.reingreso);
             }
         }
         
@@ -121,7 +114,6 @@
             let cambioCell = row.querySelector('td:nth-child(33)'); // Ajusta este índice
             if (cambioCell) {
                 cambioCell.innerHTML = data.cambio_modalidad || '—';
-                console.log('Actualizado cambio modalidad:', data.cambio_modalidad);
             }
         }
         
@@ -130,7 +122,6 @@
             let novedadCell = row.querySelector('td:nth-child(34)'); // Ajusta este índice
             if (novedadCell) {
                 novedadCell.innerHTML = data.observaciones_novedad || '—';
-                console.log('Actualizado observaciones novedad');
             }
         }
         
@@ -139,7 +130,6 @@
             const fechaCell = row.querySelector('.fecha-entrega');
             if (fechaCell) {
                 fechaCell.innerHTML = data.fecha_entrega || '';
-                console.log('Actualizado fecha entrega:', data.fecha_entrega);
             }
         }
         
@@ -148,7 +138,6 @@
             const estadoCell = row.querySelector('.estado-aprendiz');
             if (estadoCell) {
                 estadoCell.innerHTML = data.estado_aprendiz || '';
-                console.log('Actualizado estado aprendiz:', data.estado_aprendiz);
             }
         }
         
@@ -157,7 +146,6 @@
             const obsCell = row.querySelector('.observaciones');
             if (obsCell) {
                 obsCell.innerHTML = data.observaciones || '—';
-                console.log('Actualizado observaciones');
             }
         }
     }
@@ -406,7 +394,6 @@
         document.querySelectorAll('#documentPopup .doc-checkbox').forEach(cb => {
             if (cb.id) {
                 formData[cb.id] = cb.checked;
-                console.log(`Guardando ${cb.id}: ${cb.checked}`);
             }
         });
         
@@ -416,7 +403,6 @@
             const el = document.getElementById(id);
             if (el) {
                 formData[id] = el.value;
-                console.log(`Guardando ${id}: ${el.value}`);
             }
         });
         
@@ -424,7 +410,6 @@
         const reingreso = document.getElementById('reingreso');
         if (reingreso) {
             formData.reingreso = reingreso.checked;
-            console.log(`Guardando reingreso: ${reingreso.checked}`);
         }
         
         localStorage.setItem(`formulario_${currentAprendizId}`, JSON.stringify(formData));

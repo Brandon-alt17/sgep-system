@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Exports;
 
+use App\Helpers\Normalizer;
 use App\Models\Aprendiz;
 use App\Models\AprendizInfoGeneral;
 use App\Models\Empresa;
@@ -82,7 +83,8 @@ class F023Generator
             foreach ($segments as $seg) {
                 $path = (string) $seg['path'];
                 if (!empty($seg['patch_info_macros'])) {
-                    $path = F023InfoTemplateMacroInjector::patchToTemp($path);
+                    $preserveInfoHeader = ($formato === 'docx');
+                    $path = F023InfoTemplateMacroInjector::patchToTemp($path, $preserveInfoHeader);
                     $tempCleanup[] = $path;
                 }
                 if (!empty($seg['patch_m1_macros'])) {
@@ -114,24 +116,48 @@ class F023Generator
                     throw new \RuntimeException('No se pudo preparar segmento .docx.');
                 }
                 $tpl->saveAs($tmpDocx);
+                if (!empty($seg['patch_info_macros'])) {
+                    F023InfoTemplateMacroInjector::applyLayoutToSavedDocx($tmpDocx, $formato === 'docx');
+                }
+                if (!empty($seg['patch_m1_macros'])) {
+                    F023M1TemplateMacroInjector::applyLayoutToSavedDocx($tmpDocx);
+                }
                 $tempCleanup[] = $tmpDocx;
                 $mergeInputs[] = $tmpDocx;
             }
 
-            $out = base_path('storage/documents/F023_' . $aprendizId . '_' . time() . '.docx');
-            $dir = dirname($out);
+            $dir = base_path('storage/documents');
             if (!is_dir($dir)) {
                 mkdir($dir, 0775, true);
             }
 
             if ($formato === 'pdf') {
-                return $this->exportPdfFromSegments($aprendizId, $mergeInputs);
+                $pdfBasename = f023_export_basename(
+                    (string) ($info['nombre_completo'] ?? ''),
+                    (string) ($info['numero_grupo'] ?? ''),
+                    'pdf'
+                );
+
+                $pdfOut = $this->exportPdfFromSegments(
+                    $mergeInputs,
+                    resolve_unique_storage_path($dir, $pdfBasename)
+                );
+                return $pdfOut;
             }
+
+            $out = resolve_unique_storage_path(
+                $dir,
+                f023_export_basename(
+                    (string) ($info['nombre_completo'] ?? ''),
+                    (string) ($info['numero_grupo'] ?? ''),
+                    'docx'
+                )
+            );
 
             F023DocxMerge::mergeInto(
                 $out,
                 $mergeInputs,
-                $this->segmentsIncludeM3($segments),
+                false,
                 $this->m3SegmentMask($segments)
             );
 
@@ -198,6 +224,7 @@ class F023Generator
             return [['path' => $tplDir . $file, 'vars' => $vars, 'patch_m2_macros' => true]];
         }
         if ($tipo === 'M3') {
+            $vars = array_merge($this->m3PlaceholderDefaults(), $vars);
             $out = [];
             foreach ($map['m3_templates'] ?? ['m3_p1.docx', 'm3_p2.docx'] as $rel) {
                 $out[] = [
@@ -211,6 +238,27 @@ class F023Generator
         }
 
         return [];
+    }
+
+    /**
+     * Marcadores M3 (p1 + p2) con valor vacío si no hay fila en BD o el momento sintético no trae datos.
+     *
+     * @return array<string, string>
+     */
+    private function m3PlaceholderDefaults(): array
+    {
+        $out = [
+            'fecha_inicio_etapa' => '',
+            'fecha_fin_etapa' => '',
+            'numero_visitas_realizadas' => '',
+            'enlace_grabacion' => '',
+            'ciudad_diligenciamiento' => '',
+            'fecha_diligenciamiento' => date('d/m/Y'),
+            'm3_marca_presencial' => '___',
+            'm3_marca_virtual' => '___',
+        ];
+
+        return array_merge($out, $this->factorTemplateVars([]));
     }
 
     /**
@@ -266,6 +314,8 @@ class F023Generator
             $s = trim($s);
             if (in_array($k, $dateCols, true)) {
                 $out[$k] = $s === '' ? '' : date_iso_to_dmY($s);
+            } elseif ($k === 'm1_competencias' || $k === 'm1_resultados') {
+                $out[$k] = Normalizer::normalizeCommaListSentenceCase($s);
             } else {
                 $out[$k] = $s;
             }
@@ -379,18 +429,12 @@ class F023Generator
      *
      * @throws \RuntimeException
      */
-    private function exportPdfFromSegments(int $aprendizId, array $segmentDocxPaths): string
+    private function exportPdfFromSegments(array $segmentDocxPaths, string $out): string
     {
         $pdfParts = [];
         try {
             foreach ($segmentDocxPaths as $docxPath) {
                 $pdfParts[] = F023DocxToPdf::convert($docxPath);
-            }
-
-            $out = base_path('storage/documents/F023_' . $aprendizId . '_' . time() . '.pdf');
-            $dir = dirname($out);
-            if (!is_dir($dir)) {
-                mkdir($dir, 0775, true);
             }
 
             F023PdfMerge::merge($pdfParts, $out);

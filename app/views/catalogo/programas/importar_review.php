@@ -41,7 +41,7 @@ foreach ($metaFieldLabels as $metaKey => $metaLabel) {
 ?>
 
 <section class="mt-4">
-    <h3 class="m-0 cursor-default select-none text-2xl font-semibold text-app-text"><?= e($programName) ?></h3>
+    <h3 class="m-0 cursor-default text-2xl font-semibold text-app-text"><?= e($programName) ?></h3>
     <p class="mt-1 text-sm text-app-muted">Código: <?= e($programCode !== '' ? $programCode : 'No detectado') ?></p>
 </section>
 

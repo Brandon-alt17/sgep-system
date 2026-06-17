@@ -98,9 +98,9 @@ $viewLabelCls = 'm-0 text-xs font-medium uppercase tracking-wide text-app-muted'
             Nombre
             <input type="text" name="nombre_contacto2" value="<?= $val('nombre_contacto2') ?>" class="<?= e(ui_input_classes()) ?>">
         </label>
-        <label class="<?= e(ui_label_classes()) ?>">
-            Correo
-            <input type="email" name="correo_contacto2" value="<?= $val('correo_contacto2') ?>" class="<?= e(ui_input_classes()) ?>">
+        <label class="<?= e(ui_label_classes()) ?> min-w-0">
+            Contacto alternativo (correo o teléfono institucional fijo/móvil)
+            <input type="text" name="correo_contacto2" value="<?= $val('correo_contacto2') ?>" class="<?= e(ui_input_classes()) ?>">
         </label>
     </div>
 
@@ -174,14 +174,15 @@ $viewLabelCls = 'm-0 text-xs font-medium uppercase tracking-wide text-app-muted'
                     <p class="<?= e($viewLabelCls) ?>">Correo institucional / organización</p>
                     <input type="email" name="correo_org" value="<?= $val('correo_org') ?>" class="<?= e($editInputCls) ?>">
                 </div>
-                <div>
+                <div class="min-w-0">
                     <p class="<?= e($viewLabelCls) ?>">Contacto alternativo (nombre)</p>
                     <input type="text" name="nombre_contacto2" value="<?= $val('nombre_contacto2') ?>" class="<?= e($editInputCls) ?>">
                 </div>
-                <div>
-                    <p class="<?= e($viewLabelCls) ?>">Contacto alternativo (correo)</p>
-                    <input type="email" name="correo_contacto2" value="<?= $val('correo_contacto2') ?>" class="<?= e($editInputCls) ?>">
+                <div class="min-w-0">
+                    <p class="<?= e($viewLabelCls) ?> normal-case leading-snug">Contacto alternativo (teléfono institucional fijo/móvil)</p>
+                    <input type="text" name="correo_contacto2" value="<?= $val('correo_contacto2') ?>" class="<?= e($editInputCls) ?>">
                 </div>
+           
             </div>
         </div>
     </section>

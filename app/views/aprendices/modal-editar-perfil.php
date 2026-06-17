@@ -304,8 +304,8 @@
                         <input type="email" name="correo_personal" value="<?= e($aprendiz['correo_personal'] ?? '') ?>" class="form-input">
                     </div>
                     <div class="form-field">
-                        <label class="form-label">Email institucional</label>
-                        <input type="email" name="correo_institucional" value="<?= e($aprendiz['correo_institucional'] ?? '') ?>" class="form-input">
+                        <label class="form-label">Correo institucional</label>
+                        <input type="text" name="correo_institucional" value="<?= e($aprendiz['correo_institucional'] ?? '') ?>" class="form-input" placeholder="Correo @soy.sena.edu.co u otro dato de contacto">
                     </div>
                     <div class="form-field">
                         <label class="form-label">Dirección de domicilio</label>

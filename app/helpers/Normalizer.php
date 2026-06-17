@@ -14,9 +14,14 @@ class Normalizer
         if (!empty($row['nombre_completo'])) {
             $row['nombre_completo'] = ucwords(strtolower((string) $row['nombre_completo']));
         }
-        foreach (['correo_personal', 'correo_institucional', 'correo_electronico_personal', 'correo_electronico_institucional'] as $emailKey) {
+        foreach (['correo_personal', 'correo_electronico_personal'] as $emailKey) {
             if (!empty($row[$emailKey])) {
                 $row[$emailKey] = strtolower((string) $row[$emailKey]);
+            }
+        }
+        foreach (['correo_institucional', 'correo_electronico_institucional'] as $textKey) {
+            if (isset($row[$textKey]) && is_string($row[$textKey])) {
+                $row[$textKey] = trim($row[$textKey]);
             }
         }
         if (!empty($row['nit_empresa'])) {
@@ -29,25 +34,12 @@ class Normalizer
     }
 
     /**
-     * Valida correo institucional SENA (@soy.sena.edu.co o subdominio de @sena.edu.co).
-     * Vacío/null se considera válido (campo opcional).
+     * Campo libre: no todos los aprendices tienen correo @sena.edu.co.
+     * Se conserva por compatibilidad con importación y pruebas.
      */
-    public static function isCorreoInstitucionalSenaValid(?string $email): bool
+    public static function isCorreoInstitucionalSenaValid(?string $value): bool
     {
-        if ($email === null) {
-            return true;
-        }
-
-        $normalized = strtolower(trim($email));
-        if ($normalized === '') {
-            return true;
-        }
-
-        if (filter_var($normalized, FILTER_VALIDATE_EMAIL) === false) {
-            return false;
-        }
-
-        return preg_match('/@(?:[\w-]+\.)*sena\.edu\.co$/i', $normalized) === 1;
+        return true;
     }
 
     public static function normalizeProgramaNombre(string $value): string
@@ -106,5 +98,45 @@ class Normalizer
         $v = rtrim($v, '.,;:-');
 
         return trim($v);
+    }
+
+    /** Minúsculas con mayúscula inicial de cada oración (. ! ?). */
+    public static function normalizeSentenceCase(string $text): string
+    {
+        $text = trim(preg_replace('/\s+/u', ' ', $text) ?? $text);
+        if ($text === '') {
+            return '';
+        }
+
+        $lower = mb_strtolower($text, 'UTF-8');
+        $result = preg_replace_callback(
+            '/(^|[.!?]+\s+)(\p{L})/u',
+            static function (array $m): string {
+                return $m[1] . mb_strtoupper($m[2], 'UTF-8');
+            },
+            $lower
+        );
+
+        return is_string($result) ? $result : $lower;
+    }
+
+    /** Lista separada por comas (competencias / RAEs en M1). */
+    public static function normalizeCommaListSentenceCase(string $text): string
+    {
+        $text = trim($text);
+        if ($text === '') {
+            return '';
+        }
+
+        $parts = preg_split('/\s*,\s*/u', $text) ?: [];
+        $normalized = [];
+        foreach ($parts as $part) {
+            $piece = self::normalizeSentenceCase($part);
+            if ($piece !== '') {
+                $normalized[] = $piece;
+            }
+        }
+
+        return implode(', ', $normalized);
     }
 }

@@ -7,19 +7,16 @@ namespace App\Exports;
 /**
  * Une varios .docx F-023 en un solo archivo.
  *
- * Con más de un segmento se incrustan las partes adicionales como w:altChunk (OOXML).
- * Concatenar word/document.xml rompe estilos y tablas; altChunk preserva cada plantilla.
+ * Concatena el cuerpo (word/document.xml) bajo un único w:sectPr del primer segmento,
+ * con saltos de página entre partes. Evita w:altChunk, que en Word/LibreOffice deja
+ * márgenes y anchos de tabla inconsistentes entre secciones.
  */
 final class F023DocxMerge
 {
-    private const AFCHUNK_REL_TYPE = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/aFChunk';
-
-    private const EMBEDDED_DOCX_CONTENT_TYPE = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
-
     /**
      * @param list<string> $docxPaths       rutas absolutas a .docx ya generados
-     * @param bool              $m3CompactLayout ignorado (compatibilidad con llamadas existentes)
-     * @param list<bool>|null   $m3SegmentMask   ignorado
+     * @param bool              $m3CompactLayout compactar espaciado si el export incluye M3
+     * @param list<bool>|null   $m3SegmentMask   máscara por segmento (m3_p1 / m3_p2)
      */
     public static function mergeInto(
         string $targetPath,
@@ -39,14 +36,19 @@ final class F023DocxMerge
             return;
         }
 
-        self::mergeWithAltChunks($targetPath, $docxPaths);
+        self::mergeWithBodyConcatenation($targetPath, $docxPaths, $m3CompactLayout, $m3SegmentMask);
     }
 
     /**
-     * @param list<string> $docxPaths
+     * @param list<string>  $docxPaths
+     * @param list<bool>|null $m3SegmentMask
      */
-    private static function mergeWithAltChunks(string $targetPath, array $docxPaths): void
-    {
+    private static function mergeWithBodyConcatenation(
+        string $targetPath,
+        array $docxPaths,
+        bool $m3CompactLayout,
+        ?array $m3SegmentMask
+    ): void {
         if (!copy($docxPaths[0], $targetPath)) {
             throw new \RuntimeException('No se pudo preparar el archivo de salida.');
         }
@@ -56,36 +58,40 @@ final class F023DocxMerge
         $bodyContent = $firstParts['content'];
         $sectPr = $firstParts['sectPr'];
 
-        $relsPath = 'word/_rels/document.xml.rels';
-        $relsXml = self::readZipEntry($targetPath, $relsPath);
-        $contentTypesXml = self::readZipEntry($targetPath, '[Content_Types].xml');
-        $nextRId = self::maxRelationshipId($relsXml) + 1;
-
-        $insertions = '';
-        $embeddings = [];
+        $mask = $m3SegmentMask ?? array_fill(0, count($docxPaths), false);
+        $usedParaIds = self::collectParaIds($bodyContent);
+        $usedTextIds = self::collectTextIds($bodyContent);
 
         for ($i = 1, $n = count($docxPaths); $i < $n; $i++) {
-            $embedName = 'f023_part_' . $i . '.docx';
-            $embedZipPath = 'word/embeddings/' . $embedName;
-            $embedPartName = '/word/embeddings/' . $embedName;
-            $embedBytes = file_get_contents($docxPaths[$i]);
-            if ($embedBytes === false) {
-                throw new \RuntimeException('No se pudo leer segmento: ' . $docxPaths[$i]);
+            $segmentXml = self::readZipEntry($docxPaths[$i], 'word/document.xml');
+            $segmentParts = self::splitBody($segmentXml);
+            $segmentContent = self::normalizeSegmentForMerge(
+                $segmentParts['content'],
+                (bool) ($mask[$i] ?? false)
+            );
+            $segmentContent = self::remapSegmentOoxmlIds(
+                $segmentContent,
+                $i,
+                $usedParaIds,
+                $usedTextIds
+            );
+
+            if (self::needsPageBreakBeforeSegment($mask, $i, $docxPaths[$i])) {
+                $segmentContent = self::withPageBreakBefore($segmentContent);
+            } else {
+                $segmentContent = '<w:p><w:r><w:br w:type="page"/></w:r></w:p>' . $segmentContent;
             }
 
-            $embeddings[$embedZipPath] = $embedBytes;
-
-            $rId = 'rId' . $nextRId;
-            ++$nextRId;
-
-            $relsXml = self::appendRelationship($relsXml, $rId, self::AFCHUNK_REL_TYPE, 'embeddings/' . $embedName);
-            $contentTypesXml = self::ensureEmbeddedDocxContentType($contentTypesXml, $embedPartName);
-
-            $insertions .= '<w:p><w:r><w:br w:type="page"/></w:r></w:p>';
-            $insertions .= '<w:altChunk r:id="' . $rId . '"/>';
+            $bodyContent .= $segmentContent;
         }
 
-        $newInner = $bodyContent . $insertions . $sectPr;
+        $bodyContent = self::normalizeMergedTableWidths($bodyContent);
+        if ($m3CompactLayout) {
+            $bodyContent = self::applyM3CompactLayout($bodyContent);
+        }
+        $bodyContent = self::deduplicateOoxmlIdsInContent($bodyContent);
+        $bodyContent = self::stripTrailingEmptyParagraphsBeforeSectPr($bodyContent);
+
         $bodyOpen = strpos($firstXml, '<w:body>');
         if ($bodyOpen === false) {
             throw new \RuntimeException('document.xml del primer archivo no contiene w:body.');
@@ -96,65 +102,250 @@ final class F023DocxMerge
         }
 
         $mergedXml = substr($firstXml, 0, $bodyOpen + strlen('<w:body>'))
-            . $newInner
+            . $bodyContent
+            . $sectPr
             . substr($firstXml, $bodyClose);
+
+        self::assertValidMergedDocumentXml($mergedXml);
 
         $zip = new \ZipArchive();
         if ($zip->open($targetPath) !== true) {
             throw new \RuntimeException('No se pudo abrir el zip de salida.');
         }
-
-        foreach ($embeddings as $path => $bytes) {
-            $zip->addFromString($path, $bytes);
+        if ($zip->locateName('word/document.xml') !== false) {
+            $zip->deleteName('word/document.xml');
         }
-        $zip->addFromString('word/document.xml', $mergedXml);
-        $zip->addFromString($relsPath, $relsXml);
-        $zip->addFromString('[Content_Types].xml', $contentTypesXml);
+        if (!$zip->addFromString('word/document.xml', $mergedXml)) {
+            $zip->close();
+            throw new \RuntimeException('No se pudo escribir document.xml fusionado.');
+        }
         $zip->close();
     }
 
-    private static function maxRelationshipId(string $relsXml): int
-    {
-        if (!preg_match_all('/\bId="rId(\d+)"/', $relsXml, $matches)) {
-            return 0;
-        }
-
-        $max = 0;
-        foreach ($matches[1] as $num) {
-            $max = max($max, (int) $num);
-        }
-
-        return $max;
-    }
-
-    private static function appendRelationship(
-        string $relsXml,
-        string $rId,
-        string $type,
-        string $target
+    /**
+     * Cada segmento trae sus propios w14:paraId, wp:docPr y shape id; Word rechaza duplicados.
+     *
+     * @param array<string, true> $usedParaIds
+     * @param array<string, true> $usedTextIds
+     */
+    private static function remapSegmentOoxmlIds(
+        string $content,
+        int $segmentIndex,
+        array &$usedParaIds,
+        array &$usedTextIds
     ): string {
-        $relationship = '<Relationship Id="' . $rId . '" Type="' . $type . '" Target="' . $target . '"/>';
-        $pos = strrpos($relsXml, '</Relationships>');
-        if ($pos === false) {
-            throw new \RuntimeException('document.xml.rels sin cierre </Relationships>.');
+        if ($segmentIndex <= 0) {
+            return $content;
         }
 
-        return substr($relsXml, 0, $pos) . $relationship . substr($relsXml, $pos);
+        $offset = $segmentIndex * 100000;
+
+        preg_match_all('/w14:paraId="([0-9A-Fa-f]{8})"/', $content, $paraMatches);
+        foreach (array_values(array_unique($paraMatches[1] ?? [])) as $old) {
+            $old = (string) $old;
+            $new = self::allocateUniqueHexId($old, $segmentIndex, 'para', $usedParaIds);
+            $content = str_replace(
+                ['w14:paraId="' . $old . '"', 'w14:paraId="' . strtolower($old) . '"'],
+                ['w14:paraId="' . $new . '"', 'w14:paraId="' . $new . '"'],
+                $content
+            );
+        }
+
+        preg_match_all('/w14:textId="([0-9A-Fa-f]{8})"/', $content, $textMatches);
+        foreach (array_values(array_unique($textMatches[1] ?? [])) as $old) {
+            $old = (string) $old;
+            if (strcasecmp($old, '77777777') === 0) {
+                continue;
+            }
+            $new = self::allocateUniqueHexId($old, $segmentIndex, 'text', $usedTextIds);
+            $content = str_replace(
+                ['w14:textId="' . $old . '"', 'w14:textId="' . strtolower($old) . '"'],
+                ['w14:textId="' . $new . '"', 'w14:textId="' . $new . '"'],
+                $content
+            );
+        }
+
+        $content = preg_replace_callback(
+            '/wp:docPr\s+id="(\d+)"/',
+            static fn (array $m): string => 'wp:docPr id="' . ((int) $m[1] + $offset) . '"',
+            $content
+        ) ?? $content;
+
+        $shapeOffset = $segmentIndex * 100;
+        $content = preg_replace_callback(
+            '/id="shape (\d+)"/',
+            static fn (array $m): string => 'id="shape ' . ((int) $m[1] + $shapeOffset) . '"',
+            $content
+        ) ?? $content;
+
+        $content = preg_replace_callback(
+            '/o:spid="_x0000_s(\d+)"/',
+            static fn (array $m): string => 'o:spid="_x0000_s' . ((int) $m[1] + $shapeOffset) . '"',
+            $content
+        ) ?? $content;
+
+        return $content;
     }
 
-    private static function ensureEmbeddedDocxContentType(string $contentTypesXml, string $partName): string
+    /** @return array<string, true> */
+    private static function collectParaIds(string $content): array
     {
-        if (str_contains($contentTypesXml, 'PartName="' . $partName . '"')) {
-            return $contentTypesXml;
+        preg_match_all('/w14:paraId="([0-9A-Fa-f]{8})"/', $content, $matches);
+        $used = [];
+        foreach ($matches[1] ?? [] as $id) {
+            $used[strtoupper($id)] = true;
         }
 
-        $override = '<Override PartName="' . $partName . '" ContentType="' . self::EMBEDDED_DOCX_CONTENT_TYPE . '"/>';
-        $pos = strrpos($contentTypesXml, '</Types>');
-        if ($pos === false) {
-            throw new \RuntimeException('[Content_Types].xml sin cierre </Types>.');
+        return $used;
+    }
+
+    /** @return array<string, true> */
+    private static function collectTextIds(string $content): array
+    {
+        preg_match_all('/w14:textId="([0-9A-Fa-f]{8})"/', $content, $matches);
+        $used = [];
+        foreach ($matches[1] ?? [] as $id) {
+            if (strcasecmp($id, '77777777') === 0) {
+                continue;
+            }
+            $used[strtoupper($id)] = true;
         }
 
-        return substr($contentTypesXml, 0, $pos) . $override . substr($contentTypesXml, $pos);
+        return $used;
+    }
+
+    /**
+     * @param array<string, true> $used
+     */
+    private static function allocateUniqueHexId(
+        string $old,
+        int $segmentIndex,
+        string $kind,
+        array &$used
+    ): string {
+        $attempt = 0;
+        do {
+            $seed = $kind . '|' . $segmentIndex . '|' . $old . '|' . $attempt;
+            $candidate = strtoupper(substr(hash('crc32b', $seed), 0, 8));
+            $attempt++;
+        } while (isset($used[$candidate]) && $attempt < 32);
+
+        if (isset($used[$candidate])) {
+            throw new \RuntimeException('No se pudo asignar un identificador OOXML único al fusionar segmentos.');
+        }
+
+        $used[$candidate] = true;
+
+        return $candidate;
+    }
+
+    /** Corrige w14:paraId / w14:textId repetidos (la plantilla info ya trae algunos). */
+    private static function deduplicateOoxmlIdsInContent(string $content): string
+    {
+        $usedParaIds = [];
+        $content = preg_replace_callback(
+            '/w14:paraId="([0-9A-Fa-f]{8})"/',
+            static function (array $m) use (&$usedParaIds): string {
+                $id = strtoupper($m[1]);
+                if (!isset($usedParaIds[$id])) {
+                    $usedParaIds[$id] = true;
+
+                    return $m[0];
+                }
+
+                $new = self::allocateUniqueHexId($id, 0, 'dedupe-para', $usedParaIds);
+
+                return 'w14:paraId="' . $new . '"';
+            },
+            $content
+        ) ?? $content;
+
+        $usedTextIds = [];
+        $content = preg_replace_callback(
+            '/w14:textId="([0-9A-Fa-f]{8})"/',
+            static function (array $m) use (&$usedTextIds): string {
+                $id = strtoupper($m[1]);
+                if (strcasecmp($id, '77777777') === 0) {
+                    return $m[0];
+                }
+                if (!isset($usedTextIds[$id])) {
+                    $usedTextIds[$id] = true;
+
+                    return $m[0];
+                }
+
+                $new = self::allocateUniqueHexId($id, 0, 'dedupe-text', $usedTextIds);
+
+                return 'w14:textId="' . $new . '"';
+            },
+            $content
+        ) ?? $content;
+
+        return $content;
+    }
+
+    private static function assertValidMergedDocumentXml(string $xml): void
+    {
+        if (!str_contains($xml, '<w:document') || !str_contains($xml, '</w:document>')) {
+            throw new \RuntimeException('document.xml fusionado sin elemento raíz w:document.');
+        }
+
+        libxml_use_internal_errors(true);
+        $dom = new \DOMDocument();
+        if (!$dom->loadXML($xml)) {
+            $detail = libxml_get_errors()[0]->message ?? 'XML inválido';
+            throw new \RuntimeException('document.xml fusionado mal formado: ' . trim($detail));
+        }
+    }
+
+    /**
+     * La plantilla info usa la cabecera PROCESO a ancho fijo (~8943 dxa); los momentos usan ~50 %.
+     * En el documento fusionado unificamos tablas demasiado anchas al mismo criterio centrado.
+     */
+    private static function normalizeMergedTableWidths(string $content): string
+    {
+        $result = '';
+        foreach (self::splitTopLevelSegments($content) as $segment) {
+            if ($segment['type'] !== 'table') {
+                $result .= $segment['content'];
+                continue;
+            }
+
+            $tableXml = $segment['content'];
+            if (preg_match('/<w:tblPr\b[^>]*>.*?<\/w:tblPr>/s', $tableXml, $m)) {
+                $tblPr = $m[0];
+                if (str_contains($tblPr, '<w:tblpPr')) {
+                    $result .= $tableXml;
+                    continue;
+                }
+                if (
+                    preg_match('/<w:tblW\b[^>]*w:w="(\d+)"[^>]*w:type="dxa"/', $tblPr, $width)
+                    && (int) $width[1] >= 8500
+                ) {
+                    $newTblPr = preg_replace(
+                        '/<w:tblW\b[^>]*\/>/',
+                        '<w:tblW w:w="5000" w:type="pct"/>',
+                        $tblPr,
+                        1
+                    );
+                    if (is_string($newTblPr)) {
+                        if (!str_contains($newTblPr, '<w:jc')) {
+                            $newTblPr = preg_replace(
+                                '/(<w:tblPr>)/',
+                                '$1<w:jc w:val="center"/>',
+                                $newTblPr,
+                                1
+                            ) ?? $newTblPr;
+                        }
+                        $tableXml = str_replace($tblPr, $newTblPr, $tableXml);
+                    }
+                }
+            }
+
+            $result .= $tableXml;
+        }
+
+        return $result;
     }
 
     private static function applyM3CompactLayout(string $content): string
@@ -190,9 +381,21 @@ final class F023DocxMerge
             return '';
         }
 
+        $content = self::stripPageBreakBeforeFromLeadingParagraphs($content);
+
         // Segmentos M3 normalizados empiezan en <w:tbl>; el salto va antes del bloque, no dentro de una celda.
         if (str_starts_with(ltrim($content), '<w:tbl')) {
             return '<w:p><w:pPr><w:pageBreakBefore/></w:pPr></w:p>' . $content;
+        }
+
+        // Párrafos de texto antes de la primera tabla (p. ej. aviso legal en M1): un salto suelto evita
+        // marcar ese párrafo con pageBreakBefore y dejar una hoja casi vacía tras info.
+        $firstTable = self::findNextTableOpen($content, 0);
+        if ($firstTable !== false && $firstTable > 0) {
+            $leading = substr($content, 0, $firstTable);
+            if (preg_match('/<w:t[^>]*>[^<\s][^<]*<\/w:t>/', $leading)) {
+                return '<w:p><w:r><w:br w:type="page"/></w:r></w:p>' . $content;
+            }
         }
 
         $pStart = self::findNextParagraphOpen($content, 0);
@@ -228,11 +431,24 @@ final class F023DocxMerge
             . substr($content, $tagEnd + 1);
     }
 
+    /** Quita pageBreakBefore en párrafos previos a la primera tabla (restos de fusión). */
+    private static function stripPageBreakBeforeFromLeadingParagraphs(string $content): string
+    {
+        $firstTable = self::findNextTableOpen($content, 0);
+        if ($firstTable === false || $firstTable === 0) {
+            return $content;
+        }
+
+        $leading = substr($content, 0, $firstTable);
+        $body = substr($content, $firstTable);
+        $leading = preg_replace('/<w:pageBreakBefore\s*\/>/', '', $leading) ?? $leading;
+
+        return $leading . $body;
+    }
+
     private static function normalizeSegmentForMerge(string $content, bool $isM3Segment): string
     {
-        return $isM3Segment
-            ? self::normalizeM3SegmentContent($content)
-            : self::normalizeSegmentContentLight($content);
+        return self::normalizeSegmentContentLight($content);
     }
 
     /** Normalización mínima para info / M1 / M2 y fusiones mixtas (comportamiento previo al fix M3). */
@@ -240,6 +456,7 @@ final class F023DocxMerge
     {
         $content = self::stripEmbeddedSectionProperties($content);
         $content = self::normalizeImplicitSpacing($content);
+        $content = self::stripPageBreakBeforeFromLeadingParagraphs($content);
         $content = self::trimLeadingEmptyParagraphsBeforeFirstTable($content);
         $content = self::trimTrailingEmptyParagraphsAfterLastTable($content);
         $content = self::collapseRedundantParagraphsBeforeFooter($content);

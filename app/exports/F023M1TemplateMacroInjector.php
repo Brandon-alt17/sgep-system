@@ -86,7 +86,7 @@ final class F023M1TemplateMacroInjector
         }
 
         $xml = self::normalizeFooterParagraph($xml);
-        $xml = self::insertSpacerParagraphsBeforeFooter($xml, 3);
+        $xml = self::insertSpacerParagraphsBeforeFooter($xml, 1);
         $xml = self::stripExtraEmptyParasFromConcertacionCells($xml);
         $xml = self::shrinkConcertacionEmptyRowHeights($xml);
         $xml = self::shrinkBottomSectionRowHeights($xml);
@@ -103,6 +103,165 @@ final class F023M1TemplateMacroInjector
         $zip->close();
 
         return $tmpDocx;
+    }
+
+    /**
+     * Aplica layout final tras PhpWord TemplateProcessor::saveAs() (el XML definitivo del segmento).
+     */
+    public static function applyLayoutToSavedDocx(string $docxPath): void
+    {
+        $zip = new ZipArchive();
+        if ($zip->open($docxPath) !== true) {
+            throw new \RuntimeException('No se pudo abrir el segmento M1 para layout.');
+        }
+
+        $xml = $zip->getFromName(self::DOCUMENT_XML);
+        if ($xml === false || $xml === '') {
+            $zip->close();
+            throw new \RuntimeException('document.xml ilegible en segmento M1 guardado.');
+        }
+
+        $xml = self::compactLayoutForSinglePage($xml);
+        $xml = self::removeTrailingEmptyParagraphsAfterFooter($xml);
+
+        if ($zip->locateName(self::DOCUMENT_XML) !== false) {
+            $zip->deleteName(self::DOCUMENT_XML);
+        }
+        if (!$zip->addFromString(self::DOCUMENT_XML, $xml)) {
+            $zip->close();
+            throw new \RuntimeException('No se pudo escribir layout en segmento M1.');
+        }
+        $zip->close();
+    }
+
+    /**
+     * Exportación M1 sola: una página, cabecera PROCESO centrada, sin saltos de sección extra.
+     */
+    private static function compactLayoutForSinglePage(string $xml): string
+    {
+        if (!preg_match('#^(.*?<w:body>\s*)(.*?)(\s*</w:body>.*)$#s', $xml, $m)) {
+            return $xml;
+        }
+
+        $inner = $m[2];
+        $sectPos = strrpos($inner, '<w:sectPr');
+        if ($sectPos === false) {
+            return $xml;
+        }
+
+        $content = substr($inner, 0, $sectPos);
+        $sectPr = substr($inner, $sectPos);
+
+        $stripped = preg_replace('/<w:sectPr\b[^>]*>.*?<\/w:sectPr>/s', '', $content);
+        $content = is_string($stripped) ? trim($stripped) : trim($content);
+
+        $content = self::stripPageBreakBeforeFromLeadingParagraphs($content);
+        $content = self::centerFirstTopLevelTable($content);
+        $content = self::trimLeadingEmptyParagraphsBeforeFirstTable($content);
+        $content = self::removeTrailingEmptyParagraphAfterLastTable($content);
+
+        $sectPr = preg_replace('/<w:type\s+w:val="nextPage"\s*\/>/', '<w:type w:val="continuous" />', $sectPr) ?? $sectPr;
+        $sectPr = preg_replace('/<w:titlePg\s*\/>/', '', $sectPr) ?? $sectPr;
+
+        $result = $m[1] . $content . $sectPr . $m[3];
+
+        return $result;
+    }
+
+    private static function centerFirstTopLevelTable(string $content): string
+    {
+        $tblStart = strpos($content, '<w:tbl');
+        if ($tblStart === false) {
+            return $content;
+        }
+
+        $tblPrStart = strpos($content, '<w:tblPr>', $tblStart);
+        $tblPrEnd = strpos($content, '</w:tblPr>', $tblPrStart !== false ? $tblPrStart : $tblStart);
+        if ($tblPrStart === false || $tblPrEnd === false) {
+            return $content;
+        }
+
+        $tblPrEnd += strlen('</w:tblPr>');
+        $tblPr = substr($content, $tblPrStart, $tblPrEnd - $tblPrStart);
+        if (str_contains($tblPr, '<w:jc')) {
+            return $content;
+        }
+
+        $centered = preg_replace('/(<w:tblPr>)/', '$1<w:jc w:val="center"/>', $tblPr, 1);
+        if (!is_string($centered) || $centered === $tblPr) {
+            return $content;
+        }
+
+        return substr($content, 0, $tblPrStart) . $centered . substr($content, $tblPrEnd);
+    }
+
+    private static function stripPageBreakBeforeFromLeadingParagraphs(string $content): string
+    {
+        $firstTable = strpos($content, '<w:tbl');
+        if ($firstTable === false || $firstTable === 0) {
+            return $content;
+        }
+
+        $leading = substr($content, 0, $firstTable);
+        $body = substr($content, $firstTable);
+        $leading = preg_replace('/<w:pageBreakBefore\s*\/>/', '', $leading) ?? $leading;
+
+        return $leading . $body;
+    }
+
+    private static function trimLeadingEmptyParagraphsBeforeFirstTable(string $content): string
+    {
+        $firstTable = strpos($content, '<w:tbl');
+        if ($firstTable === false || $firstTable === 0) {
+            return $content;
+        }
+
+        $leading = substr($content, 0, $firstTable);
+        $body = substr($content, $firstTable);
+
+        while (preg_match('/^\s*(<w:p\b[^>]*>(?:(?!<\/w:p>).)*<\/w:p>)/s', $leading, $match)) {
+            $paragraph = $match[1];
+            if (
+                str_contains($paragraph, '${')
+                || preg_match('/<w:t[^>]*>[^<\s][^<]*<\/w:t>/', $paragraph)
+                || str_contains($paragraph, '<w:pageBreakBefore')
+            ) {
+                break;
+            }
+
+            $leading = substr($leading, strlen($match[0]));
+        }
+
+        return ltrim($leading) . $body;
+    }
+
+    private static function removeTrailingEmptyParagraphAfterLastTable(string $content): string
+    {
+        $lastTableEnd = strrpos($content, '</w:tbl>');
+        if ($lastTableEnd === false) {
+            return $content;
+        }
+        $lastTableEnd += strlen('</w:tbl>');
+
+        $footerPos = strpos($content, '${ciudad_diligenciamiento}');
+        if ($footerPos === false) {
+            $footerPos = strpos($content, 'Ciudad ');
+        }
+        if ($footerPos === false || $footerPos <= $lastTableEnd) {
+            return $content;
+        }
+
+        $between = substr($content, $lastTableEnd, $footerPos - $lastTableEnd);
+        if (str_contains($between, '${') || preg_match('/<w:t[^>]*>[^<\s][^<]*<\/w:t>/', $between)) {
+            return $content;
+        }
+
+        $collapsed = preg_replace('/<w:p\b[^>]*>(?:(?!<\/w:p>).)*<\/w:p>/s', '', $between) ?? $between;
+        if ($collapsed === $between) {
+            return $content;
+        }
+
+        return substr($content, 0, $lastTableEnd) . $collapsed . substr($content, $footerPos);
     }
 
     private static function normalizeFooterParagraph(string $xml): string

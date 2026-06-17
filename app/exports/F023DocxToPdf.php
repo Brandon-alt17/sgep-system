@@ -176,6 +176,17 @@ final class F023DocxToPdf
             }
         }
 
+        if (PHP_OS_FAMILY === 'Darwin') {
+            foreach ([
+                '/Applications/LibreOffice.app/Contents/MacOS/soffice',
+                '/Applications/LibreOffice.app/Contents/MacOS/libreoffice',
+            ] as $path) {
+                if (self::isUsableBinary($path)) {
+                    return $path;
+                }
+            }
+        }
+
         if (PHP_OS_FAMILY === 'Linux') {
             foreach ([
                 '/usr/bin/libreoffice',

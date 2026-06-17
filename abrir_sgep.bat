@@ -1,7 +1,7 @@
 @echo off
 setlocal
 rem URL por defecto (WAMP en C:\wamp64\www\sgep). Ajuste si cambio APP_URL en .env
-set "SGEP_URL=http://localhost/sgep/public"
+set "SGEP_URL=http://localhost/sgep/"
 
 php --version >nul 2>&1
 if %errorlevel% neq 0 (

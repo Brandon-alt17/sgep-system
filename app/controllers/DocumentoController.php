@@ -133,7 +133,7 @@ class DocumentoController
             ? 'application/pdf'
             : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
         header('Content-Type: ' . $mime);
-        header('Content-Disposition: attachment; filename="' . basename($path) . '"');
+        header('Content-Disposition: ' . content_disposition_attachment(basename($path)));
         readfile($path);
         exit;
     }
@@ -179,44 +179,24 @@ class DocumentoController
         $nombreInstructor = trim((string) ($_POST['nombre_instructor_seguimiento'] ?? ''));
         $telefonoInstructor = trim((string) ($_POST['telefono_instructor_seguimiento'] ?? ''));
         $correoInstructor = trim((string) ($_POST['correo_instructor_seguimiento'] ?? ''));
-        $pdo = Database::connection();
-        $hasCorreoInstructorColumn = false;
-        try {
-            $check = $pdo->query("SHOW COLUMNS FROM aprendices LIKE 'correo_instructor_seguimiento'");
-            $hasCorreoInstructorColumn = $check !== false && (bool) $check->fetch();
-        } catch (\Throwable) {
-            $hasCorreoInstructorColumn = false;
-        }
+        $tipoAsistencia = AprendizInfoGeneral::tipoAsistenciaAprendizFromPost($_POST);
 
-        if ($hasCorreoInstructorColumn) {
-            $pdo->prepare(
-                'UPDATE aprendices
-                 SET
-                    nombre_instructor_seguimiento = :nombre_instructor_seguimiento,
-                    telefono_instructor_seguimiento = :telefono_instructor_seguimiento,
-                    correo_instructor_seguimiento = :correo_instructor_seguimiento,
-                    updated_at = NOW()
-                 WHERE id = :id'
-            )->execute([
-                'id' => $aprendizId,
-                'nombre_instructor_seguimiento' => $nombreInstructor === '' ? null : $nombreInstructor,
-                'telefono_instructor_seguimiento' => $telefonoInstructor === '' ? null : $telefonoInstructor,
-                'correo_instructor_seguimiento' => $correoInstructor === '' ? null : $correoInstructor,
-            ]);
-        } else {
-            $pdo->prepare(
-                'UPDATE aprendices
-                 SET
-                    nombre_instructor_seguimiento = :nombre_instructor_seguimiento,
-                    telefono_instructor_seguimiento = :telefono_instructor_seguimiento,
-                    updated_at = NOW()
-                 WHERE id = :id'
-            )->execute([
-                'id' => $aprendizId,
-                'nombre_instructor_seguimiento' => $nombreInstructor === '' ? null : $nombreInstructor,
-                'telefono_instructor_seguimiento' => $telefonoInstructor === '' ? null : $telefonoInstructor,
-            ]);
-        }
+        Database::connection()->prepare(
+            'UPDATE aprendices
+             SET
+                nombre_instructor_seguimiento = :nombre_instructor_seguimiento,
+                telefono_instructor_seguimiento = :telefono_instructor_seguimiento,
+                correo_instructor_seguimiento = :correo_instructor_seguimiento,
+                tipo_asistencia = :tipo_asistencia,
+                updated_at = NOW()
+             WHERE id = :id'
+        )->execute([
+            'id' => $aprendizId,
+            'nombre_instructor_seguimiento' => $nombreInstructor === '' ? null : $nombreInstructor,
+            'telefono_instructor_seguimiento' => $telefonoInstructor === '' ? null : $telefonoInstructor,
+            'correo_instructor_seguimiento' => $correoInstructor === '' ? null : $correoInstructor,
+            'tipo_asistencia' => $tipoAsistencia,
+        ]);
 
         redirect(APP_BASE_PATH . '/aprendices/show?id=' . $aprendizId . '&toast=info_f023_guardada');
     }

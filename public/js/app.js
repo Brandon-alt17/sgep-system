@@ -1684,9 +1684,19 @@ document.querySelectorAll("[data-jefe-form]").forEach(function (form) {
 
   var parseFilename = function (contentDisposition) {
     if (!contentDisposition) return "descarga";
-    var match = /filename\*?=(?:UTF-8''|")?([^";]+)/i.exec(contentDisposition);
-    if (!match) return "descarga";
-    return decodeURIComponent(match[1].replace(/"/g, ""));
+    var utf8Match = /filename\*=UTF-8''([^;]+)/i.exec(contentDisposition);
+    if (utf8Match) {
+      try {
+        return decodeURIComponent(utf8Match[1].trim());
+      } catch (e) {
+        /* fallback abajo */
+      }
+    }
+    var quotedMatch = /filename="([^"]+)"/i.exec(contentDisposition);
+    if (quotedMatch) return quotedMatch[1];
+    var plainMatch = /filename=([^;]+)/i.exec(contentDisposition);
+    if (plainMatch) return plainMatch[1].trim().replace(/^"|"$/g, "");
+    return "descarga";
   };
 
   var isBinaryDownloadResponse = function (contentType) {
