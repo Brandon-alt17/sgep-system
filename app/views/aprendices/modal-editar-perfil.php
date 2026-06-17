@@ -296,12 +296,12 @@
                         <label class="form-label">Estado</label>
                         <select name="estado" class="form-input">
                             <option value="Pendiente por iniciar" <?= ($aprendiz['estado'] ?? '') === 'Pendiente por iniciar' ? 'selected' : '' ?>>Pendiente por iniciar</option>
-                            <option value="En ejecución" <?= ($aprendiz['estado'] ?? '') === 'En ejecución' ? 'selected' : 'En ejecución' ?>>En ejecución</option>
-                            <option value="Certificado" <?= ($aprendiz['estado'] ?? '') === 'Certificado' ? 'selected' : 'Certificado' ?>>Certificado</option>
-                            <option value="Aplazada" <?= ($aprendiz['estado'] ?? '') === 'Aplazada' ? 'selected' : 'Aplazada' ?>>Aplazada</option>
-                            <option value="Finalizada" <?= ($aprendiz['estado'] ?? '') === 'Finalizada' ? 'selected' : 'Finalizada' ?>>Finalizada</option>
-                            <option value="Por certificar" <?= ($aprendiz['estado'] ?? '') === 'Por certificar' ? 'selected' : 'Por certificar' ?>>Por certificar</option>
-                            <option value="Pendiente por comité" <?= ($aprendiz['estado'] ?? '') === 'Pendiente por comité' ? 'selected' : 'Pendiente por comité' ?>>Pendiente por comité</option>
+                            <option value="En ejecución" <?= ($aprendiz['estado'] ?? '') === 'En ejecución' ? 'selected' : '' ?>>En ejecución</option>
+                            <option value="Certificado" <?= ($aprendiz['estado'] ?? '') === 'Certificado' ? 'selected' : '' ?>>Certificado</option>
+                            <option value="Aplazada" <?= ($aprendiz['estado'] ?? '') === 'Aplazada' ? 'selected' : '' ?>>Aplazada</option>
+                            <option value="Finalizada" <?= ($aprendiz['estado'] ?? '') === 'Finalizada' ? 'selected' : '' ?>>Finalizada</option>
+                            <option value="Por certificar" <?= ($aprendiz['estado'] ?? '') === 'Por certificar' ? 'selected' : '' ?>>Por certificar</option>
+                            <option value="Pendiente por comité" <?= ($aprendiz['estado'] ?? '') === 'Pendiente por comité' ? 'selected' : '' ?>>Pendiente por comité</option>
                         </select>
                     </div>
 
@@ -310,8 +310,8 @@
                         <input type="text" name="jefe_grupo" value="<?= e($aprendiz['jefe_grupo'] ?? '') ?>" class="form-input">
                     </div>
                     <div class="form-field">
-                        <label class="form-label">Area de coordinacion</label>
-                        <input type="text" name="area_coordinacion" value="<?= e($aprendiz['coordinacion'] ?? '') ?>" class="form-input">
+                        <label class="form-label">Área de coordinación</label>
+                        <input type="text" name="coordinacion" maxlength="120" value="<?= e($aprendiz['coordinacion'] ?? '') ?>" class="form-input" autocomplete="off">
                     </div>
                 </div>
             </div>

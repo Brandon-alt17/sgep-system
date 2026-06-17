@@ -2,9 +2,9 @@
 setlocal
 echo === Instalador SGEP (PHP puro) ===
 
-php --version >nul 2>&1
+call "%~dp0scripts\php.cmd" --version >nul 2>&1
 if %errorlevel% neq 0 (
-  echo ERROR: No se encontro PHP en PATH.
+  echo ERROR: No se encontro PHP 8.3+ en PATH ni en WAMP.
   pause
   exit /b 1
 )
@@ -16,14 +16,14 @@ if not exist .env (
 
 set /p DBPASS=Ingrese la contrasena de MySQL (root, enter si vacia): 
 
-php -r "require 'vendor/autoload.php';"
+call "%~dp0scripts\php.cmd" -r "require 'vendor/autoload.php';"
 if %errorlevel% neq 0 (
   echo ERROR: No se pudo cargar autoload de Composer.
   pause
   exit /b 1
 )
 
-php database/run_migrations.php
+call "%~dp0scripts\php.cmd" database/run_migrations.php
 if %errorlevel% neq 0 (
   echo ERROR: Fallaron las migraciones.
   pause

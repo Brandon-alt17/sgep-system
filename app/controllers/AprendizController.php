@@ -165,6 +165,7 @@ class AprendizController
             'info_f023_guardada' => ['message' => 'Información general F-023 guardada correctamente.', 'variant' => 'success'],
             'momento_guardado' => ['message' => 'Momento guardado correctamente.', 'variant' => 'success'],
             'momento_actualizado' => ['message' => 'Momento actualizado correctamente.', 'variant' => 'success'],
+            'aprendiz_actualizado' => ['message' => 'Datos del aprendiz actualizados correctamente.', 'variant' => 'success'],
         ];
 
         return $map[$key] ?? null;
@@ -174,7 +175,7 @@ class AprendizController
     {
         $id = (int) ($_POST['id'] ?? 0);
         Aprendiz::update($id, $_POST);
-        redirect(APP_BASE_PATH . '/aprendices/show?id=' . $id);
+        redirect(APP_BASE_PATH . '/aprendices/show?id=' . $id . '&toast=aprendiz_actualizado');
     }
 
     public function updateVisitas(): void
