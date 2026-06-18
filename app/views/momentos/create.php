@@ -57,6 +57,35 @@ foreach ($programaContenido as $comp) {
     }
 }
 $factorObsTextareaClass = e(ui_input_classes()) . ' mt-0 min-h-[72px] min-w-0 max-w-full resize-y py-2 text-sm leading-snug';
+
+$renderDiligenciamientoCard = static function () use ($momentoSectionHeading, $grid, $lc, $ic, $momento, $valueFrom, $maxShortText): void {
+    $modalidadD = $valueFrom($momento, 'modalidad_diligenciamiento', '');
+    ?>
+    <section class="<?= e(ui_card_classes()) ?> !p-6">
+        <?php $momentoSectionHeading('map-pin', 'Diligenciamiento'); ?>
+        <div class="<?= e($grid) ?>">
+            <label class="<?= $lc ?> min-w-0 self-start">Ciudad diligenciamiento
+                <input type="text" name="ciudad_diligenciamiento" maxlength="<?= $maxShortText ?>" value="<?= e($valueFrom($momento, 'ciudad_diligenciamiento')) ?>" class="<?= $ic ?> mt-1.5">
+            </label>
+            <label class="<?= $lc ?> min-w-0 self-start">Fecha diligenciamiento
+                <input type="text" name="fecha_diligenciamiento" value="<?= e(date_iso_to_dmY($valueFrom($momento, 'fecha_diligenciamiento'))) ?>" data-date-input="dmy" placeholder="dd/mm/aaaa" title="Formato día/mes/año (dd/mm/aaaa)" inputmode="numeric" maxlength="10" spellcheck="false" autocomplete="off" class="<?= $ic ?> mt-1.5">
+            </label>
+            <label class="<?= $lc ?> min-w-0 self-start">Modalidad diligenciamiento
+                <span class="<?= e(ui_select_wrapper_classes()) ?> mt-1.5">
+                    <select name="modalidad_diligenciamiento" class="<?= e(ui_select_classes()) ?>">
+                        <option value="" <?= $modalidadD === '' ? 'selected' : '' ?>>Sin definir</option>
+                        <option value="Presencial" <?= $modalidadD === 'Presencial' ? 'selected' : '' ?>>Presencial</option>
+                        <option value="Virtual" <?= $modalidadD === 'Virtual' ? 'selected' : '' ?>>Virtual</option>
+                    </select>
+                    <span class="<?= e(ui_select_chevron_classes()) ?>" data-select-chevron aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-4 w-4"><path d="m6 9 6 6 6-6"></path></svg>
+                    </span>
+                </span>
+            </label>
+        </div>
+    </section>
+    <?php
+};
 ?>
 
 <section class="bg-app-bg flex flex-row items-start gap-2">
@@ -82,6 +111,8 @@ $factorObsTextareaClass = e(ui_input_classes()) . ' mt-0 min-h-[72px] min-w-0 ma
         <?php endif; ?>
         <input type="hidden" name="aprendiz_id" value="<?= (int) $aprendiz['id'] ?>">
         <input type="hidden" name="tipo" value="<?= e($tipo) ?>">
+
+        <?php $renderDiligenciamientoCard(); ?>
 
         <?php if ($tipo === 'M1'): ?>
             <section class="<?= e(ui_card_classes()) ?> !p-6">
@@ -164,6 +195,11 @@ $factorObsTextareaClass = e(ui_input_classes()) . ' mt-0 min-h-[72px] min-w-0 ma
                     <?php if ($tipo === 'M3'): ?>
                         <label class="<?= $lc ?> min-w-0 self-start">Número de visitas realizadas
                             <input type="number" min="0" name="numero_visitas_realizadas" value="<?= e($valueFrom($momento, 'numero_visitas_realizadas')) ?>" class="<?= $ic ?> mt-1.5">
+                        </label>
+                    <?php endif; ?>
+                    <?php if ($tipo === 'M2' || $tipo === 'EX'): ?>
+                        <label class="<?= $lc ?> min-w-0 self-start md:col-span-3">Enlace de grabación
+                            <input type="url" name="enlace_grabacion" maxlength="<?= $maxUrl ?>" value="<?= e($valueFrom($momento, 'enlace_grabacion')) ?>" class="<?= $ic ?> mt-1.5" placeholder="https://…">
                         </label>
                     <?php endif; ?>
                 </div>
@@ -315,61 +351,12 @@ $factorObsTextareaClass = e(ui_input_classes()) . ' mt-0 min-h-[72px] min-w-0 ma
                             </span>
                         </span>
                     </label>
-                    <label class="<?= $lc ?> min-w-0 self-start">Ciudad diligenciamiento
-                        <input type="text" name="ciudad_diligenciamiento" maxlength="<?= $maxShortText ?>" value="<?= e($valueFrom($momento, 'ciudad_diligenciamiento')) ?>" class="<?= $ic ?> mt-1.5">
-                    </label>
-                    <label class="<?= $lc ?> min-w-0 self-start">Fecha diligenciamiento
-                        <input type="text" name="fecha_diligenciamiento" value="<?= e(date_iso_to_dmY($valueFrom($momento, 'fecha_diligenciamiento'))) ?>" data-date-input="dmy" placeholder="dd/mm/aaaa" title="Formato día/mes/año (dd/mm/aaaa)" inputmode="numeric" maxlength="10" spellcheck="false" autocomplete="off" class="<?= $ic ?> mt-1.5">
-                    </label>
                     <label class="<?= $lc ?> min-w-0 self-start md:col-span-3">Enlace de grabación
                         <input type="url" name="enlace_grabacion" maxlength="<?= $maxUrl ?>" value="<?= e($valueFrom($momento, 'enlace_grabacion')) ?>" class="<?= $ic ?> mt-1.5">
                     </label>
                 </div>
             </section>
         <?php endif; ?>
-
-        <section class="<?= e(ui_card_classes()) ?> !p-6">
-            <?php $momentoSectionHeading('map-pin', 'Diligenciamiento'); ?>
-            <div class="<?= e($grid) ?>">
-                <?php if ($tipo !== 'M3'): ?>
-                    <label class="<?= $lc ?> min-w-0 self-start">Ciudad diligenciamiento
-                        <input type="text" name="ciudad_diligenciamiento" maxlength="<?= $maxShortText ?>" value="<?= e($valueFrom($momento, 'ciudad_diligenciamiento')) ?>" class="<?= $ic ?> mt-1.5">
-                    </label>
-                    <label class="<?= $lc ?> min-w-0 self-start">Fecha diligenciamiento
-                        <input type="text" name="fecha_diligenciamiento" value="<?= e(date_iso_to_dmY($valueFrom($momento, 'fecha_diligenciamiento'))) ?>" data-date-input="dmy" placeholder="dd/mm/aaaa" title="Formato día/mes/año (dd/mm/aaaa)" inputmode="numeric" maxlength="10" spellcheck="false" autocomplete="off" class="<?= $ic ?> mt-1.5">
-                    </label>
-                <?php endif; ?>
-                <?php $modalidadD = $valueFrom($momento, 'modalidad_diligenciamiento', ''); ?>
-                <div class="min-w-0 self-start <?= $tipo === 'M3' ? 'md:col-span-3' : '' ?>">
-                    <span class="<?= $lc ?> block">Modalidad diligenciamiento</span>
-                    <?php if ($tipo === 'M1'): ?>
-                        <div class="mt-1.5 w-full min-w-0">
-                            <?php partial('components/combobox', [
-                                'name' => 'modalidad_diligenciamiento',
-                                'placeholder' => 'Seleccionar modalidad…',
-                                'value' => $modalidadD,
-                                'comboboxDropUp' => true,
-                                'options' => [
-                                    ['value' => 'Presencial', 'label' => 'Presencial', 'search' => 'Presencial'],
-                                    ['value' => 'Virtual', 'label' => 'Virtual', 'search' => 'Virtual'],
-                                ],
-                            ]); ?>
-                        </div>
-                    <?php else: ?>
-                        <span class="<?= e(ui_select_wrapper_classes()) ?> mt-1.5">
-                            <select name="modalidad_diligenciamiento" class="<?= e(ui_select_classes()) ?>">
-                                <option value="" <?= $modalidadD === '' ? 'selected' : '' ?>>Sin definir</option>
-                                <option value="Presencial" <?= $modalidadD === 'Presencial' ? 'selected' : '' ?>>Presencial</option>
-                                <option value="Virtual" <?= $modalidadD === 'Virtual' ? 'selected' : '' ?>>Virtual</option>
-                            </select>
-                            <span class="<?= e(ui_select_chevron_classes()) ?>" data-select-chevron aria-hidden="true">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-4 w-4"><path d="m6 9 6 6 6-6"></path></svg>
-                            </span>
-                        </span>
-                    <?php endif; ?>
-                </div>
-            </div>
-        </section>
     </form>
 
     <div class="pointer-events-none fixed inset-x-0 bottom-0 z-[60] border-t border-app-border bg-app-panel/95 shadow-[0_-4px_24px_rgba(16,24,40,0.08)] backdrop-blur-sm" style="padding-bottom: env(safe-area-inset-bottom, 0px);">

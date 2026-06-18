@@ -173,11 +173,11 @@ $renderJefeModal = static function (
                             <p class="mt-1 text-base text-app-text"><?= $showField((string) ($jefe['telefono'] ?? '')) ?></p>
                         </div>
                         <div>
-                            <p class="<?= e($viewLabelCls) ?>">Contacto alternativo (nombre)</p>
+                            <p class="<?= e($viewLabelCls) ?>">Nombre otro contacto</p>
                             <p class="mt-1 text-base text-app-text"><?= $showField((string) ($jefe['nombre_contacto2'] ?? '')) ?></p>
                         </div>
                         <div>
-                            <p class="<?= e($viewLabelCls) ?>">Contacto alternativo (correo)</p>
+                            <p class="<?= e($viewLabelCls) ?>">Teléfono institucional (fijo/móvil)</p>
                             <p class="mt-1 break-all text-base text-app-text"><?= $showField((string) ($jefe['correo_contacto2'] ?? '')) ?></p>
                         </div>
                     </div>

@@ -321,7 +321,7 @@ class F023Generator
             }
         }
 
-        if (in_array($out['tipo'] ?? '', ['M1', 'M3'], true)) {
+        if (in_array($out['tipo'] ?? '', ['M1', 'M2', 'M3', 'EX'], true)) {
             if (($out['fecha_diligenciamiento'] ?? '') === '') {
                 $out['fecha_diligenciamiento'] = date('d/m/Y');
             }
@@ -345,7 +345,7 @@ class F023Generator
     }
 
     /**
-     * Marcas X / ___ de modalidad en el pie de diligenciamiento (M1 y M3).
+     * Marcas X / ___ de modalidad en el pie de diligenciamiento (M1, M2, M3 y EX).
      *
      * @param array<string,mixed> $momento
      * @return array<string,string>
@@ -353,11 +353,14 @@ class F023Generator
     private function diligenciamientoMarcasTemplateVars(array $momento): array
     {
         $tipo = (string) ($momento['tipo'] ?? '');
-        if (!in_array($tipo, ['M1', 'M3'], true)) {
+        if (!in_array($tipo, ['M1', 'M2', 'M3', 'EX'], true)) {
             return [];
         }
 
-        $prefix = strtolower($tipo);
+        $prefix = match ($tipo) {
+            'EX' => 'm2',
+            default => strtolower($tipo),
+        };
         $modalidad = trim((string) ($momento['modalidad_diligenciamiento'] ?? ''));
         if ($modalidad === '') {
             $modalidad = trim((string) ($momento['modalidad'] ?? ''));

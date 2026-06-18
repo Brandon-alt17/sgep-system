@@ -467,7 +467,7 @@ final class F023DocxMerge
     /** Quita bloques de párrafos vacíos antes del pie estático (M2 sin inyector; evita hoja en blanco). */
     private static function collapseRedundantParagraphsBeforeFooter(string $content): string
     {
-        if (str_contains($content, '${ciudad_diligenciamiento}') || str_contains($content, '${m3_marca_virtual}')) {
+        if (str_contains($content, '${ciudad_diligenciamiento}') || str_contains($content, '${m3_marca_virtual}') || str_contains($content, '${m2_marca_virtual}')) {
             return $content;
         }
 
