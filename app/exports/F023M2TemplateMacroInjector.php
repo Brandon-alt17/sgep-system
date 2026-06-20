@@ -57,6 +57,9 @@ final class F023M2TemplateMacroInjector
             );
         }
 
+        $xml = self::injectComplementaryObservationFields($xml);
+        $xml = self::stripComplementaryObservationLabelBorders($xml);
+        $xml = F023SignatureNameSupport::injectIntoDocumentXml($xml);
         $xml = self::normalizeFooterParagraph($xml);
 
         if ($zip->locateName(self::DOCUMENT_XML) !== false) {
@@ -73,23 +76,449 @@ final class F023M2TemplateMacroInjector
     }
 
     /**
+     * Compacta el M2 exportado para que quepa en una sola página.
+     */
+    public static function applyLayoutToSavedDocx(string $docxPath): void
+    {
+        $zip = new ZipArchive();
+        if ($zip->open($docxPath) !== true) {
+            throw new \RuntimeException('No se pudo abrir el segmento M2 para layout.');
+        }
+
+        $xml = $zip->getFromName(self::DOCUMENT_XML);
+        if ($xml === false || $xml === '') {
+            $zip->close();
+            throw new \RuntimeException('document.xml ilegible en segmento M2 guardado.');
+        }
+
+        $xml = self::compactLayoutForSinglePage($xml);
+        $xml = self::stripComplementaryObservationLabelBorders($xml);
+        $xml = self::reinforceComplementaryObservationLines($xml);
+        $xml = self::trimEmptyParagraphsBeforeSignatureTable($xml);
+
+        if ($zip->locateName(self::DOCUMENT_XML) !== false) {
+            $zip->deleteName(self::DOCUMENT_XML);
+        }
+        if (!$zip->addFromString(self::DOCUMENT_XML, $xml)) {
+            $zip->close();
+            throw new \RuntimeException('No se pudo escribir layout en segmento M2.');
+        }
+        $zip->close();
+    }
+
+    private static function compactLayoutForSinglePage(string $xml): string
+    {
+        if (!preg_match('#^(.*?<w:body>\s*)(.*?)(\s*</w:body>.*)$#s', $xml, $m)) {
+            return $xml;
+        }
+
+        $inner = $m[2];
+        $sectPos = strrpos($inner, '<w:sectPr');
+        if ($sectPos === false) {
+            return $xml;
+        }
+
+        $content = substr($inner, 0, $sectPos);
+        $sectPr = substr($inner, $sectPos);
+
+        $stripped = preg_replace('/<w:sectPr\b[^>]*>.*?<\/w:sectPr>/s', '', $content);
+        $content = is_string($stripped) ? trim($stripped) : trim($content);
+
+        $lastTableEnd = strrpos($content, '</w:tbl>');
+        if ($lastTableEnd !== false) {
+            $lastTableEnd += strlen('</w:tbl>');
+            $tail = substr($content, $lastTableEnd);
+            $tail = str_replace('<w:spacing />', '<w:spacing w:after="0" w:before="0"/>', $tail);
+            $content = substr($content, 0, $lastTableEnd) . $tail;
+        }
+
+        $sectPr = preg_replace('/<w:type\s+w:val="nextPage"\s*\/>/', '<w:type w:val="continuous" />', $sectPr) ?? $sectPr;
+
+        return $m[1] . $content . $sectPr . $m[3];
+    }
+
+    /**
+     * Tras saveAs: quita guiones residuales en renglones vacíos y asegura borde inferior en cada línea de observación.
+     */
+    private static function reinforceComplementaryObservationLines(string $xml): string
+    {
+        $sectionStart = strpos($xml, 'complementarias del instructor');
+        if ($sectionStart === false) {
+            return $xml;
+        }
+
+        $firmaPos = strpos($xml, 'Firma del', $sectionStart);
+        $tblPos = strpos($xml, '<w:tbl>', $sectionStart);
+        $sectionEnd = strlen($xml);
+        if ($firmaPos !== false) {
+            $sectionEnd = min($sectionEnd, self::paragraphStartBeforePosition($xml, $firmaPos));
+        }
+        if ($tblPos !== false) {
+            $sectionEnd = min($sectionEnd, $tblPos);
+        }
+
+        /** @var list<array{start: int, length: int, new: string}> $replacements */
+        $replacements = [];
+        $searchFrom = 0;
+
+        while (preg_match('/<w:p\b[^>]*>.*?<\/w:p>/s', $xml, $match, PREG_OFFSET_CAPTURE, $searchFrom)) {
+            $paragraph = $match[0][0];
+            $paraStart = $match[0][1];
+            $searchFrom = $paraStart + strlen($paragraph);
+
+            if ($paraStart < $sectionStart || $paraStart >= $sectionEnd) {
+                continue;
+            }
+
+            $plain = trim(preg_replace('/\s+/u', '', strip_tags($paragraph)) ?? '');
+            if ($plain !== '' && (str_contains($plain, ':') || stripos($plain, 'Firma') !== false)) {
+                continue;
+            }
+
+            $newParagraph = $paragraph;
+            if (preg_match('/^_{3,}$/u', $plain)) {
+                $newParagraph = self::stripBottomBorderLine($paragraph);
+            } elseif ($plain !== '') {
+                $stripped = preg_replace(
+                    '/<w:r>\s*<w:rPr>.*?<\/w:rPr>\s*<w:t[^>]*>_{3,}<\/w:t><\/w:r>/s',
+                    '',
+                    $paragraph
+                );
+                $newParagraph = is_string($stripped) ? $stripped : $paragraph;
+                $newParagraph = self::ensureBottomBorderLine($newParagraph);
+            } else {
+                $newParagraph = self::ensureBottomBorderLine($paragraph);
+            }
+
+            if ($newParagraph !== $paragraph) {
+                $replacements[] = [
+                    'start' => $paraStart,
+                    'length' => strlen($paragraph),
+                    'new' => $newParagraph,
+                ];
+            }
+        }
+
+        usort($replacements, static fn (array $a, array $b): int => $b['start'] <=> $a['start']);
+        foreach ($replacements as $rep) {
+            $xml = substr_replace($xml, $rep['new'], $rep['start'], $rep['length']);
+        }
+
+        return $xml;
+    }
+
+    private static function paragraphStartBeforePosition(string $xml, int $textPos): int
+    {
+        $slice = substr($xml, 0, $textPos);
+        $pStart = strrpos($slice, '<w:p ');
+        if ($pStart === false) {
+            $pStart = strrpos($slice, '<w:p>');
+        }
+
+        return $pStart !== false ? $pStart : $textPos;
+    }
+
+    /**
+     * Quita párrafos vacíos entre las observaciones y la tabla de firmas (evita renglones extra).
+     */
+    private static function trimEmptyParagraphsBeforeSignatureTable(string $xml): string
+    {
+        $pos = strpos($xml, 'complementarias del instructor');
+        if ($pos === false) {
+            return $xml;
+        }
+
+        $tblPos = strpos($xml, '<w:tbl>', $pos);
+        if ($tblPos === false) {
+            return $xml;
+        }
+
+        $beforeTbl = substr($xml, 0, $tblPos);
+        $afterTbl = substr($xml, $tblPos);
+
+        while (preg_match('/<w:p\b[^>]*>.*?<\/w:p>\s*$/s', $beforeTbl, $match)) {
+            $paragraph = $match[0];
+            $plain = trim(preg_replace('/\s+/u', '', strip_tags($paragraph)) ?? '');
+            if ($plain !== '' || str_contains($paragraph, 'w:bottom w:val="single"')) {
+                break;
+            }
+            $beforeTbl = substr($beforeTbl, 0, -strlen($match[0]));
+        }
+
+        return $beforeTbl . $afterTbl;
+    }
+
+    /**
      * @return list<array{anchor: string, occ: int, macro: string}>
      */
     private static function injectionSpecs(): array
     {
         return [
+            ['anchor' => '(DD/MM/AA)</w:t>', 'occ' => 0, 'macro' => 'fecha_inicio_etapa'],
+            ['anchor' => 'Fecha del momento de seguimiento:</w:t>', 'occ' => 0, 'macro' => 'fecha_visita'],
+            ['anchor' => 'Modalidad del seguimiento: </w:t>', 'occ' => 0, 'macro' => 'modalidad'],
             ['anchor' => 'grabación del momento 2: </w:t>', 'occ' => 0, 'macro' => 'enlace_grabacion'],
         ];
     }
 
-    private static function macroRunXml(string $macro): string
+    private static function macroRunXml(string $macro, bool $bold = false): string
     {
         $safe = preg_replace('/[^a-zA-Z0-9_]/', '', $macro) ?? '';
+        $boldPr = $bold ? '<w:b/><w:bCs/><w:color w:val="000000"/>' : '';
 
         return '<w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri"/>'
+            . $boldPr
             . '<w:sz w:val="18"/><w:szCs w:val="18"/>'
             . '<w:lang w:val="es-CO" w:eastAsia="es-CO"/></w:rPr>'
             . '<w:t xml:space="preserve">${' . $safe . '}</w:t></w:r>';
+    }
+
+    /**
+     * Observaciones complementarias (instructor, aprendiz, co-formador) tras las tablas de factores.
+     * Cada campo usa exactamente 2 párrafos subrayados (sin espacio extra entre renglones).
+     */
+    private static function injectComplementaryObservationFields(string $xml): string
+    {
+        $sectionStart = strpos($xml, 'complementarias del instructor');
+        if ($sectionStart === false) {
+            return $xml;
+        }
+
+        $macros = ['obs_instructor', 'obs_aprendiz', 'obs_coformador'];
+        $search = substr($xml, $sectionStart);
+        $offset = 0;
+        $pattern = '/<w:p\b(?:(?!<\/w:p>).)*<w:bottom w:val="single"(?:(?!<\/w:p>).)*<\/w:p>\s*'
+            . '<w:p\b(?:(?!<\/w:p>).)*<\/w:p>/s';
+        /** @var list<array{absStart: int, length: int, new: string}> $replacements */
+        $replacements = [];
+
+        foreach ($macros as $macro) {
+            if (!preg_match($pattern, $search, $match, PREG_OFFSET_CAPTURE, $offset)) {
+                break;
+            }
+
+            $block = (string) $match[0][0];
+            $relStart = (int) $match[0][1];
+            if (!preg_match_all('/<w:p\b[^>]*>.*?<\/w:p>/s', $block, $paragraphs) || count($paragraphs[0]) < 2) {
+                $offset = $relStart + strlen($block);
+
+                continue;
+            }
+
+            $line1 = self::normalizeComplementaryObservationParagraph((string) $paragraphs[0][0]);
+            $line1 = preg_replace(
+                '/<\/w:p>$/',
+                self::macroRunXml($macro, false) . '</w:p>',
+                $line1,
+                1
+            );
+            if (!is_string($line1)) {
+                $offset = $relStart + strlen($block);
+
+                continue;
+            }
+
+            $line1 = self::ensureBottomBorderLine($line1);
+
+            $line2 = self::injectComplementaryLine2Macro((string) $paragraphs[0][1], $macro);
+            if ($line2 === '') {
+                $offset = $relStart + strlen($block);
+
+                continue;
+            }
+
+            $replacement = $line1 . $line2;
+
+            $replacements[] = [
+                'absStart' => $sectionStart + $relStart,
+                'length' => strlen($block),
+                'new' => $replacement,
+            ];
+            $offset = $relStart + strlen($block);
+        }
+
+        usort($replacements, static fn (array $a, array $b): int => $b['absStart'] <=> $a['absStart']);
+        foreach ($replacements as $rep) {
+            $xml = substr_replace($xml, $rep['new'], $rep['absStart'], $rep['length']);
+        }
+
+        $xml = self::trimTrailingEmptyParagraphsAfterComplementaryObservations($xml);
+
+        return $xml;
+    }
+
+    /**
+     * Quita <w:pBdr></w:pBdr> vacío en títulos de observación (evita un tercer renglón visual).
+     */
+    private static function stripComplementaryObservationLabelBorders(string $xml): string
+    {
+        $textPos = strpos($xml, 'complementarias del instructor');
+        if ($textPos === false) {
+            return $xml;
+        }
+
+        $sectionStart = self::paragraphStartBeforePosition($xml, $textPos);
+
+        $firmaPos = strpos($xml, 'Firma del', $sectionStart);
+        $tblPos = strpos($xml, '<w:tbl>', $sectionStart);
+        $sectionEnd = strlen($xml);
+        if ($firmaPos !== false) {
+            $sectionEnd = min($sectionEnd, self::paragraphStartBeforePosition($xml, $firmaPos));
+        }
+        if ($tblPos !== false) {
+            $sectionEnd = min($sectionEnd, $tblPos);
+        }
+
+        /** @var list<array{start: int, length: int, new: string}> $replacements */
+        $replacements = [];
+        $searchFrom = 0;
+
+        while (preg_match('/<w:p\b[^>]*>.*?<\/w:p>/s', $xml, $match, PREG_OFFSET_CAPTURE, $searchFrom)) {
+            $paragraph = $match[0][0];
+            $paraStart = $match[0][1];
+            $searchFrom = $paraStart + strlen($paragraph);
+
+            if ($paraStart < $sectionStart || $paraStart >= $sectionEnd) {
+                continue;
+            }
+
+            $plain = trim(preg_replace('/\s+/u', ' ', strip_tags($paragraph)) ?? '');
+            if ($plain === '' || !str_contains($plain, ':') || stripos($plain, 'Firma') !== false) {
+                continue;
+            }
+            if (preg_match('/^_{3,}$/u', str_replace(' ', '', $plain))) {
+                continue;
+            }
+
+            $newParagraph = self::stripEmptyParagraphBorder($paragraph);
+            if ($newParagraph === $paragraph) {
+                continue;
+            }
+
+            $replacements[] = [
+                'start' => $paraStart,
+                'length' => strlen($paragraph),
+                'new' => $newParagraph,
+            ];
+        }
+
+        usort($replacements, static fn (array $a, array $b): int => $b['start'] <=> $a['start']);
+        foreach ($replacements as $rep) {
+            $xml = substr_replace($xml, $rep['new'], $rep['start'], $rep['length']);
+        }
+
+        return $xml;
+    }
+
+    private static function stripEmptyParagraphBorder(string $paragraphXml): string
+    {
+        $stripped = preg_replace('/<w:pBdr>\s*<\/w:pBdr>/', '', $paragraphXml);
+
+        return is_string($stripped) ? $stripped : $paragraphXml;
+    }
+
+    private static function injectComplementaryLine2Macro(string $paragraphXml, string $macro): string
+    {
+        $safe = preg_replace('/[^a-zA-Z0-9_]/', '', $macro . '_l2') ?? '';
+        $paragraphXml = self::normalizeComplementaryObservationParagraph($paragraphXml);
+
+        if (!preg_match('/^(<w:p\b[^>]*>)(.*?)(<\/w:p>)$/s', $paragraphXml, $parts)) {
+            return '';
+        }
+
+        $pPr = '';
+        if (preg_match('/<w:pPr>.*?<\/w:pPr>/s', $parts[2], $pPrMatch)) {
+            $pPr = (string) $pPrMatch[0];
+        }
+
+        $rebuilt = $parts[1] . $pPr . self::macroRunXml($safe, false) . $parts[3];
+
+        return self::stripBottomBorderLine($rebuilt);
+    }
+
+    private static function trimTrailingEmptyParagraphsAfterComplementaryObservations(string $xml): string
+    {
+        $pos = strpos($xml, 'obs_coformador_l2');
+        if ($pos === false) {
+            return $xml;
+        }
+
+        $afterBlock = strpos($xml, '</w:p>', $pos);
+        if ($afterBlock === false) {
+            return $xml;
+        }
+        $afterBlock += strlen('</w:p>');
+
+        $tail = substr($xml, $afterBlock);
+
+        while (preg_match('/^\s*(<w:p\b[^>]*>.*?<\/w:p>)/s', $tail, $match)) {
+            $paragraph = $match[1];
+            $plain = trim(preg_replace('/\s+/u', '', strip_tags($paragraph)) ?? '');
+            if ($plain !== '' || str_contains($paragraph, '${')) {
+                break;
+            }
+            $tail = substr($tail, strlen($match[0]));
+        }
+
+        return substr($xml, 0, $afterBlock) . $tail;
+    }
+
+    private static function ensureBottomBorderLine(string $paragraphXml): string
+    {
+        $border = '<w:pBdr><w:bottom w:val="single" w:color="000000" w:sz="4" w:space="4"/></w:pBdr>';
+        if (preg_match('/<w:pBdr>.*?<\/w:pBdr>/s', $paragraphXml)) {
+            $updated = preg_replace('/<w:pBdr>.*?<\/w:pBdr>/s', $border, $paragraphXml, 1);
+
+            return is_string($updated) ? $updated : $paragraphXml;
+        }
+        if (str_contains($paragraphXml, '<w:pPr>')) {
+            $updated = preg_replace('/<w:pPr>/', '<w:pPr>' . $border, $paragraphXml, 1);
+
+            return is_string($updated) ? $updated : $paragraphXml;
+        }
+
+        $updated = preg_replace('/<w:p>/', '<w:p><w:pPr>' . $border, $paragraphXml, 1);
+
+        return is_string($updated) ? $updated : $paragraphXml;
+    }
+
+    private static function stripBottomBorderLine(string $paragraphXml): string
+    {
+        if (!preg_match('/<w:pBdr>.*?<\/w:pBdr>/s', $paragraphXml)) {
+            return $paragraphXml;
+        }
+        $updated = preg_replace('/<w:pBdr>.*?<\/w:pBdr>/s', '', $paragraphXml, 1);
+
+        return is_string($updated) ? $updated : $paragraphXml;
+    }
+
+    private static function normalizeComplementaryObservationParagraph(string $paragraphXml): string
+    {
+        $paragraphXml = self::applyTightLineSpacing($paragraphXml);
+        $stripped = preg_replace('/<w:pBdr>\s*<\/w:pBdr>/', '', $paragraphXml);
+        $paragraphXml = is_string($stripped) ? $stripped : $paragraphXml;
+        $stripped = preg_replace('/<w:b\/?>\s*<w:bCs\/?>/', '', $paragraphXml);
+
+        return is_string($stripped) ? $stripped : $paragraphXml;
+    }
+
+    private static function applyTightLineSpacing(string $paragraphXml): string
+    {
+        $spacing = '<w:spacing w:after="0" w:before="0" w:line="240" w:lineRule="atLeast"/>';
+        if (preg_match('/<w:spacing\b[^>]*\/>/', $paragraphXml)) {
+            $updated = preg_replace('/<w:spacing\b[^>]*\/>/', $spacing, $paragraphXml, 1);
+
+            return is_string($updated) ? $updated : $paragraphXml;
+        }
+        if (str_contains($paragraphXml, '<w:pPr>')) {
+            $updated = preg_replace('/<w:pPr>/', '<w:pPr>' . $spacing, $paragraphXml, 1);
+
+            return is_string($updated) ? $updated : $paragraphXml;
+        }
+
+        $updated = preg_replace('/<w:p>/', '<w:p><w:pPr>' . $spacing . '</w:pPr>', $paragraphXml, 1);
+
+        return is_string($updated) ? $updated : $paragraphXml;
     }
 
     private static function injectAfterAnchor(string $xml, string $anchor, int $occurrence, string $macro): string
@@ -101,13 +530,14 @@ final class F023M2TemplateMacroInjector
 
         $tail = substr($xml, $pos);
         $quoted = preg_quote($anchor, '/');
-        $pattern = '/^(' . $quoted . '(?s).*?<\/w:p><\/w:tc><w:tc\b[^>]*>(?s).*?<w:p\b[^>]*>(?s)(?:<w:pPr>.*?<\/w:pPr>)?)(.*?)(<\/w:p>)/u';
+        $macroRun = self::macroRunXml($macro);
+        $pattern = '/^(' . $quoted . '(?s).*?<\/w:p><\/w:tc>)(<w:tc\b[^>]*>.*?<\/w:tc>)/u';
         if (!preg_match($pattern, $tail, $m)) {
             return $xml;
         }
 
-        $replacement = $m[1] . self::macroRunXml($macro) . $m[3];
-        $newTail = $replacement . substr($tail, strlen($m[0]));
+        $normalizedCell = F023HeaderValueCellSupport::normalize((string) $m[2], $macroRun);
+        $newTail = (string) $m[1] . $normalizedCell . substr($tail, strlen($m[0]));
 
         return substr($xml, 0, $pos) . $newTail;
     }

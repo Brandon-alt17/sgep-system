@@ -34,6 +34,23 @@ final class F023M2TemplateMacroInjectorTest extends TestCase
 
             $this->assertIsString($xml);
             $this->assertStringContainsString('${enlace_grabacion}', $xml);
+            $this->assertStringContainsString('${fecha_inicio_etapa}', $xml);
+            $this->assertStringContainsString('${fecha_visita}', $xml);
+            $this->assertStringContainsString('${modalidad}', $xml);
+            $this->assertStringContainsString('${obs_instructor}', $xml);
+            $this->assertStringContainsString('${obs_instructor_l2}', $xml);
+            $this->assertStringContainsString('${obs_aprendiz}', $xml);
+            $this->assertStringContainsString('${obs_aprendiz_l2}', $xml);
+            $this->assertStringContainsString('${obs_coformador}', $xml);
+            $this->assertStringContainsString('${obs_coformador_l2}', $xml);
+            $this->assertStringContainsString('${obs_coformador_l2}', $xml);
+            $this->assertStringContainsString('w:lineRule="atLeast"', $xml);
+
+            libxml_use_internal_errors(true);
+            $dom = new \DOMDocument();
+            $this->assertTrue($dom->loadXML($xml), 'document.xml parcheado M2 debe ser XML válido');
+            $this->assertStringContainsString('Firma Instructor de seguimiento</w:t>', $xml);
+            $this->assertStringContainsString('Firma del </w:t>', $xml);
         } finally {
             @unlink($path);
         }

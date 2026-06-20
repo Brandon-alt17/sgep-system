@@ -75,7 +75,9 @@ final class F023FactorValoracionMacroSupport
                 return match ($cellIndex) {
                     2 => self::injectMacroInCell($cell, 'factor_' . $factorIndex . '_valoracion_s'),
                     3 => self::injectMacroInCell($cell, 'factor_' . $factorIndex . '_valoracion_pm'),
-                    4 => self::injectMacroInCell($cell, 'factor_' . $factorIndex . '_observacion'),
+                    4 => self::normalizeObservationCellLeft(
+                        self::injectMacroInCell($cell, 'factor_' . $factorIndex . '_observacion', true)
+                    ),
                     default => $cell,
                 };
             },
@@ -85,7 +87,7 @@ final class F023FactorValoracionMacroSupport
         return is_string($patched) ? $patched : $rowXml;
     }
 
-    private static function injectMacroInCell(string $cellXml, string $macro): string
+    private static function injectMacroInCell(string $cellXml, string $macro, bool $stripEmptyBorders = false): string
     {
         if (!preg_match('/^(<w:tc\b[^>]*>)(.*?)(<\/w:tc>)$/s', $cellXml, $parts)) {
             return $cellXml;
@@ -93,8 +95,13 @@ final class F023FactorValoracionMacroSupport
 
         $inner = $parts[2];
         if (preg_match('/<w:p\b[^>]*>.*?<\/w:p>/s', $inner, $paragraphMatch, PREG_OFFSET_CAPTURE)) {
-            $paragraph = $paragraphMatch[0][0];
+            $originalParagraph = (string) $paragraphMatch[0][0];
             $paragraphPos = (int) $paragraphMatch[0][1];
+            $paragraph = $originalParagraph;
+            if ($stripEmptyBorders) {
+                $paragraph = self::stripEmptyParagraphBorders($paragraph);
+                $paragraph = self::ensureParagraphLeftAlign($paragraph);
+            }
             $newParagraph = preg_replace(
                 '/<\/w:p>$/',
                 self::macroRunXml($macro) . '</w:p>',
@@ -102,16 +109,59 @@ final class F023FactorValoracionMacroSupport
                 1
             );
             if (is_string($newParagraph)) {
-                $inner = substr_replace($inner, $newParagraph, $paragraphPos, strlen($paragraph));
+                $inner = substr_replace($inner, $newParagraph, $paragraphPos, strlen($originalParagraph));
             }
         } else {
+            $jc = $stripEmptyBorders ? 'left' : 'center';
             $inner .= '<w:p><w:pPr><w:spacing w:after="0" w:before="0"/>'
-                . '<w:jc w:val="center"/></w:pPr>'
+                . '<w:jc w:val="' . $jc . '"/></w:pPr>'
                 . self::macroRunXml($macro)
                 . '</w:p>';
         }
 
         return $parts[1] . $inner . $parts[3];
+    }
+
+    private static function stripEmptyParagraphBorders(string $paragraphXml): string
+    {
+        $stripped = preg_replace('/<w:pBdr>\s*<\/w:pBdr>/', '', $paragraphXml);
+
+        return is_string($stripped) ? $stripped : $paragraphXml;
+    }
+
+    private static function normalizeObservationCellLeft(string $cellXml): string
+    {
+        $normalized = preg_replace_callback(
+            '/<w:p\b[^>]*>.*?<\/w:p>/s',
+            static fn (array $match): string => self::ensureParagraphLeftAlign((string) $match[0]),
+            $cellXml
+        );
+
+        return is_string($normalized) ? $normalized : $cellXml;
+    }
+
+    private static function ensureParagraphLeftAlign(string $paragraphXml): string
+    {
+        if (preg_match('/<w:jc\b[^>]*>/', $paragraphXml)) {
+            $aligned = preg_replace(
+                '/<w:jc\b[^>]*\/?>/',
+                '<w:jc w:val="left"/>',
+                $paragraphXml,
+                1
+            );
+
+            return is_string($aligned) ? $aligned : $paragraphXml;
+        }
+
+        if (preg_match('/<w:pPr>/', $paragraphXml)) {
+            $aligned = preg_replace('/<w:pPr>/', '<w:pPr><w:jc w:val="left"/>', $paragraphXml, 1);
+
+            return is_string($aligned) ? $aligned : $paragraphXml;
+        }
+
+        $aligned = preg_replace('/<w:p>/', '<w:p><w:pPr><w:jc w:val="left"/></w:pPr>', $paragraphXml, 1);
+
+        return is_string($aligned) ? $aligned : $paragraphXml;
     }
 
     private static function macroRunXml(string $macro): string

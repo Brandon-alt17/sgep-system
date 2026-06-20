@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Controllers;
 
+use App\Exports\F023M3RetroSupport;
 use App\Helpers\Database;
 use App\Helpers\Normalizer;
 use App\Models\Aprendiz;
@@ -90,6 +91,9 @@ class MomentoController
         if (in_array($tipo, ['M2', 'M3', 'EX'], true) && count((array) ($_POST['factores'] ?? [])) !== 13) {
             redirect(APP_BASE_PATH . '/momentos/create?aprendiz_id=' . $aprendizId . '&tipo=' . $tipo);
         }
+        if ($tipo === 'M3') {
+            $_POST = F023M3RetroSupport::fillFromObservacionesIfEmpty($_POST);
+        }
         $limites = require base_path('config/f023_limites.php');
         $_POST = $this->applyTextLimits($_POST, $limites);
         if ($tipo === 'EX') {
@@ -166,6 +170,9 @@ class MomentoController
             redirect(APP_BASE_PATH . '/aprendices/show?id=' . max(0, $aprendizId));
         }
         $_POST = $this->normalizeMomentoDateFields($_POST);
+        if ((string) ($momentoRow['tipo'] ?? '') === 'M3') {
+            $_POST = F023M3RetroSupport::fillFromObservacionesIfEmpty($_POST);
+        }
         $limites = require base_path('config/f023_limites.php');
         $_POST = $this->applyTextLimits($_POST, $limites);
         $_POST['tipo'] = $this->normalizeTipo((string) ($_POST['tipo'] ?? ''));

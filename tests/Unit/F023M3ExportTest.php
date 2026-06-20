@@ -38,5 +38,6 @@ final class F023M3ExportTest extends TestCase
         $this->assertStringNotContainsString('${fecha_fin_etapa}', $xml);
         $this->assertStringNotContainsString('${enlace_grabacion}', $xml);
         $this->assertStringNotContainsString('${numero_visitas_realizadas}', $xml);
+        $this->assertStringNotContainsString('${modalidad}', $xml);
     }
 }

@@ -244,8 +244,9 @@ class Momento
     {
         $stmt = Database::connection()->prepare('SELECT * FROM momentos WHERE id = :id LIMIT 1');
         $stmt->execute(['id' => $id]);
+        $row = $stmt->fetch() ?: null;
 
-        return $stmt->fetch() ?: null;
+        return $row;
     }
 
     /**
