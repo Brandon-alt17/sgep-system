@@ -19,25 +19,27 @@ final class F023M1TemplateMacroInjector
     private static function injectionSpecs(): array
     {
         return [
-            ['anchor' => '(DD/MM/AA)</w:t>', 'occ' => 0, 'macro' => 'fecha_inicio_etapa'],
-            ['anchor' => '(DD/MM/AA)</w:t>', 'occ' => 1, 'macro' => 'fecha_fin_etapa'],
-            ['anchor' => 'Fecha de afiliación a la ARL:</w:t>', 'occ' => 0, 'macro' => 'fecha_arl'],
-            ['anchor' => 'póliza ARL:</w:t>', 'occ' => 0, 'macro' => 'numero_poliza_arl'],
-            ['anchor' => 'Indicar si es diurno', 'occ' => 0, 'macro' => 'horario'],
-            ['anchor' => 'grabación del momento 1: </w:t>', 'occ' => 0, 'macro' => 'enlace_grabacion'],
+            ['anchor' => '(DD/MM/AA)</w:t>', 'occ' => 0, 'macro' => 'fecha_inicio_etapa', 'header' => true],
+            ['anchor' => '(DD/MM/AA)</w:t>', 'occ' => 1, 'macro' => 'fecha_fin_etapa', 'header' => true],
+            ['anchor' => 'Fecha de afiliación a la ARL:</w:t>', 'occ' => 0, 'macro' => 'fecha_arl', 'header' => true],
+            ['anchor' => 'póliza ARL:</w:t>', 'occ' => 0, 'macro' => 'numero_poliza_arl', 'header' => true],
+            ['anchor' => 'Indicar si es diurno', 'occ' => 0, 'macro' => 'horario', 'header' => true],
+            ['anchor' => 'grabación del momento 1: </w:t>', 'occ' => 0, 'macro' => 'enlace_grabacion', 'header' => true],
             ['anchor' => 'Competencias a </w:t>', 'occ' => 0, 'macro' => 'm1_competencias'],
             ['anchor' => 'Resultados de aprendizaje</w:t>', 'occ' => 0, 'macro' => 'm1_resultados'],
             ['anchor' => 'Actividades a desarrollar </w:t>', 'occ' => 0, 'macro' => 'm1_actividades'],
             ['anchor' => 'Evidencias de aprendizaje</w:t>', 'occ' => 0, 'macro' => 'm1_evidencias'],
-            ['anchor' => 'Observaciones adicionales</w:t>', 'occ' => 0, 'macro' => 'm1_observaciones_adicionales'],
+            ['anchor' => 'Observaciones adicionales</w:t>', 'occ' => 0, 'macro' => 'm1_observaciones_adicionales', 'bold' => true],
         ];
     }
 
-    private static function macroRunXml(string $macro): string
+    private static function macroRunXml(string $macro, bool $bold = false): string
     {
         $safe = preg_replace('/[^a-zA-Z0-9_]/', '', $macro) ?? '';
+        $boldPr = $bold ? '<w:b/><w:bCs/><w:color w:val="000000"/>' : '';
 
         return '<w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri"/>'
+            . $boldPr
             . '<w:sz w:val="18"/><w:szCs w:val="18"/>'
             . '<w:lang w:val="es-CO" w:eastAsia="es-CO"/></w:rPr>'
             . '<w:t xml:space="preserve">${' . $safe . '}</w:t></w:r>';
@@ -81,10 +83,15 @@ final class F023M1TemplateMacroInjector
                 $xml,
                 (string) $spec['anchor'],
                 (int) $spec['occ'],
-                (string) $spec['macro']
+                (string) $spec['macro'],
+                (bool) ($spec['bold'] ?? false),
+                (bool) ($spec['header'] ?? false)
             );
         }
 
+        $xml = self::injectM1ObservacionesAdicionalesSecondLine($xml);
+
+        $xml = F023SignatureNameSupport::injectIntoDocumentXml($xml);
         $xml = self::normalizeFooterParagraph($xml);
         $xml = self::insertSpacerParagraphsBeforeFooter($xml, 1);
         $xml = self::stripExtraEmptyParasFromConcertacionCells($xml);
@@ -570,8 +577,84 @@ final class F023M1TemplateMacroInjector
         return substr($xml, 0, $rowStart) . $newRow . substr($xml, $rowEnd);
     }
 
-    private static function injectAfterAnchor(string $xml, string $anchor, int $occurrence, string $macro): string
+    private static function injectM1ObservacionesAdicionalesSecondLine(string $xml): string
     {
+        $anchor = 'Observaciones adicionales</w:t>';
+        $pos = strpos($xml, $anchor);
+        if ($pos === false) {
+            return $xml;
+        }
+
+        $tail = substr($xml, $pos);
+        if (!preg_match(
+            '/Observaciones adicionales<\/w:t>.*?<\/w:p><\/w:tc><w:tc\b[^>]*>(?s)(.*?)(<\/w:tc>)/u',
+            $tail,
+            $match
+        )) {
+            return $xml;
+        }
+
+        $cellInner = (string) $match[1];
+        if (!preg_match_all('/<w:p\b[^>]*>.*?<\/w:p>/s', $cellInner, $paragraphs, PREG_OFFSET_CAPTURE)) {
+            return $xml;
+        }
+        if (count($paragraphs[0]) < 2) {
+            return $xml;
+        }
+
+        $firstParagraph = (string) $paragraphs[0][0][0];
+        $firstPos = (int) $paragraphs[0][0][1];
+        $secondParagraph = (string) $paragraphs[0][1][0];
+        $secondPos = (int) $paragraphs[0][1][1];
+
+        $newFirst = self::applyTightLineSpacing($firstParagraph);
+        $newSecond = self::applyTightLineSpacing($secondParagraph);
+        $newSecond = preg_replace(
+            '/<\/w:p>$/',
+            self::macroRunXml('m1_observaciones_adicionales_l2', true) . '</w:p>',
+            $newSecond,
+            1
+        );
+        if (!is_string($newSecond)) {
+            return $xml;
+        }
+
+        $newCellInner = substr_replace($cellInner, $newFirst, $firstPos, strlen($firstParagraph));
+        $secondPos += strlen($newFirst) - strlen($firstParagraph);
+        $newCellInner = substr_replace($newCellInner, $newSecond, $secondPos, strlen($secondParagraph));
+
+        $newTail = str_replace($match[1], $newCellInner, $tail);
+
+        return substr($xml, 0, $pos) . $newTail;
+    }
+
+    private static function applyTightLineSpacing(string $paragraphXml): string
+    {
+        $spacing = '<w:spacing w:after="0" w:before="0" w:line="240" w:lineRule="exact"/>';
+        if (preg_match('/<w:spacing\b[^>]*\/>/', $paragraphXml)) {
+            $updated = preg_replace('/<w:spacing\b[^>]*\/>/', $spacing, $paragraphXml, 1);
+
+            return is_string($updated) ? $updated : $paragraphXml;
+        }
+        if (str_contains($paragraphXml, '<w:pPr>')) {
+            $updated = preg_replace('/<w:pPr>/', '<w:pPr>' . $spacing, $paragraphXml, 1);
+
+            return is_string($updated) ? $updated : $paragraphXml;
+        }
+
+        $updated = preg_replace('/<w:p>/', '<w:p><w:pPr>' . $spacing . '</w:pPr>', $paragraphXml, 1);
+
+        return is_string($updated) ? $updated : $paragraphXml;
+    }
+
+    private static function injectAfterAnchor(
+        string $xml,
+        string $anchor,
+        int $occurrence,
+        string $macro,
+        bool $bold = false,
+        bool $headerValueCell = false
+    ): string {
         $pos = self::nthIndexOf($xml, $anchor, $occurrence);
         if ($pos === null) {
             return $xml;
@@ -579,12 +662,26 @@ final class F023M1TemplateMacroInjector
 
         $tail = substr($xml, $pos);
         $quoted = preg_quote($anchor, '/');
+        $macroRun = self::macroRunXml($macro, $bold);
+
+        if ($headerValueCell) {
+            $pattern = '/^(' . $quoted . '(?s).*?<\/w:p><\/w:tc>)(<w:tc\b[^>]*>.*?<\/w:tc>)/u';
+            if (!preg_match($pattern, $tail, $m)) {
+                return $xml;
+            }
+
+            $normalizedCell = F023HeaderValueCellSupport::normalize((string) $m[2], $macroRun);
+            $newTail = (string) $m[1] . $normalizedCell . substr($tail, strlen($m[0]));
+
+            return substr($xml, 0, $pos) . $newTail;
+        }
+
         $pattern = '/^(' . $quoted . '(?s).*?<\/w:p><\/w:tc><w:tc\b[^>]*>(?s).*?<w:p\b[^>]*>(?s)(?:<w:pPr>.*?<\/w:pPr>)?)(.*?)(<\/w:p>)/u';
         if (!preg_match($pattern, $tail, $m)) {
             return $xml;
         }
 
-        $replacement = $m[1] . self::macroRunXml($macro) . $m[3];
+        $replacement = $m[1] . $macroRun . $m[3];
         $newTail = $replacement . substr($tail, strlen($m[0]));
 
         return substr($xml, 0, $pos) . $newTail;

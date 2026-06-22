@@ -20,10 +20,10 @@ $ac = $autocompleteOff
     <label class="<?= e(ui_label_classes()) ?> md:col-span-2">Correo supervisor
         <input type="email" name="correo" value="<?= e((string) ($jefe['correo'] ?? '')) ?>" class="<?= e(ui_input_classes()) ?>"<?= $ac ?>>
     </label>
-    <label class="<?= e(ui_label_classes()) ?>">Contacto alternativo (nombre)
+    <label class="<?= e(ui_label_classes()) ?>">Nombre otro contacto
         <input type="text" name="nombre_contacto2" value="<?= e((string) ($jefe['nombre_contacto2'] ?? '')) ?>" class="<?= e(ui_input_classes()) ?>"<?= $ac ?>>
     </label>
-    <label class="<?= e(ui_label_classes()) ?>">Contacto alternativo (correo)
-        <input type="email" name="correo_contacto2" value="<?= e((string) ($jefe['correo_contacto2'] ?? '')) ?>" class="<?= e(ui_input_classes()) ?>"<?= $ac ?>>
+    <label class="<?= e(ui_label_classes()) ?>">Teléfono institucional (fijo/móvil)
+        <input type="text" name="correo_contacto2" value="<?= e((string) ($jefe['correo_contacto2'] ?? '')) ?>" class="<?= e(ui_input_classes()) ?>"<?= $ac ?>>
     </label>
 </div>

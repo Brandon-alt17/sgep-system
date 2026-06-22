@@ -95,11 +95,11 @@ $viewLabelCls = 'm-0 text-xs font-medium uppercase tracking-wide text-app-muted'
     <h3 class="text-sm font-semibold text-app-text">Contacto alternativo</h3>
     <div class="grid gap-4 md:grid-cols-2">
         <label class="<?= e(ui_label_classes()) ?>">
-            Nombre
+            Nombre otro contacto
             <input type="text" name="nombre_contacto2" value="<?= $val('nombre_contacto2') ?>" class="<?= e(ui_input_classes()) ?>">
         </label>
         <label class="<?= e(ui_label_classes()) ?> min-w-0">
-            Contacto alternativo (correo o teléfono institucional fijo/móvil)
+            Teléfono institucional (fijo/móvil)
             <input type="text" name="correo_contacto2" value="<?= $val('correo_contacto2') ?>" class="<?= e(ui_input_classes()) ?>">
         </label>
     </div>
@@ -175,11 +175,11 @@ $viewLabelCls = 'm-0 text-xs font-medium uppercase tracking-wide text-app-muted'
                     <input type="email" name="correo_org" value="<?= $val('correo_org') ?>" class="<?= e($editInputCls) ?>">
                 </div>
                 <div class="min-w-0">
-                    <p class="<?= e($viewLabelCls) ?>">Contacto alternativo (nombre)</p>
+                    <p class="<?= e($viewLabelCls) ?>">Nombre otro contacto</p>
                     <input type="text" name="nombre_contacto2" value="<?= $val('nombre_contacto2') ?>" class="<?= e($editInputCls) ?>">
                 </div>
                 <div class="min-w-0">
-                    <p class="<?= e($viewLabelCls) ?> normal-case leading-snug">Contacto alternativo (teléfono institucional fijo/móvil)</p>
+                    <p class="<?= e($viewLabelCls) ?> normal-case leading-snug">Teléfono institucional (fijo/móvil)</p>
                     <input type="text" name="correo_contacto2" value="<?= $val('correo_contacto2') ?>" class="<?= e($editInputCls) ?>">
                 </div>
            

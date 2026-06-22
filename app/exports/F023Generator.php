@@ -122,6 +122,9 @@ class F023Generator
                 if (!empty($seg['patch_m1_macros'])) {
                     F023M1TemplateMacroInjector::applyLayoutToSavedDocx($tmpDocx);
                 }
+                if (!empty($seg['patch_m2_macros'])) {
+                    F023M2TemplateMacroInjector::applyLayoutToSavedDocx($tmpDocx);
+                }
                 $tempCleanup[] = $tmpDocx;
                 $mergeInputs[] = $tmpDocx;
             }
@@ -202,12 +205,19 @@ class F023Generator
     private function momentoTemplateSegments(array $momento, array $map, array $infoForTpl, array $aprendiz): array
     {
         $tipo = (string) ($momento['tipo'] ?? '');
+        if ($tipo === 'M3') {
+            $momento = F023M3RetroSupport::fillFromObservacionesIfEmpty($momento);
+        }
         $vars = array_merge(
             $infoForTpl,
             ['nombre_aprendiz' => (string) ($aprendiz['nombre_completo'] ?? '')],
+            [
+                'nombre_instructor_seguimiento' => trim((string) ($aprendiz['nombre_instructor_seguimiento'] ?? '')),
+            ],
             $this->momentoRowTemplateVars($momento),
             $this->factorTemplateVars(Momento::factoresByMomento((int) $momento['id'])),
-            $this->diligenciamientoMarcasTemplateVars($momento)
+            $this->diligenciamientoMarcasTemplateVars($momento),
+            $this->juicioMarcasTemplateVars($momento)
         );
 
         $tplDir = base_path('storage/templates/');
@@ -220,6 +230,7 @@ class F023Generator
         }
         if ($tipo === 'M2' || $tipo === 'EX') {
             $file = $tipo === 'EX' ? ($map['ex_template'] ?? 'm2.docx') : ($map['m2_template'] ?? 'm2.docx');
+            $vars = array_merge($this->m2PlaceholderDefaults(), $vars);
 
             return [['path' => $tplDir . $file, 'vars' => $vars, 'patch_m2_macros' => true]];
         }
@@ -241,6 +252,27 @@ class F023Generator
     }
 
     /**
+     * Marcadores M2/EX con valor vacío si no hay dato en BD.
+     *
+     * @return array<string, string>
+     */
+    private function m2PlaceholderDefaults(): array
+    {
+        return [
+            'fecha_inicio_etapa' => '',
+            'fecha_visita' => '',
+            'modalidad' => '',
+            'enlace_grabacion' => '',
+            'nombre_aprendiz' => '',
+            'nombre_instructor_seguimiento' => '',
+            'ciudad_diligenciamiento' => '',
+            'fecha_diligenciamiento' => date('d/m/Y'),
+            'm2_marca_presencial' => '___',
+            'm2_marca_virtual' => '___',
+        ];
+    }
+
+    /**
      * Marcadores M3 (p1 + p2) con valor vacío si no hay fila en BD o el momento sintético no trae datos.
      *
      * @return array<string, string>
@@ -251,11 +283,23 @@ class F023Generator
             'fecha_inicio_etapa' => '',
             'fecha_fin_etapa' => '',
             'numero_visitas_realizadas' => '',
+            'modalidad' => '',
             'enlace_grabacion' => '',
+            'nombre_aprendiz' => '',
+            'nombre_instructor_seguimiento' => '',
             'ciudad_diligenciamiento' => '',
             'fecha_diligenciamiento' => date('d/m/Y'),
             'm3_marca_presencial' => '___',
             'm3_marca_virtual' => '___',
+            'm3_juicio_marca_aprobado' => '___',
+            'm3_juicio_marca_no_aprobado' => '___',
+            'm3_retro_instructor_proceso' => '',
+            'm3_retro_instructor_desempeno' => '',
+            'm3_retro_aprendiz_proceso' => '',
+            'm3_retro_aprendiz_desempeno' => '',
+            'm3_retro_coformador_proceso' => '',
+            'm3_retro_coformador_desempeno' => '',
+            'juicio_final' => '',
         ];
 
         return array_merge($out, $this->factorTemplateVars([]));
@@ -321,7 +365,7 @@ class F023Generator
             }
         }
 
-        if (in_array($out['tipo'] ?? '', ['M1', 'M3'], true)) {
+        if (in_array($out['tipo'] ?? '', ['M1', 'M2', 'M3', 'EX'], true)) {
             if (($out['fecha_diligenciamiento'] ?? '') === '') {
                 $out['fecha_diligenciamiento'] = date('d/m/Y');
             }
@@ -333,19 +377,35 @@ class F023Generator
                 }
             }
 
+            if (trim($out['modalidad'] ?? '') === '') {
+                $fallbackSeguimiento = trim($out['modalidad_diligenciamiento'] ?? '');
+                if ($fallbackSeguimiento !== '') {
+                    $out['modalidad'] = $fallbackSeguimiento;
+                }
+            }
+
             if (($out['ciudad_diligenciamiento'] ?? '') === '') {
                 $fallbackCiudad = trim((string) ($momento['ciudad'] ?? ''));
                 if ($fallbackCiudad !== '') {
                     $out['ciudad_diligenciamiento'] = $fallbackCiudad;
                 }
             }
+
+            if (($out['tipo'] ?? '') === 'M3' && trim($out['fecha_fin_etapa'] ?? '') === '') {
+                $out['fecha_fin_etapa'] = trim($out['fecha_visita'] ?? '');
+            }
         }
 
-        return $out;
+        return F023ObservationLines::expandTemplateVars($out, [
+            'obs_instructor',
+            'obs_aprendiz',
+            'obs_coformador',
+            'm1_observaciones_adicionales',
+        ]);
     }
 
     /**
-     * Marcas X / ___ de modalidad en el pie de diligenciamiento (M1 y M3).
+     * Marcas X / ___ de modalidad en el pie de diligenciamiento (M1, M2, M3 y EX).
      *
      * @param array<string,mixed> $momento
      * @return array<string,string>
@@ -353,11 +413,14 @@ class F023Generator
     private function diligenciamientoMarcasTemplateVars(array $momento): array
     {
         $tipo = (string) ($momento['tipo'] ?? '');
-        if (!in_array($tipo, ['M1', 'M3'], true)) {
+        if (!in_array($tipo, ['M1', 'M2', 'M3', 'EX'], true)) {
             return [];
         }
 
-        $prefix = strtolower($tipo);
+        $prefix = match ($tipo) {
+            'EX' => 'm2',
+            default => strtolower($tipo),
+        };
         $modalidad = trim((string) ($momento['modalidad_diligenciamiento'] ?? ''));
         if ($modalidad === '') {
             $modalidad = trim((string) ($momento['modalidad'] ?? ''));
@@ -369,6 +432,28 @@ class F023Generator
         return [
             $prefix . '_marca_presencial' => $isPresencial ? 'X' : '___',
             $prefix . '_marca_virtual' => $isVirtual ? 'X' : '___',
+        ];
+    }
+
+    /**
+     * Marcas X junto a Aprobado / No aprobado en M3 p2.
+     *
+     * @param array<string,mixed> $momento
+     * @return array<string,string>
+     */
+    private function juicioMarcasTemplateVars(array $momento): array
+    {
+        if ((string) ($momento['tipo'] ?? '') !== 'M3') {
+            return [];
+        }
+
+        $juicio = trim((string) ($momento['juicio_final'] ?? ''));
+        $isAprobado = strcasecmp($juicio, 'Aprobado') === 0;
+        $isNoAprobado = strcasecmp($juicio, 'No aprobado') === 0;
+
+        return [
+            'm3_juicio_marca_aprobado' => $isAprobado ? 'X' : '___',
+            'm3_juicio_marca_no_aprobado' => $isNoAprobado ? 'X' : '___',
         ];
     }
 
@@ -415,9 +500,21 @@ class F023Generator
         return [
             'factor_' . $index . '_valoracion_s' => $isSatisfactorio ? 'X' : '',
             'factor_' . $index . '_valoracion_pm' => $isPorMejorar ? 'X' : '',
-            'factor_' . $index . '_observacion' => $factorRow
-                ? trim((string) ($factorRow['observacion'] ?? ''))
-                : '',
+            ...self::factorObservacionTemplateVars($index, $factorRow),
+        ];
+    }
+
+    /**
+     * @param array<string,mixed>|null $factorRow
+     * @return array<string, string>
+     */
+    private static function factorObservacionTemplateVars(int $index, ?array $factorRow): array
+    {
+        $obs = $factorRow ? trim((string) ($factorRow['observacion'] ?? '')) : '';
+        [$line1, $line2] = F023ObservationLines::split($obs);
+
+        return [
+            'factor_' . $index . '_observacion' => F023ObservationLines::combineTwoLines($line1, $line2),
         ];
     }
 

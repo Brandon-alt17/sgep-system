@@ -1,11 +1,27 @@
-// Utilidad heredada: limita longitud de campos con data-max.
+// Utilidad heredada: limita longitud de campos con data-max y muestra contador.
+function enforceMaxLines(value, maxLines) {
+  if (!maxLines || maxLines < 1) return value;
+  var lines = value.split(/\r?\n/);
+  if (lines.length <= maxLines) return value;
+  return lines.slice(0, maxLines).join("\n");
+}
+
 document.querySelectorAll("[data-max]").forEach(function (element) {
   var max = parseInt(element.getAttribute("data-max") || "0", 10);
   if (!max) return;
-  element.addEventListener("input", function (event) {
-    var value = event.target.value || "";
-    if (value.length > max) event.target.value = value.substring(0, max);
-  });
+  var maxLines = parseInt(element.getAttribute("data-max-lines") || "0", 10);
+  var counter = element.parentElement
+    ? element.parentElement.querySelector("[data-char-counter]")
+    : null;
+  var update = function () {
+    var value = element.value || "";
+    if (maxLines > 0) value = enforceMaxLines(value, maxLines);
+    if (value.length > max) value = value.substring(0, max);
+    if (value !== element.value) element.value = value;
+    if (counter) counter.textContent = value.length + " / " + max;
+  };
+  element.addEventListener("input", update);
+  update();
 });
 
 // Toast global reutilizable (contenedor #sg-app-toast-root en el layout).

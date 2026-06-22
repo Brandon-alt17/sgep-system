@@ -57,6 +57,36 @@ foreach ($programaContenido as $comp) {
     }
 }
 $factorObsTextareaClass = e(ui_input_classes()) . ' mt-0 min-h-[72px] min-w-0 max-w-full resize-y py-2 text-sm leading-snug';
+$compromisosHeaderClass = in_array($tipo, ['M2', 'EX'], true) ? ' font-semibold' : '';
+
+$renderDiligenciamientoCard = static function () use ($momentoSectionHeading, $grid, $lc, $ic, $momento, $valueFrom, $maxShortText): void {
+    $modalidadD = $valueFrom($momento, 'modalidad_diligenciamiento', '');
+    ?>
+    <section class="<?= e(ui_card_classes()) ?> !p-6">
+        <?php $momentoSectionHeading('map-pin', 'Diligenciamiento'); ?>
+        <div class="<?= e($grid) ?>">
+            <label class="<?= $lc ?> min-w-0 self-start">Ciudad diligenciamiento
+                <input type="text" name="ciudad_diligenciamiento" maxlength="<?= $maxShortText ?>" value="<?= e($valueFrom($momento, 'ciudad_diligenciamiento')) ?>" class="<?= $ic ?> mt-1.5">
+            </label>
+            <label class="<?= $lc ?> min-w-0 self-start">Fecha diligenciamiento
+                <input type="text" name="fecha_diligenciamiento" value="<?= e(date_iso_to_dmY($valueFrom($momento, 'fecha_diligenciamiento'))) ?>" data-date-input="dmy" placeholder="dd/mm/aaaa" title="Formato día/mes/año (dd/mm/aaaa)" inputmode="numeric" maxlength="10" spellcheck="false" autocomplete="off" class="<?= $ic ?> mt-1.5">
+            </label>
+            <label class="<?= $lc ?> min-w-0 self-start">Modalidad diligenciamiento
+                <span class="<?= e(ui_select_wrapper_classes()) ?> mt-1.5">
+                    <select name="modalidad_diligenciamiento" class="<?= e(ui_select_classes()) ?>">
+                        <option value="" <?= $modalidadD === '' ? 'selected' : '' ?>>Sin definir</option>
+                        <option value="Presencial" <?= $modalidadD === 'Presencial' ? 'selected' : '' ?>>Presencial</option>
+                        <option value="Virtual" <?= $modalidadD === 'Virtual' ? 'selected' : '' ?>>Virtual</option>
+                    </select>
+                    <span class="<?= e(ui_select_chevron_classes()) ?>" data-select-chevron aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-4 w-4"><path d="m6 9 6 6 6-6"></path></svg>
+                    </span>
+                </span>
+            </label>
+        </div>
+    </section>
+    <?php
+};
 ?>
 
 <section class="bg-app-bg flex flex-row items-start gap-2">
@@ -83,6 +113,8 @@ $factorObsTextareaClass = e(ui_input_classes()) . ' mt-0 min-h-[72px] min-w-0 ma
         <input type="hidden" name="aprendiz_id" value="<?= (int) $aprendiz['id'] ?>">
         <input type="hidden" name="tipo" value="<?= e($tipo) ?>">
 
+        <?php $renderDiligenciamientoCard(); ?>
+
         <?php if ($tipo === 'M1'): ?>
             <section class="<?= e(ui_card_classes()) ?> !p-6">
                 <?php $momentoSectionHeading('calendar', 'Fechas y datos de etapa productiva'); ?>
@@ -103,7 +135,7 @@ $factorObsTextareaClass = e(ui_input_classes()) . ' mt-0 min-h-[72px] min-w-0 ma
                         <input type="text" name="horario" maxlength="<?= $maxShortText ?>" value="<?= e($valueFrom($momento, 'horario')) ?>" placeholder="Diurno/nocturno, días y hora" class="<?= $ic ?> mt-1.5">
                     </label>
                     <label class="<?= $lc ?> min-w-0 self-start md:col-span-3">Enlace grabación momento 1
-                        <input type="url" name="enlace_grabacion" maxlength="<?= $maxUrl ?>" value="<?= e($valueFrom($momento, 'enlace_grabacion')) ?>" class="<?= $ic ?> mt-1.5">
+                        <input type="text" name="enlace_grabacion" maxlength="<?= $maxUrl ?>" value="<?= e($valueFrom($momento, 'enlace_grabacion')) ?>" class="<?= $ic ?> mt-1.5">
                     </label>
                 </div>
             </section>
@@ -145,8 +177,9 @@ $factorObsTextareaClass = e(ui_input_classes()) . ' mt-0 min-h-[72px] min-w-0 ma
                     <label class="<?= $lc ?> min-w-0">Evidencias de aprendizaje
                         <textarea name="m1_evidencias" maxlength="<?= $maxM1Evidencias ?>" class="<?= $ta ?> mt-1.5"><?= e($valueFrom($momento, 'm1_evidencias')) ?></textarea>
                     </label>
-                    <label class="<?= $lc ?> min-w-0">Observaciones adicionales
-                        <textarea name="m1_observaciones_adicionales" maxlength="<?= $maxM1ObsAdicionales ?>" class="<?= $ta ?> mt-1.5"><?= e($valueFrom($momento, 'm1_observaciones_adicionales')) ?></textarea>
+                    <label class="<?= $lc ?> min-w-0 font-semibold">Observaciones adicionales
+                        <textarea name="m1_observaciones_adicionales" rows="2" data-max="<?= $maxM1ObsAdicionales ?>" data-max-lines="2" maxlength="<?= $maxM1ObsAdicionales ?>" class="<?= $ta ?> mt-1.5"><?= e($valueFrom($momento, 'm1_observaciones_adicionales')) ?></textarea>
+                        <p class="mt-1 text-right text-xs text-app-muted" data-char-counter aria-live="polite"></p>
                     </label>
                 </div>
             </section>
@@ -165,6 +198,11 @@ $factorObsTextareaClass = e(ui_input_classes()) . ' mt-0 min-h-[72px] min-w-0 ma
                         <label class="<?= $lc ?> min-w-0 self-start">Número de visitas realizadas
                             <input type="number" min="0" name="numero_visitas_realizadas" value="<?= e($valueFrom($momento, 'numero_visitas_realizadas')) ?>" class="<?= $ic ?> mt-1.5">
                         </label>
+                    <?php endif; ?>
+                    <?php if ($tipo === 'M2' || $tipo === 'M3' || $tipo === 'EX'): ?>
+                        <label class="<?= $lc ?> min-w-0 self-start md:col-span-3">Enlace de grabación
+                            <input type="text" name="enlace_grabacion" maxlength="<?= $maxUrl ?>" value="<?= e($valueFrom($momento, 'enlace_grabacion')) ?>" class="<?= $ic ?> mt-1.5" placeholder="https://…">
+                            </label>
                     <?php endif; ?>
                 </div>
             </section>
@@ -191,7 +229,7 @@ $factorObsTextareaClass = e(ui_input_classes()) . ' mt-0 min-h-[72px] min-w-0 ma
                         <div class="grid grid-cols-[minmax(8rem,1fr)_10.5rem_minmax(10rem,1fr)] gap-2 border-b border-app-border px-3 py-2 text-xs font-medium text-app-muted md:gap-3">
                             <span>Factor</span>
                             <span>Valoración</span>
-                            <span class="min-w-0 leading-snug">Observaciones / Compromisos de mejora</span>
+                            <span class="min-w-0 leading-snug<?= e($compromisosHeaderClass) ?>">Observaciones / Compromisos de mejora</span>
                         </div>
                         <?php foreach ($factores['tecnicos'] as $idx => $nombre): ?>
                             <?php $valF = $factorValoracionPorIndice[$idx] ?? 'PM'; ?>
@@ -211,8 +249,9 @@ $factorObsTextareaClass = e(ui_input_classes()) . ' mt-0 min-h-[72px] min-w-0 ma
                                     </label>
                                 </div>
                                 <div class="min-w-0">
-                                    <span class="mb-1 block text-xs text-app-muted md:hidden">Observaciones / Compromisos de mejora</span>
-                                    <textarea name="factores[<?= $idx ?>][observacion]" rows="2" maxlength="<?= $maxCompromisos ?>" placeholder="Observaciones..." class="<?= $factorObsTextareaClass ?> w-full"><?= e((string) ($factorObsPorIndice[$idx] ?? '')) ?></textarea>
+                                    <span class="mb-1 block text-xs text-app-muted md:hidden<?= e($compromisosHeaderClass) ?>">Observaciones / Compromisos de mejora</span>
+                                    <textarea name="factores[<?= $idx ?>][observacion]" rows="2" data-max="<?= $maxCompromisos ?>" data-max-lines="2" maxlength="<?= $maxCompromisos ?>" placeholder="Observaciones..." class="<?= $factorObsTextareaClass ?> w-full"><?= e((string) ($factorObsPorIndice[$idx] ?? '')) ?></textarea>
+                                    <p class="mt-1 text-right text-xs text-app-muted" data-char-counter aria-live="polite"></p>
                                 </div>
                             </div>
                         <?php endforeach; ?>
@@ -227,7 +266,7 @@ $factorObsTextareaClass = e(ui_input_classes()) . ' mt-0 min-h-[72px] min-w-0 ma
                         <div class="grid grid-cols-[minmax(8rem,1fr)_10.5rem_minmax(10rem,1fr)] gap-2 border-b border-app-border px-3 py-2 text-xs font-medium text-app-muted md:gap-3">
                             <span>Factor</span>
                             <span>Valoración</span>
-                            <span class="min-w-0 leading-snug">Observaciones / Compromisos de mejora</span>
+                            <span class="min-w-0 leading-snug<?= e($compromisosHeaderClass) ?>">Observaciones / Compromisos de mejora</span>
                         </div>
                         <?php foreach ($factores['actitudinales'] as $offset => $nombre): ?>
                             <?php $i = $offset + 8; ?>
@@ -248,8 +287,9 @@ $factorObsTextareaClass = e(ui_input_classes()) . ' mt-0 min-h-[72px] min-w-0 ma
                                     </label>
                                 </div>
                                 <div class="min-w-0">
-                                    <span class="mb-1 block text-xs text-app-muted md:hidden">Observaciones / Compromisos de mejora</span>
-                                    <textarea name="factores[<?= $i ?>][observacion]" rows="2" maxlength="<?= $maxCompromisos ?>" placeholder="Observaciones..." class="<?= $factorObsTextareaClass ?> w-full"><?= e((string) ($factorObsPorIndice[$i] ?? '')) ?></textarea>
+                                    <span class="mb-1 block text-xs text-app-muted md:hidden<?= e($compromisosHeaderClass) ?>">Observaciones / Compromisos de mejora</span>
+                                    <textarea name="factores[<?= $i ?>][observacion]" rows="2" data-max="<?= $maxCompromisos ?>" data-max-lines="2" maxlength="<?= $maxCompromisos ?>" placeholder="Observaciones..." class="<?= $factorObsTextareaClass ?> w-full"><?= e((string) ($factorObsPorIndice[$i] ?? '')) ?></textarea>
+                                    <p class="mt-1 text-right text-xs text-app-muted" data-char-counter aria-live="polite"></p>
                                 </div>
                             </div>
                         <?php endforeach; ?>
@@ -262,15 +302,26 @@ $factorObsTextareaClass = e(ui_input_classes()) . ' mt-0 min-h-[72px] min-w-0 ma
             <section class="<?= e(ui_card_classes()) ?> !p-6">
                 <?php $momentoSectionHeading('pencil', 'Observaciones'); ?>
                 <div class="grid gap-5 md:grid-cols-1 md:gap-y-6">
+                    <?php if ($tipo === 'M3'): ?>
+                        <label class="<?= $lc ?> min-w-0">Observaciones del responsable ente co-formador
+                            <textarea name="obs_coformador" rows="2" data-max="<?= $maxObsCoformador ?>" data-max-lines="2" maxlength="<?= $maxObsCoformador ?>" class="<?= $ta ?> mt-1.5"><?= e($valueFrom($momento, 'obs_coformador')) ?></textarea>
+                            <p class="mt-1 text-right text-xs text-app-muted" data-char-counter aria-live="polite"></p>
+                        </label>
+                    <?php endif; ?>
                     <label class="<?= $lc ?> min-w-0">Observaciones instructor de seguimiento
-                        <textarea name="obs_instructor" data-max="<?= $maxObsInstructor ?>" maxlength="<?= $maxObsInstructor ?>" class="<?= $ta ?> mt-1.5"><?= e($valueFrom($momento, 'obs_instructor')) ?></textarea>
+                        <textarea name="obs_instructor" rows="2" data-max="<?= $maxObsInstructor ?>" data-max-lines="2" maxlength="<?= $maxObsInstructor ?>" class="<?= $ta ?> mt-1.5"><?= e($valueFrom($momento, 'obs_instructor')) ?></textarea>
+                        <p class="mt-1 text-right text-xs text-app-muted" data-char-counter aria-live="polite"></p>
                     </label>
                     <label class="<?= $lc ?> min-w-0">Observaciones del aprendiz
-                        <textarea name="obs_aprendiz" maxlength="<?= $maxObsAprendiz ?>" class="<?= $ta ?> mt-1.5"><?= e($valueFrom($momento, 'obs_aprendiz')) ?></textarea>
+                        <textarea name="obs_aprendiz" rows="2" data-max="<?= $maxObsAprendiz ?>" data-max-lines="2" maxlength="<?= $maxObsAprendiz ?>" class="<?= $ta ?> mt-1.5"><?= e($valueFrom($momento, 'obs_aprendiz')) ?></textarea>
+                        <p class="mt-1 text-right text-xs text-app-muted" data-char-counter aria-live="polite"></p>
                     </label>
-                    <label class="<?= $lc ?> min-w-0">Observaciones del responsable ente co-formador
-                        <textarea name="obs_coformador" maxlength="<?= $maxObsCoformador ?>" class="<?= $ta ?> mt-1.5"><?= e($valueFrom($momento, 'obs_coformador')) ?></textarea>
-                    </label>
+                    <?php if ($tipo !== 'M3'): ?>
+                        <label class="<?= $lc ?> min-w-0">Observaciones del responsable ente co-formador
+                            <textarea name="obs_coformador" rows="2" data-max="<?= $maxObsCoformador ?>" data-max-lines="2" maxlength="<?= $maxObsCoformador ?>" class="<?= $ta ?> mt-1.5"><?= e($valueFrom($momento, 'obs_coformador')) ?></textarea>
+                            <p class="mt-1 text-right text-xs text-app-muted" data-char-counter aria-live="polite"></p>
+                        </label>
+                    <?php endif; ?>
                 </div>
             </section>
         <?php endif; ?>
@@ -278,7 +329,7 @@ $factorObsTextareaClass = e(ui_input_classes()) . ' mt-0 min-h-[72px] min-w-0 ma
         <?php if ($tipo === 'M3'): ?>
             <section class="<?= e(ui_card_classes()) ?> !p-6">
                 <?php $momentoSectionHeading('book-open', 'Retroalimentación (página 2)'); ?>
-                <div class="grid gap-5 md:grid-cols-2 md:gap-x-6 md:gap-y-6">
+                <div class="grid gap-5 md:grid-cols-1 md:gap-y-6">
                     <label class="<?= $lc ?> min-w-0">Retroalimentación ente co-formador — Proceso de formación
                         <textarea name="m3_retro_coformador_proceso" maxlength="<?= $maxRetroM3 ?>" class="<?= $ta ?> mt-1.5"><?= e($valueFrom($momento, 'm3_retro_coformador_proceso')) ?></textarea>
                     </label>
@@ -315,61 +366,9 @@ $factorObsTextareaClass = e(ui_input_classes()) . ' mt-0 min-h-[72px] min-w-0 ma
                             </span>
                         </span>
                     </label>
-                    <label class="<?= $lc ?> min-w-0 self-start">Ciudad diligenciamiento
-                        <input type="text" name="ciudad_diligenciamiento" maxlength="<?= $maxShortText ?>" value="<?= e($valueFrom($momento, 'ciudad_diligenciamiento')) ?>" class="<?= $ic ?> mt-1.5">
-                    </label>
-                    <label class="<?= $lc ?> min-w-0 self-start">Fecha diligenciamiento
-                        <input type="text" name="fecha_diligenciamiento" value="<?= e(date_iso_to_dmY($valueFrom($momento, 'fecha_diligenciamiento'))) ?>" data-date-input="dmy" placeholder="dd/mm/aaaa" title="Formato día/mes/año (dd/mm/aaaa)" inputmode="numeric" maxlength="10" spellcheck="false" autocomplete="off" class="<?= $ic ?> mt-1.5">
-                    </label>
-                    <label class="<?= $lc ?> min-w-0 self-start md:col-span-3">Enlace de grabación
-                        <input type="url" name="enlace_grabacion" maxlength="<?= $maxUrl ?>" value="<?= e($valueFrom($momento, 'enlace_grabacion')) ?>" class="<?= $ic ?> mt-1.5">
-                    </label>
                 </div>
             </section>
         <?php endif; ?>
-
-        <section class="<?= e(ui_card_classes()) ?> !p-6">
-            <?php $momentoSectionHeading('map-pin', 'Diligenciamiento'); ?>
-            <div class="<?= e($grid) ?>">
-                <?php if ($tipo !== 'M3'): ?>
-                    <label class="<?= $lc ?> min-w-0 self-start">Ciudad diligenciamiento
-                        <input type="text" name="ciudad_diligenciamiento" maxlength="<?= $maxShortText ?>" value="<?= e($valueFrom($momento, 'ciudad_diligenciamiento')) ?>" class="<?= $ic ?> mt-1.5">
-                    </label>
-                    <label class="<?= $lc ?> min-w-0 self-start">Fecha diligenciamiento
-                        <input type="text" name="fecha_diligenciamiento" value="<?= e(date_iso_to_dmY($valueFrom($momento, 'fecha_diligenciamiento'))) ?>" data-date-input="dmy" placeholder="dd/mm/aaaa" title="Formato día/mes/año (dd/mm/aaaa)" inputmode="numeric" maxlength="10" spellcheck="false" autocomplete="off" class="<?= $ic ?> mt-1.5">
-                    </label>
-                <?php endif; ?>
-                <?php $modalidadD = $valueFrom($momento, 'modalidad_diligenciamiento', ''); ?>
-                <div class="min-w-0 self-start <?= $tipo === 'M3' ? 'md:col-span-3' : '' ?>">
-                    <span class="<?= $lc ?> block">Modalidad diligenciamiento</span>
-                    <?php if ($tipo === 'M1'): ?>
-                        <div class="mt-1.5 w-full min-w-0">
-                            <?php partial('components/combobox', [
-                                'name' => 'modalidad_diligenciamiento',
-                                'placeholder' => 'Seleccionar modalidad…',
-                                'value' => $modalidadD,
-                                'comboboxDropUp' => true,
-                                'options' => [
-                                    ['value' => 'Presencial', 'label' => 'Presencial', 'search' => 'Presencial'],
-                                    ['value' => 'Virtual', 'label' => 'Virtual', 'search' => 'Virtual'],
-                                ],
-                            ]); ?>
-                        </div>
-                    <?php else: ?>
-                        <span class="<?= e(ui_select_wrapper_classes()) ?> mt-1.5">
-                            <select name="modalidad_diligenciamiento" class="<?= e(ui_select_classes()) ?>">
-                                <option value="" <?= $modalidadD === '' ? 'selected' : '' ?>>Sin definir</option>
-                                <option value="Presencial" <?= $modalidadD === 'Presencial' ? 'selected' : '' ?>>Presencial</option>
-                                <option value="Virtual" <?= $modalidadD === 'Virtual' ? 'selected' : '' ?>>Virtual</option>
-                            </select>
-                            <span class="<?= e(ui_select_chevron_classes()) ?>" data-select-chevron aria-hidden="true">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-4 w-4"><path d="m6 9 6 6 6-6"></path></svg>
-                            </span>
-                        </span>
-                    <?php endif; ?>
-                </div>
-            </div>
-        </section>
     </form>
 
     <div class="pointer-events-none fixed inset-x-0 bottom-0 z-[60] border-t border-app-border bg-app-panel/95 shadow-[0_-4px_24px_rgba(16,24,40,0.08)] backdrop-blur-sm" style="padding-bottom: env(safe-area-inset-bottom, 0px);">

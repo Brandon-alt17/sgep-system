@@ -340,6 +340,14 @@
                         <label class="form-label">Teléfono instructor seguimiento</label>
                         <input type="text" name="telefono_instructor_seguimiento" value="<?= e($aprendiz['telefono_instructor_seguimiento'] ?? '') ?>" class="form-input">
                     </div>
+                    <div class="form-field">
+                        <label class="form-label">Jefe de grupo</label>
+                        <input type="text" name="jefe_grupo" value="<?= e($aprendiz['jefe_grupo'] ?? '') ?>" class="form-input">
+                    </div>
+                    <div class="form-field">
+                        <label class="form-label">Área de coordinación</label>
+                        <input type="text" name="coordinacion" maxlength="120" value="<?= e($aprendiz['coordinacion'] ?? '') ?>" class="form-input" autocomplete="off">
+                    </div>
 
                     <div class="form-field">
                         <label class="form-label">Estado</label>
@@ -360,15 +368,6 @@
                                 <option value="<?= e($estadoOpt) ?>" <?= $estadoActual === $estadoOpt ? 'selected' : '' ?>><?= e($estadoOpt) ?></option>
                             <?php endforeach; ?>
                         </select>
-                    </div>
-
-                    <div class="form-field">
-                        <label class="form-label">Jefe de grupo</label>
-                        <input type="text" name="jefe_grupo" value="<?= e($aprendiz['jefe_grupo'] ?? '') ?>" class="form-input">
-                    </div>
-                    <div class="form-field">
-                        <label class="form-label">Área de coordinación</label>
-                        <input type="text" name="coordinacion" maxlength="120" value="<?= e($aprendiz['coordinacion'] ?? '') ?>" class="form-input" autocomplete="off">
                     </div>
                 </div>
             </div>

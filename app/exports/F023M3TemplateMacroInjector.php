@@ -65,9 +65,19 @@ final class F023M3TemplateMacroInjector
                     (string) $spec['macro']
                 );
             }
+            foreach (self::p1RetroalimentacionSpecs() as $spec) {
+                $xml = self::injectRetroMacroInTableRow(
+                    $xml,
+                    (string) $spec['tableAnchor'],
+                    (int) $spec['row'],
+                    (string) $spec['macro']
+                );
+            }
             $xml = self::ensureFactorTableBorders($xml);
             $xml = F023FactorValoracionMacroSupport::injectIntoDocumentXml($xml);
         } else {
+            $xml = self::injectP2ContentFields($xml);
+            $xml = F023SignatureNameSupport::injectIntoDocumentXml($xml);
             $xml = self::normalizeFooterParagraphs($xml);
             $xml = self::insertSpacerParagraphsBeforeFooter($xml, 3);
             $xml = self::shrinkSignatureRowHeights($xml);
@@ -88,6 +98,231 @@ final class F023M3TemplateMacroInjector
     }
 
     /**
+     * @return list<array{labelAnchor: string, macro: string, searchUntil: string|null}>
+     */
+    private static function p2JuicioMarcaSpecs(): array
+    {
+        return [
+            [
+                'labelAnchor' => 'Aprobado</w:t></w:r>',
+                'macro' => 'm3_juicio_marca_aprobado',
+                'searchUntil' => 'No aprobado',
+            ],
+            [
+                'labelAnchor' => 'No aprobado </w:t></w:r>',
+                'macro' => 'm3_juicio_marca_no_aprobado',
+                'searchUntil' => null,
+            ],
+        ];
+    }
+
+    /**
+     * Retroalimentación ente co-formador en m3_p1 (página 1).
+     *
+     * @return list<array{tableAnchor: string, row: int, macro: string}>
+     */
+    private static function p1RetroalimentacionSpecs(): array
+    {
+        return [
+            ['tableAnchor' => 'Retroalimentación ente', 'row' => 1, 'macro' => 'm3_retro_coformador_proceso'],
+            ['tableAnchor' => 'Retroalimentación ente', 'row' => 2, 'macro' => 'm3_retro_coformador_desempeno'],
+        ];
+    }
+
+    /**
+     * @return list<array{tableAnchor: string, row: int, macro: string}>
+     */
+    private static function p2RetroalimentacionSpecs(): array
+    {
+        return [
+            ['tableAnchor' => 'Retroalimentación instructor', 'row' => 1, 'macro' => 'm3_retro_instructor_proceso'],
+            ['tableAnchor' => 'Retroalimentación instructor', 'row' => 2, 'macro' => 'm3_retro_instructor_desempeno'],
+            ['tableAnchor' => 'Retroalimentación del aprendiz', 'row' => 1, 'macro' => 'm3_retro_aprendiz_proceso'],
+            ['tableAnchor' => 'Retroalimentación del aprendiz', 'row' => 2, 'macro' => 'm3_retro_aprendiz_desempeno'],
+        ];
+    }
+
+    private static function injectP2ContentFields(string $xml): string
+    {
+        foreach (self::p2RetroalimentacionSpecs() as $spec) {
+            $xml = self::injectRetroMacroInTableRow(
+                $xml,
+                (string) $spec['tableAnchor'],
+                (int) $spec['row'],
+                (string) $spec['macro']
+            );
+        }
+
+        foreach (self::p2JuicioMarcaSpecs() as $spec) {
+            $xml = self::injectJuicioMarcaInCheckbox(
+                $xml,
+                (string) $spec['labelAnchor'],
+                (string) $spec['macro'],
+                isset($spec['searchUntil']) ? (string) $spec['searchUntil'] : null
+            );
+        }
+
+        return $xml;
+    }
+
+    private static function injectRetroMacroInTableRow(
+        string $xml,
+        string $tableAnchor,
+        int $rowIndex,
+        string $macro
+    ): string {
+        $anchorPos = strpos($xml, $tableAnchor);
+        if ($anchorPos === false) {
+            return $xml;
+        }
+
+        $tblStart = strrpos(substr($xml, 0, $anchorPos), '<w:tbl');
+        $tblEnd = strpos($xml, '</w:tbl>', $anchorPos);
+        if ($tblStart === false || $tblEnd === false) {
+            return $xml;
+        }
+        $tblEnd += strlen('</w:tbl>');
+
+        $table = substr($xml, $tblStart, $tblEnd - $tblStart);
+        if (!preg_match_all('/<w:tr\b[^>]*>.*?<\/w:tr>/s', $table, $rows) || !isset($rows[0][$rowIndex])) {
+            return $xml;
+        }
+
+        $row = (string) $rows[0][$rowIndex];
+        if (!preg_match_all('/<w:tc\b[^>]*>.*?<\/w:tc>/s', $row, $cells) || !isset($cells[0][1])) {
+            return $xml;
+        }
+
+        $dataCell = (string) $cells[0][1];
+        $patchedCell = self::injectMacroInRetroCell($dataCell, $macro);
+        if ($patchedCell === $dataCell) {
+            return $xml;
+        }
+
+        $patchedRow = substr_replace($row, $patchedCell, strpos($row, $dataCell), strlen($dataCell));
+        $patchedTable = substr_replace($table, $patchedRow, strpos($table, $row), strlen($row));
+
+        return substr($xml, 0, $tblStart) . $patchedTable . substr($xml, $tblEnd);
+    }
+
+    private static function injectMacroInRetroCell(string $cellXml, string $macro): string
+    {
+        if (!preg_match('/^(<w:tc\b[^>]*>)(.*?)(<\/w:tc>)$/s', $cellXml, $parts)) {
+            return $cellXml;
+        }
+
+        $inner = $parts[2];
+        if (!preg_match('/<w:p\b[^>]*>.*?<\/w:p>/s', $inner, $paragraphMatch, PREG_OFFSET_CAPTURE)) {
+            $inner .= '<w:p><w:pPr><w:jc w:val="left"/></w:pPr>' . self::macroRunXml($macro) . '</w:p>';
+
+            return $parts[1] . $inner . $parts[3];
+        }
+
+        $originalParagraph = (string) $paragraphMatch[0][0];
+        $paragraphPos = (int) $paragraphMatch[0][1];
+        $paragraph = self::ensureParagraphLeftAlign($originalParagraph);
+        $newParagraph = preg_replace(
+            '/<\/w:p>$/',
+            self::macroRunXml($macro) . '</w:p>',
+            $paragraph,
+            1
+        );
+        if (!is_string($newParagraph)) {
+            return $cellXml;
+        }
+
+        $inner = substr_replace($inner, $newParagraph, $paragraphPos, strlen($originalParagraph));
+
+        return $parts[1] . $inner . $parts[3];
+    }
+
+    private static function injectJuicioMarcaInCheckbox(
+        string $xml,
+        string $labelAnchor,
+        string $macro,
+        ?string $searchUntil = null
+    ): string {
+        $pos = strpos($xml, $labelAnchor);
+        if ($pos === false) {
+            return $xml;
+        }
+
+        $searchFrom = $pos + strlen($labelAnchor);
+        $searchEnd = strlen($xml);
+        if ($searchUntil !== null && $searchUntil !== '') {
+            $untilPos = strpos($xml, $searchUntil, $searchFrom);
+            if ($untilPos !== false) {
+                $searchEnd = $untilPos;
+            }
+        }
+
+        $segment = substr($xml, $searchFrom, $searchEnd - $searchFrom);
+        if (!preg_match(
+            '/<w:r\b(?:(?!<\/w:r>).)*<w:sz w:val="40"(?:(?!<\/w:r>).)*<\/w:r>/s',
+            $segment,
+            $match,
+            PREG_OFFSET_CAPTURE
+        )) {
+            return $xml;
+        }
+
+        $runStart = $searchFrom + (int) $match[0][1];
+        $runLength = strlen((string) $match[0][0]);
+
+        return substr_replace($xml, self::juicioCheckboxMacroRun($macro), $runStart, $runLength);
+    }
+
+    private static function juicioCheckboxMacroRun(string $macro): string
+    {
+        $safe = preg_replace('/[^a-zA-Z0-9_]/', '', $macro) ?? '';
+
+        return '<w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri"/>'
+            . '<w:b/><w:bCs/><w:color w:val="000000"/><w:sz w:val="40"/><w:szCs w:val="40"/>'
+            . '<w:lang w:val="es-CO" w:eastAsia="es-CO"/></w:rPr>'
+            . '<w:t xml:space="preserve">${' . $safe . '}</w:t></w:r>';
+    }
+
+    private static function injectMacroRunAfterAnchor(
+        string $xml,
+        string $anchor,
+        int $occurrence,
+        string $macro
+    ): string {
+        $pos = self::nthIndexOf($xml, $anchor, $occurrence);
+        if ($pos === null) {
+            return $xml;
+        }
+
+        $insertAt = $pos + strlen($anchor);
+
+        return substr($xml, 0, $insertAt) . self::macroRunXml($macro) . substr($xml, $insertAt);
+    }
+
+    private static function ensureParagraphLeftAlign(string $paragraphXml): string
+    {
+        if (preg_match('/<w:jc\b[^>]*>/', $paragraphXml)) {
+            $aligned = preg_replace(
+                '/<w:jc\b[^>]*\/?>/',
+                '<w:jc w:val="left"/>',
+                $paragraphXml,
+                1
+            );
+
+            return is_string($aligned) ? $aligned : $paragraphXml;
+        }
+
+        if (preg_match('/<w:pPr>/', $paragraphXml)) {
+            $aligned = preg_replace('/<w:pPr>/', '<w:pPr><w:jc w:val="left"/>', $paragraphXml, 1);
+
+            return is_string($aligned) ? $aligned : $paragraphXml;
+        }
+
+        $aligned = preg_replace('/<w:p>/', '<w:p><w:pPr><w:jc w:val="left"/></w:pPr>', $paragraphXml, 1);
+
+        return is_string($aligned) ? $aligned : $paragraphXml;
+    }
+
+    /**
      * @return list<array{anchor: string, occ: int, macro: string}>
      */
     private static function p1InjectionSpecs(): array
@@ -96,6 +331,7 @@ final class F023M3TemplateMacroInjector
             ['anchor' => '(DD/MM/AA)</w:t>', 'occ' => 0, 'macro' => 'fecha_inicio_etapa'],
             ['anchor' => 'DD/MM/AA</w:t>', 'occ' => 0, 'macro' => 'fecha_fin_etapa'],
             ['anchor' => 'Número de visitas realizadas en toda la etapa productiva:</w:t>', 'occ' => 0, 'macro' => 'numero_visitas_realizadas'],
+            ['anchor' => 'La evaluación se realizó en forma </w:t>', 'occ' => 0, 'macro' => 'modalidad'],
             ['anchor' => 'Enlace de grabación del momento 3: </w:t>', 'occ' => 0, 'macro' => 'enlace_grabacion'],
         ];
     }
@@ -348,13 +584,14 @@ final class F023M3TemplateMacroInjector
 
         $tail = substr($xml, $pos);
         $quoted = preg_quote($anchor, '/');
-        $pattern = '/^(' . $quoted . '(?s).*?<\/w:p><\/w:tc><w:tc\b[^>]*>(?s).*?<w:p\b[^>]*>(?s)(?:<w:pPr>.*?<\/w:pPr>)?)(.*?)(<\/w:p>)/u';
+        $macroRun = self::macroRunXml($macro);
+        $pattern = '/^(' . $quoted . '(?s).*?<\/w:p><\/w:tc>)(<w:tc\b[^>]*>.*?<\/w:tc>)/u';
         if (!preg_match($pattern, $tail, $m)) {
             return $xml;
         }
 
-        $replacement = $m[1] . self::macroRunXml($macro) . $m[3];
-        $newTail = $replacement . substr($tail, strlen($m[0]));
+        $normalizedCell = F023HeaderValueCellSupport::normalize((string) $m[2], $macroRun);
+        $newTail = (string) $m[1] . $normalizedCell . substr($tail, strlen($m[0]));
 
         return substr($xml, 0, $pos) . $newTail;
     }
