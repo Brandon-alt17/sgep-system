@@ -35,7 +35,7 @@ class ImportHistory
     }
 
     /** @param array<string, mixed> $entry */
-    public static function add(array $entry): void
+    public static function add(array $entry): bool
     {
         $items = self::all();
         array_unshift($items, $entry);
@@ -46,7 +46,7 @@ class ImportHistory
             mkdir($dir, 0777, true);
         }
 
-        self::write($items);
+        return self::write($items);
     }
 
     /**
@@ -107,12 +107,14 @@ class ImportHistory
     }
 
     /** @param array<int, array<string, mixed>> $items */
-    private static function write(array $items): void
+    private static function write(array $items): bool
     {
         $encoded = json_encode($items, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
-        if ($encoded === false || !self::persistFile($encoded)) {
-            return;
+        if ($encoded === false) {
+            return false;
         }
+
+        return self::persistFile($encoded);
     }
 
     private static function persistFile(string $contents): bool

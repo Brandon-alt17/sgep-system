@@ -26,7 +26,7 @@ final class F023M3JuicioMarcasTest extends TestCase
         $vars = $method->invoke($generator, ['tipo' => 'M3', 'juicio_final' => 'Aprobado']);
 
         $this->assertSame('X', $vars['m3_juicio_marca_aprobado']);
-        $this->assertSame('___', $vars['m3_juicio_marca_no_aprobado']);
+        $this->assertSame('', $vars['m3_juicio_marca_no_aprobado']);
     }
 
     public function test_m3_juicio_marca_no_aprobado(): void
@@ -37,7 +37,7 @@ final class F023M3JuicioMarcasTest extends TestCase
 
         $vars = $method->invoke($generator, ['tipo' => 'M3', 'juicio_final' => 'No aprobado']);
 
-        $this->assertSame('___', $vars['m3_juicio_marca_aprobado']);
+        $this->assertSame('', $vars['m3_juicio_marca_aprobado']);
         $this->assertSame('X', $vars['m3_juicio_marca_no_aprobado']);
     }
 }

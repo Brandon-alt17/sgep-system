@@ -43,14 +43,64 @@ final class F023M3P2TemplateMacroInjectorTest extends TestCase
         }
 
         $this->assertMatchesRegularExpression(
-            '/Aprobado<\\/w:t><\\/w:r>(?:(?!<w:sz w:val="40").)*<w:sz w:val="40"(?:(?!<\\/w:r>).)*\\$\\{m3_juicio_marca_aprobado\\}/s',
+            '/wp:posOffset>4938395<\\/wp:posOffset>.*?\\$\\{m3_juicio_marca_aprobado\\}/s',
             $xml,
-            'La marca de Aprobado debe ir en el cuadro (run sz 40), no pegada al texto'
+            'La marca de Aprobado debe ir dentro del cuadro anclado (textbox), no junto al texto'
+        );
+        $this->assertMatchesRegularExpression(
+            '/wp:posOffset>6029325<\\/wp:posOffset>.*?\\$\\{m3_juicio_marca_no_aprobado\\}/s',
+            $xml,
+            'La marca de No aprobado debe ir dentro del cuadro anclado'
         );
         $this->assertDoesNotMatchRegularExpression(
-            '/Aprobado<\\/w:t><w:r><w:rPr>/',
+            '/Aprobado<\\/w:t><\\/w:r>.*?<w:sz w:val="40".*?\\$\\{m3_juicio_marca_aprobado\\}/s',
             $xml,
-            'No debe anidar un run de macro dentro del run de la etiqueta Aprobado'
+            'No debe insertar la marca en el run de texto junto a la etiqueta Aprobado'
+        );
+        $this->assertMatchesRegularExpression(
+            '/wp:posOffset>4938395<\\/wp:posOffset>.*?anchor="ctr".*?anchorCtr="1"/s',
+            $xml,
+            'El cuadro de Aprobado debe centrarse verticalmente dentro del recuadro'
+        );
+    }
+
+    public function test_m3_p2_apply_juicio_marca_writes_x_inside_checkbox_after_save(): void
+    {
+        $template = BASE_PATH . '/storage/templates/m3_p2.docx';
+        if (!is_file($template)) {
+            $this->markTestSkipped('Plantilla m3_p2.docx no disponible.');
+        }
+
+        $patched = F023M3TemplateMacroInjector::patchToTemp($template);
+        $proc = new \PhpOffice\PhpWord\TemplateProcessor($patched);
+        $proc->setValue('m3_juicio_marca_aprobado', 'X');
+        $proc->setValue('m3_juicio_marca_no_aprobado', '');
+        $saved = tempnam(sys_get_temp_dir(), 'm3p2saved_') . '.docx';
+        $proc->saveAs($saved);
+        @unlink($patched);
+
+        F023M3TemplateMacroInjector::applyJuicioMarcasToSavedDocx($saved, [
+            'm3_juicio_marca_aprobado' => 'X',
+            'm3_juicio_marca_no_aprobado' => '',
+        ]);
+
+        $zip = new ZipArchive();
+        $this->assertTrue($zip->open($saved) === true);
+        $xml = (string) $zip->getFromName('word/document.xml');
+        $zip->close();
+        @unlink($saved);
+
+        $this->assertMatchesRegularExpression(
+            '/wp:posOffset>4938395<\\/wp:posOffset>.*?<w:txbxContent>.*?<w:t[^>]*>X<\\/w:t>.*?<\\/w:txbxContent>/s',
+            $xml
+        );
+        $this->assertMatchesRegularExpression(
+            '/wp:posOffset>4938395<\\/wp:posOffset>.*?lIns="0".*?tIns="0"/s',
+            $xml
+        );
+        $this->assertDoesNotMatchRegularExpression(
+            '/Aprobado<\\/w:t><\\/w:r>.*?<w:t[^>]*>X<\\/w:t>/s',
+            $xml
         );
     }
 }

@@ -77,7 +77,7 @@ class ImportacionController
             : 'Exitoso';
 
         $importId = date('YmdHis') . '-' . substr(bin2hex(random_bytes(4)), 0, 8);
-        ImportHistory::add([
+        $historySaved = ImportHistory::add([
             'id' => $importId,
             'file_name' => $fileName,
             'date' => date('Y-m-d'),
@@ -85,6 +85,16 @@ class ImportacionController
             'status' => $status,
             'resultado' => $resultado,
         ]);
+
+        if (!$historySaved) {
+            log_error('Import history: no se pudo escribir storage/app/imports/history.json');
+            $this->respondImportValidationFailed([
+                'La importación se procesó pero no se pudo guardar el historial. '
+                . 'Revise permisos de escritura en storage/app/imports (usuario del servidor web).',
+            ]);
+
+            return;
+        }
 
         $redirectUrl = rtrim((string) APP_BASE_PATH, '/') . '/importar/resultado?id=' . urlencode($importId);
         if ($this->isAjaxRequest()) {
@@ -102,7 +112,12 @@ class ImportacionController
 
         if ($entry === null) {
             http_response_code(404);
-            view('errors/404', ['uri' => '/importar/resultado?id=' . $id]);
+            view('errors/404', [
+                'uri' => '/importar/resultado?id=' . $id,
+                'message' => 'No se encontró el resultado de esta importación. '
+                    . 'Puede deberse a permisos de escritura en storage/app/imports o a un enlace antiguo.',
+            ]);
+
             return;
         }
 

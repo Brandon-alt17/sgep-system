@@ -125,6 +125,12 @@ class F023Generator
                 if (!empty($seg['patch_m2_macros'])) {
                     F023M2TemplateMacroInjector::applyLayoutToSavedDocx($tmpDocx);
                 }
+                if (!empty($seg['patch_m3_macros']) && str_contains(basename($path), 'm3_p2')) {
+                    F023M3TemplateMacroInjector::applyJuicioMarcasToSavedDocx($tmpDocx, [
+                        'm3_juicio_marca_aprobado' => (string) ($seg['vars']['m3_juicio_marca_aprobado'] ?? ''),
+                        'm3_juicio_marca_no_aprobado' => (string) ($seg['vars']['m3_juicio_marca_no_aprobado'] ?? ''),
+                    ]);
+                }
                 $tempCleanup[] = $tmpDocx;
                 $mergeInputs[] = $tmpDocx;
             }
@@ -291,8 +297,8 @@ class F023Generator
             'fecha_diligenciamiento' => date('d/m/Y'),
             'm3_marca_presencial' => '___',
             'm3_marca_virtual' => '___',
-            'm3_juicio_marca_aprobado' => '___',
-            'm3_juicio_marca_no_aprobado' => '___',
+            'm3_juicio_marca_aprobado' => '',
+            'm3_juicio_marca_no_aprobado' => '',
             'm3_retro_instructor_proceso' => '',
             'm3_retro_instructor_desempeno' => '',
             'm3_retro_aprendiz_proceso' => '',
@@ -452,8 +458,8 @@ class F023Generator
         $isNoAprobado = strcasecmp($juicio, 'No aprobado') === 0;
 
         return [
-            'm3_juicio_marca_aprobado' => $isAprobado ? 'X' : '___',
-            'm3_juicio_marca_no_aprobado' => $isNoAprobado ? 'X' : '___',
+            'm3_juicio_marca_aprobado' => $isAprobado ? 'X' : '',
+            'm3_juicio_marca_no_aprobado' => $isNoAprobado ? 'X' : '',
         ];
     }
 

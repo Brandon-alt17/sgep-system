@@ -97,23 +97,61 @@ final class F023M3TemplateMacroInjector
         return $tmpDocx;
     }
 
-    /**
-     * @return list<array{labelAnchor: string, macro: string, searchUntil: string|null}>
-     */
-    private static function p2JuicioMarcaSpecs(): array
+    /** @return array<string, string> posOffset del cuadro anclado → macro de marca */
+    private static function p2JuicioCheckboxOffsets(): array
     {
         return [
-            [
-                'labelAnchor' => 'Aprobado</w:t></w:r>',
-                'macro' => 'm3_juicio_marca_aprobado',
-                'searchUntil' => 'No aprobado',
-            ],
-            [
-                'labelAnchor' => 'No aprobado </w:t></w:r>',
-                'macro' => 'm3_juicio_marca_no_aprobado',
-                'searchUntil' => null,
-            ],
+            '4938395' => 'm3_juicio_marca_aprobado',
+            '6029325' => 'm3_juicio_marca_no_aprobado',
         ];
+    }
+
+    /** @return array<string, string> paraId del cuadro anclado → macro de marca */
+    private static function p2JuicioCheckboxParaIds(): array
+    {
+        return [
+            '6C2D484F' => 'm3_juicio_marca_aprobado',
+            '469EB6AF' => 'm3_juicio_marca_no_aprobado',
+        ];
+    }
+
+    /**
+     * Tras TemplateProcessor::saveAs(), fija la X dentro de los cuadros de juicio y ajusta
+     * márgenes/centrado para que LibreOffice/PDF la dibuje dentro del recuadro.
+     *
+     * @param array<string, string> $marcaValues
+     */
+    public static function applyJuicioMarcasToSavedDocx(string $docxPath, array $marcaValues): void
+    {
+        if (!is_file($docxPath)) {
+            return;
+        }
+
+        $zip = new ZipArchive();
+        if ($zip->open($docxPath) !== true) {
+            throw new \RuntimeException('No se pudo abrir el segmento M3 p2 para marcas de juicio.');
+        }
+
+        $xml = $zip->getFromName(self::DOCUMENT_XML);
+        if ($xml === false || $xml === '') {
+            $zip->close();
+            throw new \RuntimeException('document.xml ilegible en segmento M3 p2 guardado.');
+        }
+
+        foreach (self::p2JuicioCheckboxOffsets() as $offset => $macro) {
+            $value = (string) ($marcaValues[$macro] ?? '');
+            $xml = self::setJuicioMarcaInAnchor($xml, (string) $offset, $value);
+            $xml = self::tuneJuicioCheckboxAnchorInXml($xml, (string) $offset);
+        }
+
+        if ($zip->locateName(self::DOCUMENT_XML) !== false) {
+            $zip->deleteName(self::DOCUMENT_XML);
+        }
+        if (!$zip->addFromString(self::DOCUMENT_XML, $xml)) {
+            $zip->close();
+            throw new \RuntimeException('No se pudo escribir marcas de juicio en segmento M3 p2.');
+        }
+        $zip->close();
     }
 
     /**
@@ -153,16 +191,106 @@ final class F023M3TemplateMacroInjector
             );
         }
 
-        foreach (self::p2JuicioMarcaSpecs() as $spec) {
-            $xml = self::injectJuicioMarcaInCheckbox(
-                $xml,
-                (string) $spec['labelAnchor'],
-                (string) $spec['macro'],
-                isset($spec['searchUntil']) ? (string) $spec['searchUntil'] : null
-            );
+        return self::tuneJuicioCheckboxAnchorsInXml(
+            self::injectJuicioMarcasInCheckboxDrawings($xml)
+        );
+    }
+
+    private static function tuneJuicioCheckboxAnchorsInXml(string $xml): string
+    {
+        foreach (self::p2JuicioCheckboxOffsets() as $offset => $macro) {
+            $xml = self::tuneJuicioCheckboxAnchorInXml($xml, (string) $offset);
         }
 
         return $xml;
+    }
+
+    private static function setJuicioMarcaInAnchor(string $xml, string $posOffset, string $value): string
+    {
+        $block = self::extractAnchorBlockContaining($xml, $posOffset);
+        if ($block === null) {
+            return $xml;
+        }
+
+        $patched = self::setJuicioMarcaInAnchorBlock($block, $value);
+        if ($patched === $block) {
+            return $xml;
+        }
+
+        $start = strpos($xml, $block);
+        if ($start === false) {
+            return $xml;
+        }
+
+        return substr_replace($xml, $patched, $start, strlen($block));
+    }
+
+    private static function setJuicioMarcaInAnchorBlock(string $block, string $value): string
+    {
+        $txbx = self::txbxContentWithValue($value);
+        $replaced = preg_replace('/<w:txbxContent>.*?<\/w:txbxContent>/s', $txbx, $block);
+
+        return is_string($replaced) ? $replaced : $block;
+    }
+
+    private static function tuneJuicioCheckboxAnchorInXml(string $xml, string $posOffset): string
+    {
+        $block = self::extractAnchorBlockContaining($xml, $posOffset);
+        if ($block === null) {
+            return $xml;
+        }
+
+        $patched = self::tuneJuicioCheckboxAnchorBlock($block);
+        if ($patched === $block) {
+            return $xml;
+        }
+
+        $start = strpos($xml, $block);
+        if ($start === false) {
+            return $xml;
+        }
+
+        return substr_replace($xml, $patched, $start, strlen($block));
+    }
+
+    private static function extractAnchorBlockContaining(string $xml, string $posOffset): ?string
+    {
+        $needle = 'wp:posOffset>' . $posOffset;
+        $pos = strpos($xml, $needle);
+        if ($pos === false) {
+            return null;
+        }
+
+        $before = substr($xml, 0, $pos);
+        $start = strrpos($before, '<wp:anchor');
+        if ($start === false) {
+            return null;
+        }
+
+        $end = strpos($xml, '</wp:anchor>', $pos);
+        if ($end === false) {
+            return null;
+        }
+        $end += strlen('</wp:anchor>');
+
+        return substr($xml, $start, $end - $start);
+    }
+
+    private static function tuneJuicioCheckboxAnchorBlock(string $block): string
+    {
+        $tuned = $block;
+        foreach (['lIns', 'tIns', 'rIns', 'bIns'] as $attr) {
+            $replaced = preg_replace('/\b' . $attr . '="\d+"/', $attr . '="0"', $tuned);
+            if (is_string($replaced)) {
+                $tuned = $replaced;
+            }
+        }
+
+        $tuned = str_replace('anchor="t"', 'anchor="ctr"', $tuned);
+        $tuned = str_replace('anchorCtr="0"', 'anchorCtr="1"', $tuned);
+        $tuned = str_replace('v-text-anchor:top', 'v-text-anchor:middle', $tuned);
+
+        return $tuned;
     }
 
     private static function injectRetroMacroInTableRow(
@@ -236,40 +364,150 @@ final class F023M3TemplateMacroInjector
         return $parts[1] . $inner . $parts[3];
     }
 
-    private static function injectJuicioMarcaInCheckbox(
-        string $xml,
-        string $labelAnchor,
-        string $macro,
-        ?string $searchUntil = null
-    ): string {
-        $pos = strpos($xml, $labelAnchor);
+    private static function injectJuicioMarcasInCheckboxDrawings(string $xml): string
+    {
+        $anchor = 'Juicio de evaluación';
+        $pos = strpos($xml, $anchor);
         if ($pos === false) {
             return $xml;
         }
 
-        $searchFrom = $pos + strlen($labelAnchor);
-        $searchEnd = strlen($xml);
-        if ($searchUntil !== null && $searchUntil !== '') {
-            $untilPos = strpos($xml, $searchUntil, $searchFrom);
-            if ($untilPos !== false) {
-                $searchEnd = $untilPos;
-            }
-        }
-
-        $segment = substr($xml, $searchFrom, $searchEnd - $searchFrom);
-        if (!preg_match(
-            '/<w:r\b(?:(?!<\/w:r>).)*<w:sz w:val="40"(?:(?!<\/w:r>).)*<\/w:r>/s',
-            $segment,
-            $match,
-            PREG_OFFSET_CAPTURE
-        )) {
+        $pStart = self::findParagraphStartOutsideTxbx($xml, $pos);
+        if ($pStart === null) {
             return $xml;
         }
 
-        $runStart = $searchFrom + (int) $match[0][1];
-        $runLength = strlen((string) $match[0][0]);
+        $paragraph = self::extractParagraphAt($xml, $pStart);
+        if ($paragraph === null) {
+            return $xml;
+        }
 
-        return substr_replace($xml, self::juicioCheckboxMacroRun($macro), $runStart, $runLength);
+        $patched = self::patchJuicioDrawingCheckboxes($paragraph);
+        if ($patched === $paragraph) {
+            return $xml;
+        }
+
+        return substr_replace($xml, $patched, $pStart, strlen($paragraph));
+    }
+
+    private static function isInsideTxbxContent(string $xml, int $pos): bool
+    {
+        $before = substr($xml, 0, $pos);
+
+        return substr_count($before, '<w:txbxContent>') > substr_count($before, '</w:txbxContent>');
+    }
+
+    private static function findParagraphStartOutsideTxbx(string $xml, int $anchorPos): ?int
+    {
+        $searchPos = $anchorPos;
+        while ($searchPos > 0) {
+            $before = substr($xml, 0, $searchPos);
+            $pStart = max(
+                (int) strrpos($before, '<w:p '),
+                (int) strrpos($before, '<w:p>')
+            );
+            if ($pStart < 0) {
+                return null;
+            }
+            if (!self::isInsideTxbxContent($xml, $pStart)) {
+                return $pStart;
+            }
+            $searchPos = $pStart - 1;
+        }
+
+        return null;
+    }
+
+    private static function extractParagraphAt(string $xml, int $pStart): ?string
+    {
+        $depth = 0;
+        $len = strlen($xml);
+        for ($i = $pStart; $i < $len; $i++) {
+            if ($xml[$i] !== '<') {
+                continue;
+            }
+            if ($i + 4 <= $len && substr($xml, $i, 4) === '<w:p') {
+                $next = $xml[$i + 4];
+                if ($next === '>' || $next === ' ') {
+                    $depth++;
+                    continue;
+                }
+            }
+            if ($i + 6 <= $len && substr($xml, $i, 6) === '</w:p>') {
+                $depth--;
+                if ($depth === 0) {
+                    return substr($xml, $pStart, $i + 6 - $pStart);
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private static function extractParagraphContaining(string $xml, int $anchorPos): ?string
+    {
+        $pStart = self::findParagraphStartOutsideTxbx($xml, $anchorPos);
+        if ($pStart === null) {
+            return null;
+        }
+
+        return self::extractParagraphAt($xml, $pStart);
+    }
+
+    private static function patchJuicioDrawingCheckboxes(string $cell): string
+    {
+        $patched = $cell;
+        foreach (self::p2JuicioCheckboxParaIds() as $paraId => $macro) {
+            if (str_contains($patched, '${' . $macro)) {
+                continue;
+            }
+
+            $pattern = '/<w:txbxContent><w:p[^>]*w14:paraId="' . preg_quote($paraId, '/')
+                . '"[^>]*>.*?<\/w:txbxContent>/s';
+            $replaced = preg_replace(
+                $pattern,
+                self::txbxContentWithMacro($macro),
+                $patched
+            );
+            if (is_string($replaced)) {
+                $patched = $replaced;
+            }
+        }
+
+        return $patched;
+    }
+
+    private static function txbxContentWithMacro(string $macro): string
+    {
+        return '<w:txbxContent>' . self::juicioCheckboxParagraphXml(self::juicioCheckboxMacroRun($macro)) . '</w:txbxContent>';
+    }
+
+    private static function txbxContentWithValue(string $value): string
+    {
+        return '<w:txbxContent>' . self::juicioCheckboxParagraphXml(self::juicioCheckboxValueRun($value)) . '</w:txbxContent>';
+    }
+
+    private static function juicioCheckboxParagraphXml(string $innerRun): string
+    {
+        return '<w:p>'
+            . '<w:pPr><w:jc w:val="center"/>'
+            . '<w:spacing w:before="0" w:after="0" w:line="200" w:lineRule="exact"/>'
+            . '<w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri"/>'
+            . '<w:b/><w:sz w:val="16"/><w:szCs w:val="16"/></w:rPr></w:pPr>'
+            . $innerRun
+            . '</w:p>';
+    }
+
+    private static function juicioCheckboxValueRun(string $value): string
+    {
+        if ($value === '') {
+            return '';
+        }
+
+        return '<w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri"/>'
+            . '<w:b/><w:bCs/><w:color w:val="000000"/><w:sz w:val="16"/><w:szCs w:val="16"/>'
+            . '<w:lang w:val="es-CO" w:eastAsia="es-CO"/></w:rPr>'
+            . '<w:t xml:space="preserve">' . htmlspecialchars($value, ENT_XML1 | ENT_QUOTES, 'UTF-8') . '</w:t></w:r>';
     }
 
     private static function juicioCheckboxMacroRun(string $macro): string
@@ -277,7 +515,7 @@ final class F023M3TemplateMacroInjector
         $safe = preg_replace('/[^a-zA-Z0-9_]/', '', $macro) ?? '';
 
         return '<w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri"/>'
-            . '<w:b/><w:bCs/><w:color w:val="000000"/><w:sz w:val="40"/><w:szCs w:val="40"/>'
+            . '<w:b/><w:bCs/><w:color w:val="000000"/><w:sz w:val="16"/><w:szCs w:val="16"/>'
             . '<w:lang w:val="es-CO" w:eastAsia="es-CO"/></w:rPr>'
             . '<w:t xml:space="preserve">${' . $safe . '}</w:t></w:r>';
     }

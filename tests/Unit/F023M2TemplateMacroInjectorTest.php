@@ -43,8 +43,9 @@ final class F023M2TemplateMacroInjectorTest extends TestCase
             $this->assertStringContainsString('${obs_aprendiz_l2}', $xml);
             $this->assertStringContainsString('${obs_coformador}', $xml);
             $this->assertStringContainsString('${obs_coformador_l2}', $xml);
-            $this->assertStringContainsString('${obs_coformador_l2}', $xml);
-            $this->assertStringContainsString('w:lineRule="atLeast"', $xml);
+            $this->assertStringContainsString('${obs_instructor_l3}', $xml);
+            $this->assertStringContainsString('w:lineRule="exact"', $xml);
+            $this->assertStringContainsString('w:jc w:val="left"/></w:pPr><w:r><w:rPr><w:rFonts w:ascii="Calibri"', $xml);
 
             libxml_use_internal_errors(true);
             $dom = new \DOMDocument();

@@ -10,9 +10,11 @@
 <body>
 <?php
 // Contexto global de UI: ruta actual para resaltar el item activo del sidebar.
-$uri = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
+$requestPath = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
 $base = rtrim((string) APP_BASE_PATH, '/');
-$currentPath = ($base !== '' && str_starts_with($uri, $base)) ? (substr($uri, strlen($base)) ?: '/') : $uri;
+$currentPath = ($base !== '' && str_starts_with($requestPath, $base))
+    ? (substr($requestPath, strlen($base)) ?: '/')
+    : $requestPath;
 $currentPath = $currentPath === '' ? '/' : $currentPath;
 $pathForTitle = $currentPath;
 if (str_starts_with($currentPath, '/momentos/')) {

@@ -9,8 +9,9 @@ namespace App\Exports;
  */
 final class F023SignatureNameSupport
 {
-    public static function injectIntoDocumentXml(string $xml): string
+    public static function injectIntoDocumentXml(string $xml, string $nameAlignment = 'center'): string
     {
+        $nameAlignment = $nameAlignment === 'left' ? 'left' : 'center';
         $offset = 0;
         while (preg_match('/<w:tbl\b/', $xml, $match, PREG_OFFSET_CAPTURE, $offset)) {
             $tblStart = (int) $match[0][1];
@@ -20,7 +21,7 @@ final class F023SignatureNameSupport
             }
             $tblEnd += strlen('</w:tbl>');
             $table = substr($xml, $tblStart, $tblEnd - $tblStart);
-            $patched = self::injectInTable($table);
+            $patched = self::injectInTable($table, $nameAlignment);
             if ($patched !== $table) {
                 $xml = substr($xml, 0, $tblStart) . $patched . substr($xml, $tblEnd);
             }
@@ -30,7 +31,7 @@ final class F023SignatureNameSupport
         return $xml;
     }
 
-    private static function injectInTable(string $table): string
+    private static function injectInTable(string $table, string $nameAlignment): string
     {
         if (!preg_match_all('/<w:tr\b[^>]*>.*?<\/w:tr>/s', $table, $rows, PREG_OFFSET_CAPTURE)) {
             return $table;
@@ -50,7 +51,7 @@ final class F023SignatureNameSupport
 
         $lineRow = (string) $rows[0][$labelRowIndex - 1][0];
         $lineRowStart = (int) $rows[0][$labelRowIndex - 1][1];
-        $newLineRow = self::patchSignatureLineRow($lineRow);
+        $newLineRow = self::patchSignatureLineRow($lineRow, $nameAlignment);
         if ($newLineRow === $lineRow) {
             return $table;
         }
@@ -67,7 +68,7 @@ final class F023SignatureNameSupport
             && stripos($plain, 'seguimiento') !== false;
     }
 
-    private static function patchSignatureLineRow(string $rowXml): string
+    private static function patchSignatureLineRow(string $rowXml, string $nameAlignment): string
     {
         if (!preg_match_all('/<w:tc\b[^>]*>.*?<\/w:tc>/s', $rowXml, $cells, PREG_OFFSET_CAPTURE)) {
             return $rowXml;
@@ -90,7 +91,7 @@ final class F023SignatureNameSupport
                 continue;
             }
 
-            $newCell = self::injectMacroInSignatureLineCell($cell, $macro);
+            $newCell = self::injectMacroInSignatureLineCell($cell, $macro, $nameAlignment);
             if ($newCell === $cell) {
                 continue;
             }
@@ -114,7 +115,7 @@ final class F023SignatureNameSupport
         return $rowXml;
     }
 
-    private static function injectMacroInSignatureLineCell(string $cellXml, string $macro): string
+    private static function injectMacroInSignatureLineCell(string $cellXml, string $macro, string $nameAlignment): string
     {
         if (!preg_match('/^(<w:tc\b[^>]*>)(.*?)(<\/w:tc>)$/s', $cellXml, $parts)) {
             return $cellXml;
@@ -129,8 +130,8 @@ final class F023SignatureNameSupport
         }
 
         $paragraph = '<w:p><w:pPr><w:spacing w:after="0" w:before="0"/>'
-            . '<w:jc w:val="center"/></w:pPr>'
-            . self::macroRunXml($macro)
+            . '<w:jc w:val="' . $nameAlignment . '"/></w:pPr>'
+            . self::macroRunXml($macro, $nameAlignment === 'left')
             . '</w:p>';
 
         return $parts[1] . $tcPr . $paragraph . $parts[3];
@@ -149,11 +150,13 @@ final class F023SignatureNameSupport
         return is_string($updated) ? $updated : $tcPr;
     }
 
-    private static function macroRunXml(string $macro): string
+    private static function macroRunXml(string $macro, bool $italic = false): string
     {
         $safe = preg_replace('/[^a-zA-Z0-9_]/', '', $macro) ?? '';
+        $italicPr = $italic ? '<w:i/><w:iCs/>' : '';
 
         return '<w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:cs="Calibri"/>'
+            . $italicPr
             . '<w:sz w:val="18"/><w:szCs w:val="18"/>'
             . '<w:lang w:val="es-CO" w:eastAsia="es-CO"/></w:rPr>'
             . '<w:t xml:space="preserve">${' . $safe . '}</w:t></w:r>';

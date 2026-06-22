@@ -5,20 +5,119 @@ declare(strict_types=1);
 namespace App\Exports;
 
 /**
- * Texto de observaciones en F-023: máximo 2 renglones alineados con la plantilla Word.
+ * Texto de observaciones en F-023: renglones alineados con subrayado en plantilla Word (m2).
  */
 final class F023ObservationLines
 {
+    /** Párrafos opcionales inyectados en m2 (líneas 3+). */
+    public const TEMPLATE_SLOT_COUNT = 8;
+
     public static function charsPerLine(): int
     {
         $limites = require base_path('config/f023_limites.php');
 
-        return max(1, (int) ($limites['obs_two_line_chars'] ?? 120));
+        return max(1, (int) ($limites['obs_two_line_chars'] ?? 132));
     }
 
-    public static function maxTotalChars(): int
+    public static function maxTotalChars(?string $configKey = null): int
     {
+        $limites = require base_path('config/f023_limites.php');
+        if ($configKey !== null && isset($limites[$configKey])) {
+            return max(1, (int) $limites[$configKey]);
+        }
+
         return self::charsPerLine() * 2;
+    }
+
+    /**
+     * Respeta saltos de línea (Enter) del formulario; solo hace word-wrap si un renglón supera el ancho.
+     *
+     * @return list<string>
+     */
+    public static function splitLines(string $text, ?int $maxTotalChars = null): array
+    {
+        $max = $maxTotalChars ?? self::maxTotalChars();
+        $perLine = self::charsPerLine();
+        $normalized = str_replace(["\r\n", "\r"], "\n", trim($text));
+        if ($normalized === '') {
+            return [];
+        }
+
+        $plainBudget = preg_replace('/\s+/u', '', $normalized) ?? '';
+        $plainBudget = mb_substr($plainBudget, 0, $max);
+
+        /** @var list<string> $explicitRows */
+        $explicitRows = preg_split('/\n/u', $normalized) ?: [];
+
+        /** @var list<string> $lines */
+        $lines = [];
+        $consumedPlain = 0;
+
+        foreach ($explicitRows as $row) {
+            $row = trim(preg_replace('/[ \t]+/u', ' ', $row) ?? '');
+            if ($row === '') {
+                continue;
+            }
+
+            foreach (self::wrapToLineWidth($row, $perLine) as $segment) {
+                $segmentPlainLen = mb_strlen(preg_replace('/\s+/u', '', $segment) ?? '');
+                if ($consumedPlain + $segmentPlainLen > mb_strlen($plainBudget)) {
+                    break 2;
+                }
+
+                $lines[] = $segment;
+                $consumedPlain += $segmentPlainLen;
+
+                if (count($lines) >= self::TEMPLATE_SLOT_COUNT) {
+                    break 2;
+                }
+            }
+        }
+
+        // #region agent log
+        F023AgentDebugLog::write('A', 'F023ObservationLines::splitLines', 'split result', [
+            'inputHasNewlines' => str_contains($normalized, "\n"),
+            'explicitRowCount' => count(array_filter($explicitRows, static fn (string $r): bool => trim($r) !== '')),
+            'outputLineCount' => count($lines),
+            'lineLengths' => array_map(static fn (string $l): int => mb_strlen($l), $lines),
+            'lines' => $lines,
+        ], 'post-fix');
+        // #endregion
+
+        return $lines;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private static function wrapToLineWidth(string $text, int $perLine): array
+    {
+        if (mb_strlen($text) <= $perLine) {
+            return [$text];
+        }
+
+        /** @var list<string> $wrapped */
+        $wrapped = [];
+        $remaining = $text;
+
+        while ($remaining !== '') {
+            if (mb_strlen($remaining) <= $perLine) {
+                $wrapped[] = $remaining;
+                break;
+            }
+
+            $chunk = mb_substr($remaining, 0, $perLine);
+            $breakPos = mb_strrpos($chunk, ' ');
+            if ($breakPos !== false && $breakPos >= (int) ($perLine * 0.4)) {
+                $wrapped[] = mb_substr($remaining, 0, $breakPos);
+                $remaining = trim(mb_substr($remaining, $breakPos));
+            } else {
+                $wrapped[] = $chunk;
+                $remaining = trim(mb_substr($remaining, $perLine));
+            }
+        }
+
+        return $wrapped;
     }
 
     /**
@@ -26,29 +125,9 @@ final class F023ObservationLines
      */
     public static function split(string $text): array
     {
-        $text = trim(preg_replace('/[\r\n]+/u', ' ', $text) ?? '');
-        $text = preg_replace('/\s+/u', ' ', $text) ?? '';
-        if ($text === '') {
-            return ['', ''];
-        }
+        $lines = self::splitLines($text);
 
-        $max = self::charsPerLine();
-        $text = mb_substr($text, 0, $max * 2);
-        if (mb_strlen($text) <= $max) {
-            return [$text, ''];
-        }
-
-        $line1 = mb_substr($text, 0, $max);
-        $breakPos = mb_strrpos($line1, ' ');
-        if ($breakPos !== false && $breakPos >= (int) ($max * 0.4)) {
-            $line1 = mb_substr($text, 0, $breakPos);
-            $rest = trim(mb_substr($text, $breakPos));
-        } else {
-            $line1 = mb_substr($text, 0, $max);
-            $rest = trim(mb_substr($text, $max));
-        }
-
-        return [$line1, mb_substr($rest, 0, $max)];
+        return [$lines[0] ?? '', $lines[1] ?? ''];
     }
 
     public static function combineTwoLines(string $line1, string $line2): string
@@ -66,16 +145,12 @@ final class F023ObservationLines
     }
 
     /**
-     * Línea 1 vacía: espacio + borde inferior. Línea 2 vacía: guiones como en plantilla m2.
+     * Línea vacía: espacio no separable sobre borde inferior (siempre línea horizontal).
      */
     public static function templateLineValue(string $line, int $lineIndex): string
     {
         if ($line !== '') {
             return $line;
-        }
-
-        if ($lineIndex === 2) {
-            return str_repeat('_', self::charsPerLine());
         }
 
         return "\u{00A0}";
@@ -89,9 +164,21 @@ final class F023ObservationLines
     public static function expandTemplateVars(array $vars, array $keys): array
     {
         foreach ($keys as $key) {
-            [$line1, $line2] = self::split((string) ($vars[$key] ?? ''));
-            $vars[$key] = self::templateLineValue($line1, 1);
-            $vars[$key . '_l2'] = self::templateLineValue($line2, 2);
+            $lines = self::splitLines((string) ($vars[$key] ?? ''), self::maxTotalChars($key));
+            $usedLines = count($lines);
+            $displayLines = max(2, $usedLines);
+
+            for ($lineIndex = 1; $lineIndex <= self::TEMPLATE_SLOT_COUNT; $lineIndex++) {
+                $macroKey = $lineIndex === 1 ? $key : $key . '_l' . $lineIndex;
+
+                if ($lineIndex > $displayLines) {
+                    $vars[$macroKey] = '';
+                } elseif ($lineIndex <= $usedLines) {
+                    $vars[$macroKey] = self::templateLineValue($lines[$lineIndex - 1], $lineIndex);
+                } else {
+                    $vars[$macroKey] = self::templateLineValue('', $lineIndex);
+                }
+            }
         }
 
         return $vars;

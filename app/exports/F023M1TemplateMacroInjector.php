@@ -168,7 +168,7 @@ final class F023M1TemplateMacroInjector
         $content = self::removeTrailingEmptyParagraphAfterLastTable($content);
 
         $sectPr = preg_replace('/<w:type\s+w:val="nextPage"\s*\/>/', '<w:type w:val="continuous" />', $sectPr) ?? $sectPr;
-        $sectPr = preg_replace('/<w:titlePg\s*\/>/', '', $sectPr) ?? $sectPr;
+        $sectPr = F023SectionHeaderSupport::normalizeSectPrForPdfExport($sectPr, $xml);
 
         $result = $m[1] . $content . $sectPr . $m[3];
 
