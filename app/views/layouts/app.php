@@ -61,6 +61,8 @@ $pageTitle = $titles[$pathForTitle] ?? $titles[$currentPath] ?? 'SGEP';
     </div>
 </div>
 <?php partial('components/confirm_modal'); ?>
+<?php partial('components/toast', ['message' => '', 'toastRootId' => 'sg-app-toast-root']); ?>
+<script src="<?= e(APP_BASE_PATH) ?>/js/ui-toast.js"></script>
 <?php partial('components/download_progress_overlay'); ?>
 <script src="<?= e(APP_BASE_PATH) ?>/js/app.js"></script>
 <script>window.APP_BASE_PATH = "<?= e((string) APP_BASE_PATH) ?>";</script>

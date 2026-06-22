@@ -49,20 +49,25 @@ function isConflictRowResolved(row) {
   return text === "Aplicado" || text === "Sin cambios";
 }
 
-function showImportConflictToast(message) {
+function showImportConflictToast(message, variant, ms) {
   var text = (message || "").trim();
   if (!text) return;
+  var v = variant || "success";
   if (typeof window.sgToastShow === "function") {
-    var roots = ["#import-conflictos-toast-root", "#import-preview-toast-root"];
+    var roots = ["#import-conflictos-toast-root", "#import-preview-toast-root", "#sg-app-toast-root"];
     for (var i = 0; i < roots.length; i++) {
       if (document.querySelector(roots[i])) {
-        window.sgToastShow(roots[i], text, "success", 5200);
+        window.sgToastShow(roots[i], text, v, ms);
         return;
       }
     }
   }
+  if (typeof window.sgToastNotify === "function") {
+    window.sgToastNotify(text, v, ms);
+    return;
+  }
   if (typeof window.showGlobalToast === "function") {
-    window.showGlobalToast(text);
+    window.showGlobalToast(text, v, ms);
   }
 }
 
@@ -167,7 +172,7 @@ function onAprendizConflictsResolved(modalId, modal) {
   persistConflictAprendizResolved(aprendizKey, resolutions)
     .then(function (data) {
       if (!data || !data.ok) {
-        alert("No se pudo registrar la resolución en el historial de importación.");
+        showImportConflictToast("No se pudo registrar la resolución en el historial de importación.", "error");
         return;
       }
       closeModal(modalId);
@@ -185,7 +190,7 @@ function onAprendizConflictsResolved(modalId, modal) {
       }
     })
     .catch(function () {
-      alert("No se pudo registrar la resolución en el historial de importación.");
+      showImportConflictToast("No se pudo registrar la resolución en el historial de importación.", "error");
     });
 }
 
@@ -270,7 +275,7 @@ function resolveConflictRow(row, action) {
       if (status) {
         status.textContent = "Error";
       }
-      alert("No se pudo guardar la decisión del conflicto.");
+      showImportConflictToast("No se pudo guardar la decisión del conflicto.", "error");
       throw new Error("conflict-resolve-failed");
     });
 }

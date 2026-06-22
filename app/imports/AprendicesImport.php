@@ -6,6 +6,7 @@ namespace App\Imports;
 
 use App\Helpers\Database;
 use App\Helpers\Normalizer;
+use App\Models\Aprendiz;
 use App\Models\Empresa;
 use App\Models\EmpresaJefe;
 use App\Models\Programa;
@@ -822,6 +823,10 @@ class AprendicesImport
     private function buildAprendizPayload(array $assoc, string $doc, ?int $programaId, ?int $empresaId, ?int $jefeId = null): array
     {
         $ficha = $this->stringOrNull($assoc['numero_grupo'] ?? $assoc['numero_ficha'] ?? null);
+        [$jefeGrupo, $coordinacion] = Aprendiz::normalizeJefeGrupoCoordinacion(
+            (string) ($this->stringOrNull($assoc['jefe_grupo'] ?? null) ?? ''),
+            (string) ($this->stringOrNull($assoc['coordinacion'] ?? null) ?? '')
+        );
 
         return [
             'nombre_completo' => trim((string) ($assoc['nombre_completo'] ?? '')),
@@ -843,8 +848,8 @@ class AprendicesImport
             'telefono_instructor_seguimiento' => $this->stringOrNull($assoc['telefono_instructor_seguimiento'] ?? null),
             'tipo_asistencia' => $this->stringOrNull($assoc['tipo_asistencia'] ?? null),
             'sugerencias_comentarios' => $this->stringOrNull($assoc['sugerencias_comentarios'] ?? null),
-            'jefe_grupo' => $this->stringOrNull($assoc['jefe_grupo'] ?? null),
-            'coordinacion' => $this->stringOrNull($assoc['coordinacion'] ?? null),
+            'jefe_grupo' => $this->stringOrNull($jefeGrupo !== '' ? $jefeGrupo : null),
+            'coordinacion' => $this->stringOrNull($coordinacion !== '' ? $coordinacion : null),
         ];
     }
 
