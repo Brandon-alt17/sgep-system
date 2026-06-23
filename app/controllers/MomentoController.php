@@ -26,7 +26,15 @@ class MomentoController
         if ($aprendiz === null) {
             abort_404('/momentos/create?aprendiz_id=' . $aprendizId);
         }
-        $momentoExistente = $aprendiz ? Momento::findOneByAprendizTipo($aprendizId, $tipo) : null;
+        $momentoId = (int) ($_GET['momento_id'] ?? 0);
+        if ($tipo === 'EX' && $momentoId > 0) {
+            $momentoExistente = Momento::findById($momentoId);
+            if ($momentoExistente === null || (int) ($momentoExistente['aprendiz_id'] ?? 0) !== $aprendizId) {
+                abort_404('/momentos/create?aprendiz_id=' . $aprendizId . '&tipo=EX&momento_id=' . $momentoId);
+            }
+        } else {
+            $momentoExistente = $tipo === 'EX' ? null : Momento::findOneByAprendizTipo($aprendizId, $tipo);
+        }
         $factoresExistentes = [];
         if ($momentoExistente !== null) {
             $factoresExistentes = Momento::factoresByMomento((int) ($momentoExistente['id'] ?? 0));
@@ -67,6 +75,7 @@ class MomentoController
             'maxObsInstructor' => (int) ($limites['obs_instructor'] ?? 500),
             'maxObsAprendiz' => (int) ($limites['obs_aprendiz'] ?? 500),
             'maxObsCoformador' => (int) ($limites['obs_coformador'] ?? 500),
+            'maxMotivoEx' => (int) ($limites['motivo_seguimiento_extraordinario'] ?? 500),
             'maxRetroM3' => (int) ($limites['retro_m3'] ?? 1200),
             'factorObsPorIndice' => $factorObsPorIndice,
             'factorValoracionPorIndice' => $factorValoracionPorIndice,
@@ -234,6 +243,7 @@ class MomentoController
     {
         foreach ([
             'fecha_visita',
+            'fecha_seguimiento_anterior',
             'fecha_inicio_etapa',
             'fecha_fin_etapa',
             'fecha_arl',
@@ -279,6 +289,8 @@ class MomentoController
             'horario' => '',
             'enlace_grabacion' => '',
             'fecha_visita' => null,
+            'fecha_seguimiento_anterior' => null,
+            'motivo_seguimiento_extraordinario' => '',
             'modalidad' => (string) ($aprendiz['modalidad'] ?? 'Presencial'),
             'proxima_visita' => $aprendiz['proxima_visita'] ?? null,
             'ciudad_diligenciamiento' => '',
@@ -312,6 +324,7 @@ class MomentoController
             'numero_poliza_arl' => $limitShortText,
             'horario' => $limitShortText,
             'enlace_grabacion' => $limitUrl,
+            'motivo_seguimiento_extraordinario' => (int) ($limites['motivo_seguimiento_extraordinario'] ?? 500),
             'ciudad_diligenciamiento' => $limitShortText,
             'obs_instructor' => (int) ($limites['obs_instructor'] ?? 500),
             'obs_aprendiz' => (int) ($limites['obs_aprendiz'] ?? 500),

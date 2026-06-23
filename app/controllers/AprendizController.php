@@ -11,6 +11,7 @@ use App\Models\Empresa;
 use App\Models\EmpresaJefe;
 use App\Models\Momento;
 use App\Models\Programa;
+use App\Models\VisitaExtraordinariaProgramada;
 
 class AprendizController
 {
@@ -142,6 +143,7 @@ class AprendizController
             'empresasOptions' => Empresa::catalogo(),
             'programasOptions' => Programa::all(),
             'momentos' => $momentos,
+            'visitasExtraordinarias' => VisitaExtraordinariaProgramada::listByAprendiz($id),
             'backToListUrl' => $this->aprendicesBackUrl($_GET),
             'pageToast' => $this->toastFromQuery((string) ($_GET['toast'] ?? '')),
         ]);

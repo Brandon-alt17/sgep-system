@@ -60,6 +60,7 @@
     });
   }
 
+  window.sgBindDateInputDmy = bind;
   document.querySelectorAll('input[type="text"][data-date-input="dmy"]').forEach(bind);
 
   document.addEventListener(

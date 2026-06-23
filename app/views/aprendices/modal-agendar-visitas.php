@@ -40,6 +40,8 @@ $modalidadVisitaM2 = trim((string) ($aprendiz['modalidad_visita_m2'] ?? 'Presenc
 $modalidadVisitaM3 = trim((string) ($aprendiz['modalidad_visita_m3'] ?? 'Presencial'));
 $visitaM1Completada = !empty($aprendiz['visita_m1_completada']);
 $visitaM2Completada = !empty($aprendiz['visita_m2_completada']);
+$visitaM3Completada = !empty($aprendiz['visita_m3_completada']);
+$visitasExtraordinarias = is_array($visitasExtraordinarias ?? null) ? $visitasExtraordinarias : [];
 $modalidadVisitaSelected = static function (string $current, string $option): string {
     return strcasecmp($current, $option) === 0 ? ' selected' : '';
 };
@@ -58,7 +60,7 @@ $modalidadVisitaSelected = static function (string $current, string $option): st
                         Programar visitas
                     </h2>
                     <p class="text-sm text-gray-500 mt-1">
-                        Puede programar las tres visitas a la vez. La próxima visita mostrada será la del primer momento pendiente.
+                        Puede programar M1, M2, M3 y visitas extraordinarias. La próxima visita mostrada será la del primer momento pendiente.
                     </p>
                 </div>
                 <button onclick="cerrarModalVisitas()" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
@@ -130,6 +132,11 @@ $modalidadVisitaSelected = static function (string $current, string $option): st
                 <div class="visita-card" id="card-m3">
                     <div class="flex items-center justify-between mb-3">
                         <span class="text-sm font-medium text-gray-700">Momento 3</span>
+                        <label class="flex items-center gap-2 text-sm cursor-pointer">
+                            <input type="checkbox" name="completado_momento3" id="chk-m3"
+                                   class="rounded border-gray-300"<?= $visitaM3Completada ? ' checked' : '' ?>>
+                            <span class="badge <?= $visitaM3Completada ? 'badge-success' : 'badge-warning' ?>"><?= $visitaM3Completada ? 'Completado' : 'Pendiente' ?></span>
+                        </label>
                     </div>
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
                         <div>
@@ -145,6 +152,57 @@ $modalidadVisitaSelected = static function (string $current, string $option): st
                                 <option value="Virtual"<?= $modalidadVisitaSelected($modalidadVisitaM3, 'Virtual') ?>>Virtual</option>
                             </select>
                         </div>
+                    </div>
+                </div>
+
+                <!-- VISITAS EXTRAORDINARIAS -->
+                <div class="border-t border-gray-200 pt-4">
+                    <div class="flex items-center justify-between mb-3">
+                        <div>
+                            <h3 class="text-sm font-semibold text-gray-800">Visitas extraordinarias</h3>
+                            <p class="text-xs text-gray-500 mt-0.5">Agregue una o más visitas adicionales fuera de M1, M2 y M3.</p>
+                        </div>
+                        <button type="button" id="btn-add-extraordinaria" class="<?= e(ui_button_small_classes()) ?> inline-flex items-center gap-1">
+                            <span class="text-base leading-none">+</span> Agregar
+                        </button>
+                    </div>
+                    <div id="extraordinarias-list" class="space-y-3">
+                        <?php foreach ($visitasExtraordinarias as $index => $visitaEx): ?>
+                            <?php
+                            $exCompletada = !empty($visitaEx['completada']);
+                            $exModalidad = trim((string) ($visitaEx['modalidad'] ?? 'Presencial'));
+                            $exFecha = trim((string) ($visitaEx['fecha_programada'] ?? ''));
+                            $exNumero = (int) ($visitaEx['numero_visita'] ?? ($index + 1));
+                            ?>
+                            <div class="visita-card extraordinaria-row" data-extra-row>
+                                <div class="flex items-center justify-between mb-3">
+                                    <span class="text-sm font-medium text-gray-700">Visita extraordinaria <?= (int) $exNumero ?></span>
+                                    <div class="flex items-center gap-3">
+                                        <label class="flex items-center gap-2 text-sm cursor-pointer">
+                                            <input type="checkbox" name="extraordinarias[<?= (int) $index ?>][completada]"
+                                                   class="rounded border-gray-300"<?= $exCompletada ? ' checked' : '' ?>>
+                                            <span class="badge <?= $exCompletada ? 'badge-success' : 'badge-warning' ?>"><?= $exCompletada ? 'Completado' : 'Pendiente' ?></span>
+                                        </label>
+                                        <button type="button" class="text-sm text-red-600 hover:text-red-800" data-remove-extra>&times; Quitar</button>
+                                    </div>
+                                </div>
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
+                                    <div>
+                                        <label class="form-label">Fecha</label>
+                                        <input type="text" name="extraordinarias[<?= (int) $index ?>][fecha]"
+                                               value="<?= e(date_iso_to_dmY($exFecha)) ?>"
+                                               class="form-input" placeholder="dd/mm/aaaa" title="Formato día/mes/año (dd/mm/aaaa)" inputmode="numeric" maxlength="10" spellcheck="false" autocomplete="off" data-date-input="dmy">
+                                    </div>
+                                    <div>
+                                        <label class="form-label">Modalidad</label>
+                                        <select name="extraordinarias[<?= (int) $index ?>][modalidad]" class="form-input">
+                                            <option value="Presencial"<?= $modalidadVisitaSelected($exModalidad, 'Presencial') ?>>Presencial</option>
+                                            <option value="Virtual"<?= $modalidadVisitaSelected($exModalidad, 'Virtual') ?>>Virtual</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
                     </div>
                 </div>
             </form> <!-- Cierre del formulario -->
@@ -193,8 +251,113 @@ document.addEventListener('DOMContentLoaded', () => {
         toggleM2(chk1.checked);
     }
 
+    const chk3 = document.getElementById('chk-m3');
+
     if (chk2) {
         chk2.addEventListener('change', () => toggleM3(chk2.checked));
+        toggleM3(chk2.checked);
+    }
+
+    function updateCompletionBadge(checkbox) {
+        const badge = checkbox.closest('label')?.querySelector('.badge');
+        if (!badge) return;
+        if (checkbox.checked) {
+            badge.textContent = 'Completado';
+            badge.classList.remove('badge-warning');
+            badge.classList.add('badge-success');
+        } else {
+            badge.textContent = 'Pendiente';
+            badge.classList.remove('badge-success');
+            badge.classList.add('badge-warning');
+        }
+    }
+
+    [chk1, chk2, chk3].forEach((chk) => {
+        if (!chk) return;
+        chk.addEventListener('change', () => updateCompletionBadge(chk));
+    });
+
+    const extraordinariasList = document.getElementById('extraordinarias-list');
+    const btnAddExtra = document.getElementById('btn-add-extraordinaria');
+
+    function bindDateInputsIn(root) {
+        if (typeof window.sgBindDateInputDmy === 'function') {
+            root.querySelectorAll('input[type="text"][data-date-input="dmy"]').forEach(window.sgBindDateInputDmy);
+        }
+    }
+
+    function reindexExtraordinarias() {
+        if (!extraordinariasList) return;
+        const rows = extraordinariasList.querySelectorAll('[data-extra-row]');
+        rows.forEach((row, index) => {
+            const title = row.querySelector('.text-sm.font-medium');
+            if (title) title.textContent = 'Visita extraordinaria ' + (index + 1);
+            const fecha = row.querySelector('input[name*="[fecha]"]');
+            const modalidad = row.querySelector('select[name*="[modalidad]"]');
+            const completada = row.querySelector('input[type="checkbox"][name*="[completada]"]');
+            if (fecha) fecha.name = 'extraordinarias[' + index + '][fecha]';
+            if (modalidad) modalidad.name = 'extraordinarias[' + index + '][modalidad]';
+            if (completada) completada.name = 'extraordinarias[' + index + '][completada]';
+        });
+    }
+
+    function createExtraordinariaRow(index) {
+        const row = document.createElement('div');
+        row.className = 'visita-card extraordinaria-row';
+        row.setAttribute('data-extra-row', '');
+        row.innerHTML = `
+            <div class="flex items-center justify-between mb-3">
+                <span class="text-sm font-medium text-gray-700">Visita extraordinaria ${index + 1}</span>
+                <div class="flex items-center gap-3">
+                    <label class="flex items-center gap-2 text-sm cursor-pointer">
+                        <input type="checkbox" name="extraordinarias[${index}][completada]" class="rounded border-gray-300">
+                        <span class="badge badge-warning">Pendiente</span>
+                    </label>
+                    <button type="button" class="text-sm text-red-600 hover:text-red-800" data-remove-extra>&times; Quitar</button>
+                </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
+                <div>
+                    <label class="form-label">Fecha</label>
+                    <input type="text" name="extraordinarias[${index}][fecha]" value=""
+                           class="form-input" placeholder="dd/mm/aaaa" title="Formato día/mes/año (dd/mm/aaaa)" inputmode="numeric" maxlength="10" spellcheck="false" autocomplete="off" data-date-input="dmy">
+                </div>
+                <div>
+                    <label class="form-label">Modalidad</label>
+                    <select name="extraordinarias[${index}][modalidad]" class="form-input">
+                        <option value="Presencial" selected>Presencial</option>
+                        <option value="Virtual">Virtual</option>
+                    </select>
+                </div>
+            </div>`;
+        return row;
+    }
+
+    if (btnAddExtra && extraordinariasList) {
+        btnAddExtra.addEventListener('click', () => {
+            const index = extraordinariasList.querySelectorAll('[data-extra-row]').length;
+            const row = createExtraordinariaRow(index);
+            extraordinariasList.appendChild(row);
+            bindDateInputsIn(row);
+        });
+
+        extraordinariasList.addEventListener('click', (e) => {
+            const removeBtn = e.target.closest('[data-remove-extra]');
+            if (!removeBtn) return;
+            const row = removeBtn.closest('[data-extra-row]');
+            if (row) {
+                row.remove();
+                reindexExtraordinarias();
+            }
+        });
+
+        extraordinariasList.addEventListener('change', (e) => {
+            const chk = e.target;
+            if (!(chk instanceof HTMLInputElement) || chk.type !== 'checkbox' || !chk.name.includes('[completada]')) return;
+            updateCompletionBadge(chk);
+        });
+
+        bindDateInputsIn(extraordinariasList);
     }
 
     function showVisitasToast(message, variant) {

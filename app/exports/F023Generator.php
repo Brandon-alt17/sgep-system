@@ -95,6 +95,10 @@ class F023Generator
                     $path = F023M2TemplateMacroInjector::patchToTemp($path);
                     $tempCleanup[] = $path;
                 }
+                if (!empty($seg['patch_ex_macros'])) {
+                    $path = F023ExTemplateMacroInjector::patchToTemp($path);
+                    $tempCleanup[] = $path;
+                }
                 if (!empty($seg['patch_m3_macros'])) {
                     $path = F023M3TemplateMacroInjector::patchToTemp($path);
                     $tempCleanup[] = $path;
@@ -124,6 +128,9 @@ class F023Generator
                 }
                 if (!empty($seg['patch_m2_macros'])) {
                     F023M2TemplateMacroInjector::applyLayoutToSavedDocx($tmpDocx);
+                }
+                if (!empty($seg['patch_ex_macros'])) {
+                    F023ExTemplateMacroInjector::applyLayoutToSavedDocx($tmpDocx);
                 }
                 if (!empty($seg['patch_m3_macros']) && str_contains(basename($path), 'm3_p2')) {
                     F023M3TemplateMacroInjector::applyJuicioMarcasToSavedDocx($tmpDocx, [
@@ -219,6 +226,7 @@ class F023Generator
             ['nombre_aprendiz' => (string) ($aprendiz['nombre_completo'] ?? '')],
             [
                 'nombre_instructor_seguimiento' => trim((string) ($aprendiz['nombre_instructor_seguimiento'] ?? '')),
+                'nombre_coformador' => trim((string) ($aprendiz['nombre_jefe'] ?? '')),
             ],
             $this->momentoRowTemplateVars($momento),
             $this->factorTemplateVars(Momento::factoresByMomento((int) $momento['id'])),
@@ -234,11 +242,22 @@ class F023Generator
                 'patch_m1_macros' => true,
             ]];
         }
-        if ($tipo === 'M2' || $tipo === 'EX') {
-            $file = $tipo === 'EX' ? ($map['ex_template'] ?? 'm2.docx') : ($map['m2_template'] ?? 'm2.docx');
+        if ($tipo === 'EX') {
+            $vars = array_merge($this->exPlaceholderDefaults(), $vars);
+            if (($vars['numero_visita'] ?? '') === '' && !empty($momento['numero_visita'])) {
+                $vars['numero_visita'] = (string) (int) $momento['numero_visita'];
+            }
+
+            return [[
+                'path' => $tplDir . ($map['ex_template'] ?? 'extra.docx'),
+                'vars' => $vars,
+                'patch_ex_macros' => true,
+            ]];
+        }
+        if ($tipo === 'M2') {
             $vars = array_merge($this->m2PlaceholderDefaults(), $vars);
 
-            return [['path' => $tplDir . $file, 'vars' => $vars, 'patch_m2_macros' => true]];
+            return [['path' => $tplDir . ($map['m2_template'] ?? 'm2.docx'), 'vars' => $vars, 'patch_m2_macros' => true]];
         }
         if ($tipo === 'M3') {
             $vars = array_merge($this->m3PlaceholderDefaults(), $vars);
@@ -275,6 +294,30 @@ class F023Generator
             'fecha_diligenciamiento' => date('d/m/Y'),
             'm2_marca_presencial' => '___',
             'm2_marca_virtual' => '___',
+        ];
+    }
+
+    /**
+     * Marcadores EX (extra.docx) con valor vacío si no hay dato en BD.
+     *
+     * @return array<string, string>
+     */
+    private function exPlaceholderDefaults(): array
+    {
+        return [
+            'numero_visita' => '',
+            'fecha_seguimiento_anterior' => '',
+            'fecha_visita' => '',
+            'modalidad' => '',
+            'enlace_grabacion' => '',
+            'motivo_seguimiento_extraordinario' => '',
+            'nombre_aprendiz' => '',
+            'nombre_instructor_seguimiento' => '',
+            'nombre_coformador' => '',
+            'ciudad_diligenciamiento' => '',
+            'fecha_diligenciamiento' => date('d/m/Y'),
+            'ex_marca_presencial' => '___',
+            'ex_marca_virtual' => '___',
         ];
     }
 
@@ -349,6 +392,7 @@ class F023Generator
     {
         $dateCols = [
             'fecha_visita',
+            'fecha_seguimiento_anterior',
             'fecha_inicio_etapa',
             'fecha_fin_etapa',
             'fecha_arl',
@@ -402,6 +446,14 @@ class F023Generator
             }
         }
 
+        if (($out['tipo'] ?? '') === 'EX') {
+            return F023ObservationLines::expandTemplateVars($out, [
+                'obs_instructor',
+                'obs_aprendiz',
+                'obs_coformador',
+            ], 1);
+        }
+
         return F023ObservationLines::expandTemplateVars($out, [
             'obs_instructor',
             'obs_aprendiz',
@@ -424,7 +476,7 @@ class F023Generator
         }
 
         $prefix = match ($tipo) {
-            'EX' => 'm2',
+            'EX' => 'ex',
             default => strtolower($tipo),
         };
         $modalidad = trim((string) ($momento['modalidad_diligenciamiento'] ?? ''));

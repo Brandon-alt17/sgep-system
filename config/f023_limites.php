@@ -10,6 +10,7 @@ return [
     'obs_instructor' => 396,
     'obs_aprendiz' => 396,
     'obs_coformador' => 396,
+    'motivo_seguimiento_extraordinario' => 500,
     'compromisos' => 240,
     'm1_competencias' => 1200,
     'm1_resultados' => 1200,

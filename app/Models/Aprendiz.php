@@ -412,6 +412,8 @@ class Aprendiz
 
     /**
      * Próxima visita a mostrar en listados: primer momento pendiente con fecha programada.
+     *
+     * @param list<array{fecha_programada?: ?string, completada?: int|string|bool}> $visitasExtraordinarias
      */
     public static function resolveProximaVisitaFromProgramadas(
         ?string $visitaM1,
@@ -419,6 +421,8 @@ class Aprendiz
         ?string $visitaM3,
         bool $m1Completada,
         bool $m2Completada,
+        bool $m3Completada = false,
+        array $visitasExtraordinarias = [],
     ): ?string {
         $d1 = self::nullableDateString($visitaM1);
         $d2 = self::nullableDateString($visitaM2);
@@ -430,8 +434,18 @@ class Aprendiz
         if ($m1Completada && !$m2Completada && $d2 !== null) {
             return $d2;
         }
-        if ($m1Completada && $m2Completada && $d3 !== null) {
+        if ($m1Completada && $m2Completada && !$m3Completada && $d3 !== null) {
             return $d3;
+        }
+
+        foreach ($visitasExtraordinarias as $visita) {
+            if (!empty($visita['completada'])) {
+                continue;
+            }
+            $fecha = self::nullableDateString((string) ($visita['fecha_programada'] ?? ''));
+            if ($fecha !== null) {
+                return $fecha;
+            }
         }
 
         return null;
@@ -451,12 +465,25 @@ class Aprendiz
 
         $m1Completada = isset($data['completado_momento1']);
         $m2Completada = isset($data['completado_momento2']);
+        $m3Completada = isset($data['completado_momento3']);
 
         $d1 = self::nullableDateString(date_post_to_iso($data['fecha_momento1'] ?? ''));
         $d2 = self::nullableDateString(date_post_to_iso($data['fecha_momento2'] ?? ''));
         $d3 = self::nullableDateString(date_post_to_iso($data['fecha_momento3'] ?? ''));
 
-        $proximaVisita = self::resolveProximaVisitaFromProgramadas($d1, $d2, $d3, $m1Completada, $m2Completada);
+        $visitasExtraordinarias = VisitaExtraordinariaProgramada::rowsFromPost($data);
+        VisitaExtraordinariaProgramada::syncForAprendiz($id, $visitasExtraordinarias);
+
+        $visitasExtraordinariasDb = VisitaExtraordinariaProgramada::listByAprendiz($id);
+        $proximaVisita = self::resolveProximaVisitaFromProgramadas(
+            $d1,
+            $d2,
+            $d3,
+            $m1Completada,
+            $m2Completada,
+            $m3Completada,
+            $visitasExtraordinariasDb,
+        );
 
         $sql = 'UPDATE aprendices SET
                     visita_programada_m1 = :visita_programada_m1,
@@ -467,6 +494,7 @@ class Aprendiz
                     modalidad_visita_m3 = :modalidad_visita_m3,
                     visita_m1_completada = :visita_m1_completada,
                     visita_m2_completada = :visita_m2_completada,
+                    visita_m3_completada = :visita_m3_completada,
                     proxima_visita = :proxima_visita,
                     updated_at = NOW()
                 WHERE id = :id';
@@ -480,6 +508,7 @@ class Aprendiz
             'modalidad_visita_m3' => self::normalizeModalidadVisita($data['modalidad_momento3'] ?? null),
             'visita_m1_completada' => $m1Completada ? 1 : 0,
             'visita_m2_completada' => $m2Completada ? 1 : 0,
+            'visita_m3_completada' => $m3Completada ? 1 : 0,
             'proxima_visita' => $proximaVisita,
             'id' => $id,
         ]);

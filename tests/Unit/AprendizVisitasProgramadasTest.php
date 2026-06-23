@@ -40,4 +40,59 @@ final class AprendizVisitasProgramadasTest extends TestCase
             Aprendiz::resolveProximaVisitaFromProgramadas('2026-06-01', '2026-07-01', '2026-08-01', true, true)
         );
     }
+
+    public function test_resolve_proxima_visita_pasa_a_ex_cuando_m1_m2_y_m3_completas(): void
+    {
+        $this->assertSame(
+            '2026-09-01',
+            Aprendiz::resolveProximaVisitaFromProgramadas(
+                '2026-06-01',
+                '2026-07-01',
+                '2026-08-01',
+                true,
+                true,
+                true,
+                [
+                    ['fecha_programada' => '2026-09-01', 'completada' => 0],
+                    ['fecha_programada' => '2026-10-01', 'completada' => 0],
+                ],
+            )
+        );
+    }
+
+    public function test_resolve_proxima_visita_salta_ex_completadas(): void
+    {
+        $this->assertSame(
+            '2026-10-01',
+            Aprendiz::resolveProximaVisitaFromProgramadas(
+                '2026-06-01',
+                '2026-07-01',
+                '2026-08-01',
+                true,
+                true,
+                true,
+                [
+                    ['fecha_programada' => '2026-09-01', 'completada' => 1],
+                    ['fecha_programada' => '2026-10-01', 'completada' => 0],
+                ],
+            )
+        );
+    }
+
+    public function test_resolve_proxima_visita_null_cuando_todo_completado(): void
+    {
+        $this->assertNull(
+            Aprendiz::resolveProximaVisitaFromProgramadas(
+                '2026-06-01',
+                '2026-07-01',
+                '2026-08-01',
+                true,
+                true,
+                true,
+                [
+                    ['fecha_programada' => '2026-09-01', 'completada' => 1],
+                ],
+            )
+        );
+    }
 }

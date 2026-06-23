@@ -63,5 +63,5 @@ return [
     'm1_template' => 'm1.docx',
     'm2_template' => 'm2.docx',
     'm3_templates' => ['m3_p1.docx', 'm3_p2.docx'],
-    'ex_template' => 'm2.docx',
+    'ex_template' => 'extra.docx',
 ];

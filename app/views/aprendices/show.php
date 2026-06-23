@@ -175,7 +175,13 @@
                                     <span class="text-xs text-app-muted"><?= e($m['fecha']) ?></span>
                                 <?php endif; ?>
                                 <span class="<?= e($badge) ?>"><?= e($m['estado']) ?></span>
-                                <a href="<?= e(APP_BASE_PATH) ?>/momentos/create?aprendiz_id=<?= (int) $aprendiz['id'] ?>&tipo=<?= e((string) $m['tipo']) ?>"
+                                <?php
+                                $editUrl = APP_BASE_PATH . '/momentos/create?aprendiz_id=' . (int) $aprendiz['id'] . '&tipo=' . rawurlencode((string) $m['tipo']);
+                                if (($m['tipo'] ?? '') === 'EX' && (int) ($m['id'] ?? 0) > 0) {
+                                    $editUrl .= '&momento_id=' . (int) $m['id'];
+                                }
+                                ?>
+                                <a href="<?= e($editUrl) ?>"
                                    class="<?= e(ui_button_small_classes()) ?> inline-flex items-center gap-2">
                                     <span class="w-5 h-5 [&_svg]:w-4 [&_svg]:h-4"><?= ui_icon('pencil') ?></span>
                                     Editar momento

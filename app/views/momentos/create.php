@@ -13,7 +13,8 @@ $momentoTitulo = match ($tipo) {
     'M1' => 'Momento 1 — Planeación',
     'M2' => 'Momento 2 — Seguimiento',
     'M3' => 'Momento 3 — Evaluación final',
-    'EX' => 'Momento extraordinario',
+    'EX' => 'Momento extraordinario'
+        . ((int) ($momento['numero_visita'] ?? 0) > 0 ? ' ' . (int) $momento['numero_visita'] : ''),
     default => 'Momento',
 };
 
@@ -183,6 +184,41 @@ $renderDiligenciamientoCard = static function () use ($momentoSectionHeading, $g
                     </label>
                 </div>
             </section>
+        <?php elseif ($tipo === 'EX'): ?>
+            <section class="<?= e(ui_card_classes()) ?> !p-6">
+                <?php $momentoSectionHeading('calendar', 'Datos del seguimiento extraordinario'); ?>
+                <div class="<?= e($grid) ?>">
+                    <?php if ((int) ($momento['numero_visita'] ?? 0) > 0): ?>
+                        <label class="<?= $lc ?> min-w-0 self-start">Número de visita
+                            <input type="text" readonly value="<?= (int) $momento['numero_visita'] ?>" class="<?= $ic ?> mt-1.5 bg-gray-50">
+                        </label>
+                    <?php endif; ?>
+                    <label class="<?= $lc ?> min-w-0 self-start">Fecha del momento de seguimiento anterior
+                        <input type="text" name="fecha_seguimiento_anterior" value="<?= e(date_iso_to_dmY($valueFrom($momento, 'fecha_seguimiento_anterior'))) ?>" data-date-input="dmy" placeholder="dd/mm/aaaa" title="Formato día/mes/año (dd/mm/aaaa)" inputmode="numeric" maxlength="10" spellcheck="false" autocomplete="off" class="<?= $ic ?> mt-1.5">
+                    </label>
+                    <label class="<?= $lc ?> min-w-0 self-start">Fecha del seguimiento extraordinario
+                        <input type="text" name="fecha_visita" value="<?= e(date_iso_to_dmY($valueFrom($momento, 'fecha_visita'))) ?>" data-date-input="dmy" placeholder="dd/mm/aaaa" title="Formato día/mes/año (dd/mm/aaaa)" inputmode="numeric" maxlength="10" spellcheck="false" autocomplete="off" class="<?= $ic ?> mt-1.5">
+                    </label>
+                    <label class="<?= $lc ?> min-w-0 self-start">Modalidad del seguimiento
+                        <?php $modalidadSeg = $valueFrom($momento, 'modalidad', 'Presencial'); ?>
+                        <span class="<?= e(ui_select_wrapper_classes()) ?> mt-1.5">
+                            <select name="modalidad" class="<?= e(ui_select_classes()) ?>">
+                                <option value="Presencial" <?= $modalidadSeg === 'Presencial' ? 'selected' : '' ?>>Presencial</option>
+                                <option value="Virtual" <?= $modalidadSeg === 'Virtual' ? 'selected' : '' ?>>Virtual</option>
+                            </select>
+                            <span class="<?= e(ui_select_chevron_classes()) ?>" data-select-chevron aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-4 w-4"><path d="m6 9 6 6 6-6"></path></svg>
+                            </span>
+                        </span>
+                    </label>
+                    <label class="<?= $lc ?> min-w-0 self-start md:col-span-3">Enlace de grabación (si es virtual)
+                        <input type="text" name="enlace_grabacion" maxlength="<?= $maxUrl ?>" value="<?= e($valueFrom($momento, 'enlace_grabacion')) ?>" class="<?= $ic ?> mt-1.5" placeholder="https://…">
+                    </label>
+                    <label class="<?= $lc ?> min-w-0 self-start md:col-span-3">Motivo del seguimiento extraordinario
+                        <textarea name="motivo_seguimiento_extraordinario" rows="3" maxlength="<?= (int) ($maxMotivoEx ?? 500) ?>" class="<?= $ta ?> mt-1.5"><?= e($valueFrom($momento, 'motivo_seguimiento_extraordinario')) ?></textarea>
+                    </label>
+                </div>
+            </section>
         <?php else: ?>
             <section class="<?= e(ui_card_classes()) ?> !p-6">
                 <?php $momentoSectionHeading('calendar', 'Fechas'); ?>
@@ -199,22 +235,11 @@ $renderDiligenciamientoCard = static function () use ($momentoSectionHeading, $g
                             <input type="number" min="0" name="numero_visitas_realizadas" value="<?= e($valueFrom($momento, 'numero_visitas_realizadas')) ?>" class="<?= $ic ?> mt-1.5">
                         </label>
                     <?php endif; ?>
-                    <?php if ($tipo === 'M2' || $tipo === 'M3' || $tipo === 'EX'): ?>
+                    <?php if ($tipo === 'M2' || $tipo === 'M3'): ?>
                         <label class="<?= $lc ?> min-w-0 self-start md:col-span-3">Enlace de grabación
                             <input type="text" name="enlace_grabacion" maxlength="<?= $maxUrl ?>" value="<?= e($valueFrom($momento, 'enlace_grabacion')) ?>" class="<?= $ic ?> mt-1.5" placeholder="https://…">
                             </label>
                     <?php endif; ?>
-                </div>
-            </section>
-        <?php endif; ?>
-
-        <?php if ($tipo === 'EX'): ?>
-            <section class="<?= e(ui_card_classes()) ?> !p-6">
-                <?php $momentoSectionHeading('clock', 'Próxima visita'); ?>
-                <div class="<?= e($grid) ?>">
-                    <label class="<?= $lc ?> min-w-0 self-start md:max-w-md">Próxima visita
-                        <input type="text" name="proxima_visita" value="<?= e(date_iso_to_dmY($valueFrom($momento, 'proxima_visita', (string) ($aprendiz['proxima_visita'] ?? '')))) ?>" data-date-input="dmy" placeholder="dd/mm/aaaa" title="Formato día/mes/año (dd/mm/aaaa)" inputmode="numeric" maxlength="10" spellcheck="false" autocomplete="off" class="<?= $ic ?> mt-1.5">
-                    </label>
                 </div>
             </section>
         <?php endif; ?>
@@ -322,6 +347,26 @@ $renderDiligenciamientoCard = static function () use ($momentoSectionHeading, $g
                             <p class="mt-1 text-right text-xs text-app-muted" data-char-counter aria-live="polite"></p>
                         </label>
                     <?php endif; ?>
+                </div>
+            </section>
+        <?php endif; ?>
+
+        <?php if ($tipo === 'EX'): ?>
+            <section class="<?= e(ui_card_classes()) ?> !p-6">
+                <?php $momentoSectionHeading('pencil', 'Compromisos'); ?>
+                <div class="grid gap-5 md:grid-cols-1 md:gap-y-6">
+                    <label class="<?= $lc ?> min-w-0 font-semibold">Compromisos por parte del instructor de seguimiento
+                        <textarea name="obs_instructor" rows="2" data-max="<?= $maxObsInstructor ?>" data-max-lines="2" maxlength="<?= $maxObsInstructor ?>" class="<?= $ta ?> mt-1.5"><?= e($valueFrom($momento, 'obs_instructor')) ?></textarea>
+                        <p class="mt-1 text-right text-xs text-app-muted" data-char-counter aria-live="polite"></p>
+                    </label>
+                    <label class="<?= $lc ?> min-w-0 font-semibold">Compromisos por parte del aprendiz
+                        <textarea name="obs_aprendiz" rows="2" data-max="<?= $maxObsAprendiz ?>" data-max-lines="2" maxlength="<?= $maxObsAprendiz ?>" class="<?= $ta ?> mt-1.5"><?= e($valueFrom($momento, 'obs_aprendiz')) ?></textarea>
+                        <p class="mt-1 text-right text-xs text-app-muted" data-char-counter aria-live="polite"></p>
+                    </label>
+                    <label class="<?= $lc ?> min-w-0 font-semibold">Compromisos por parte del responsable ente co-formador
+                        <textarea name="obs_coformador" rows="2" data-max="<?= $maxObsCoformador ?>" data-max-lines="2" maxlength="<?= $maxObsCoformador ?>" class="<?= $ta ?> mt-1.5"><?= e($valueFrom($momento, 'obs_coformador')) ?></textarea>
+                        <p class="mt-1 text-right text-xs text-app-muted" data-char-counter aria-live="polite"></p>
+                    </label>
                 </div>
             </section>
         <?php endif; ?>

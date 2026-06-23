@@ -161,12 +161,14 @@ final class F023ObservationLines
      * @param array<string, string> $vars
      * @return array<string, string>
      */
-    public static function expandTemplateVars(array $vars, array $keys): array
+    public static function expandTemplateVars(array $vars, array $keys, int $minDisplayLines = 2): array
     {
+        $minDisplayLines = max(1, $minDisplayLines);
+
         foreach ($keys as $key) {
             $lines = self::splitLines((string) ($vars[$key] ?? ''), self::maxTotalChars($key));
             $usedLines = count($lines);
-            $displayLines = max(2, $usedLines);
+            $displayLines = max($minDisplayLines, $usedLines);
 
             for ($lineIndex = 1; $lineIndex <= self::TEMPLATE_SLOT_COUNT; $lineIndex++) {
                 $macroKey = $lineIndex === 1 ? $key : $key . '_l' . $lineIndex;
