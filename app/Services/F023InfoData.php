@@ -33,8 +33,8 @@ final class F023InfoData
         $out = [
             'regional' => $valor($guardada, 'regional', 'Risaralda'),
             'centro_formacion' => $valor($guardada, 'centro_formacion', 'Diseño e Innovación Tecnológica Industrial'),
-            'nivel_formativo' => $valor($guardada, 'nivel_formativo', (string) ($programa['nivel'] ?? '')),
-            'programa_formacion' => $valor($guardada, 'programa_formacion', (string) ($programa['nombre'] ?? '')),
+            'nivel_formativo' => self::resolveNivelFormativo($programa, $guardada),
+            'programa_formacion' => programa_nombre_canonical($programa, [$guardada['programa_formacion'] ?? '']),
             'numero_grupo' => $valor($guardada, 'numero_grupo', (string) ($aprendiz['ficha'] ?? '')),
             'modalidad_formacion' => $modalidadTexto,
             'modalidad_presencial' => $modalidadMarcas['presencial'],
@@ -75,6 +75,20 @@ final class F023InfoData
         }
 
         return $out;
+    }
+
+    /**
+     * @param array<string,mixed>|null $programa
+     * @param array<string,mixed> $guardada
+     */
+    private static function resolveNivelFormativo(?array $programa, array $guardada): string
+    {
+        $catalog = trim((string) ($programa['nivel'] ?? ''));
+        if ($catalog !== '') {
+            return $catalog;
+        }
+
+        return trim((string) ($guardada['nivel_formativo'] ?? ''));
     }
 
     /**

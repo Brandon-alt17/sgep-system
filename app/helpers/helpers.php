@@ -266,3 +266,61 @@ function import_nav_query_suffix(string $importId): string
 
     return '?from=import&import_id=' . rawurlencode($importId);
 }
+
+function reporte_maestro_adjust_formula_row(string $formula, int $sourceRow, int $targetRow): string
+{
+    if ($sourceRow === $targetRow || $formula === '' || $formula[0] !== '=') {
+        return $formula;
+    }
+
+    $row = preg_quote((string) $sourceRow, '/');
+    $pattern = '/\b([A-Z]{1,3})' . $row . '\b/';
+
+    $adjusted = preg_replace_callback(
+        $pattern,
+        static fn (array $matches): string => $matches[1] . (string) $targetRow,
+        $formula
+    );
+
+    return $adjusted ?? $formula;
+}
+
+/**
+ * Nombre canónico del programa: catálogo (PDF/manual confirmado) antes que textos de importación o formularios.
+ *
+ * @param array<string, mixed>|null $programa
+ * @param list<mixed> $fallbackSources
+ */
+function programa_nombre_canonical(?array $programa, array $fallbackSources = []): string
+{
+    $catalog = trim((string) ($programa['nombre'] ?? ''));
+    if ($catalog !== '') {
+        return $catalog;
+    }
+
+    foreach ($fallbackSources as $source) {
+        $value = trim((string) $source);
+        if ($value !== '') {
+            return $value;
+        }
+    }
+
+    return '';
+}
+
+/**
+ * Metadatos de programa: el registro en `programas` prevalece sobre resúmenes de importación.
+ *
+ * @param array<string, mixed> $programa
+ * @param array<string, mixed> $importMeta
+ * @return array<string, mixed>
+ */
+function programa_meta_canonical(array $programa, array $importMeta = []): array
+{
+    return array_merge($importMeta, [
+        'codigo' => trim((string) ($programa['codigo'] ?? '')),
+        'nombre' => trim((string) ($programa['nombre'] ?? '')),
+        'nivel' => trim((string) ($programa['nivel'] ?? '')),
+        'modalidad' => trim((string) ($programa['modalidad'] ?? '')),
+    ]);
+}

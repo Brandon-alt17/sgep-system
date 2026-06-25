@@ -12,6 +12,7 @@ use App\Models\EmpresaJefe;
 use App\Models\Momento;
 use App\Models\Programa;
 use App\Models\VisitaExtraordinariaProgramada;
+use App\Services\ReporteMaestroData;
 
 class AprendizController
 {
@@ -137,6 +138,11 @@ class AprendizController
         $empresaId = (int) ($aprendiz['empresa_id'] ?? 0);
         $jefes = $empresaId > 0 ? EmpresaJefe::listByEmpresa($empresaId) : [];
 
+        $reporteCampos = ReporteMaestroData::camposForAprendiz($id, ['estado_arl', 'arl']);
+        $aprendiz['estado_arl'] = ReporteMaestroData::normalizeEstadoArl($reporteCampos['estado_arl'] ?? '');
+        $aprendiz['estado_arl_label'] = ReporteMaestroData::formatEstadoArlExport($aprendiz['estado_arl']);
+        $aprendiz['arl'] = $reporteCampos['arl'] ?? '';
+
         view('aprendices/show', [
             'aprendiz' => $aprendiz,
             'jefes' => $jefes,
@@ -236,6 +242,10 @@ class AprendizController
         }
         try {
             Aprendiz::update($id, $_POST);
+            ReporteMaestroData::persistCampos($id, [
+                'estado_arl' => ReporteMaestroData::normalizeEstadoArl(trim((string) ($_POST['estado_arl'] ?? ''))),
+                'arl' => trim((string) ($_POST['arl'] ?? '')),
+            ]);
         } catch (\PDOException $e) {
             $msg = strtolower($e->getMessage());
             $isDuplicate = str_contains($msg, 'duplicate') || str_contains($msg, 'uq_aprendiz_documento');

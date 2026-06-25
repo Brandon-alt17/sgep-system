@@ -173,6 +173,16 @@ class DocumentoController
             return;
         }
 
+        $programa = Programa::findById((int) ($aprendiz['programa_id'] ?? 0));
+        $canonicalNombre = programa_nombre_canonical($programa, []);
+        if ($canonicalNombre !== '') {
+            $_POST['programa_formacion'] = $canonicalNombre;
+        }
+        $canonicalNivel = trim((string) ($programa['nivel'] ?? ''));
+        if ($canonicalNivel !== '') {
+            $_POST['nivel_formativo'] = $canonicalNivel;
+        }
+
         AprendizInfoGeneral::upsertByAprendizId($aprendizId, $_POST);
         // El formulario F-023 también puede editar algunos campos del aprendiz (ej. instructor de seguimiento).
         // Esos campos viven en la tabla `aprendices`, por eso se persisten aquí sin tocar el resto del payload.

@@ -734,7 +734,10 @@ class CatalogoController
         if ($latestImport !== null) {
             $decoded = json_decode((string) ($latestImport['resumen_json'] ?? '{}'), true);
             if (is_array($decoded)) {
-                $parsed['meta'] = array_merge($parsed['meta'], (array) ($decoded['meta'] ?? []));
+                $parsed['meta'] = programa_meta_canonical($programa, (array) ($decoded['meta'] ?? []));
+                if (trim((string) ($parsed['meta']['nombre'] ?? '')) === '') {
+                    $parsed['meta']['nombre'] = trim((string) ($latestImport['nombre_programa'] ?? ''));
+                }
                 $decodedCompetencias = (array) ($decoded['competencias'] ?? []);
                 if ($decodedCompetencias !== [] && $parsed['competencias'] === []) {
                     $parsed['competencias'] = $decodedCompetencias;
@@ -891,7 +894,7 @@ class CatalogoController
         if ($latestImport !== null) {
             $decodedLatest = json_decode((string) ($latestImport['resumen_json'] ?? '{}'), true);
             if (is_array($decodedLatest)) {
-                $meta = array_merge($meta, (array) ($decodedLatest['meta'] ?? []));
+                $meta = programa_meta_canonical($programa, (array) ($decodedLatest['meta'] ?? []));
             }
         }
         $latestSummary = $this->latestSummaryDecoded($programaId);

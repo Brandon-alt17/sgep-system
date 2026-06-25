@@ -1,8 +1,8 @@
 {
     "private": true,
     "scripts": {
-        "build:css": "tailwindcss -i ./resources/css/app.css -o ./public/css/app.css --minify",
-        "watch:css": "tailwindcss -i ./resources/css/app.css -o ./public/css/app.css --watch --minify"
+        "build:css": "node node_modules/tailwindcss/lib/cli.js -i ./resources/css/app.css -o ./public/css/app.css --minify",
+        "watch:css": "node node_modules/tailwindcss/lib/cli.js -i ./resources/css/app.css -o ./public/css/app.css --watch --minify"
     },
     "devDependencies": {
         "@fontsource-variable/inter": "^5.2.8",

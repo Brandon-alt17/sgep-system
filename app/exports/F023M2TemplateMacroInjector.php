@@ -95,9 +95,6 @@ final class F023M2TemplateMacroInjector
         $xml = self::stripComplementaryObservationLabelBorders($xml);
         $xml = self::reinforceComplementaryObservationLines($xml);
         $xml = self::pruneUnusedObservationLineParagraphs($xml);
-        // #region agent log
-        self::logObservationLineCount($xml);
-        // #endregion
         $xml = self::trimEmptyParagraphsBeforeSignatureTable($xml);
 
         if ($zip->locateName(self::DOCUMENT_XML) !== false) {
@@ -559,62 +556,6 @@ final class F023M2TemplateMacroInjector
         );
 
         return is_string($updated) ? $updated : $paragraphXml;
-    }
-
-    private static function logObservationLineCount(string $xml): void
-    {
-        $sectionStart = strpos($xml, 'complementarias del instructor');
-        if ($sectionStart === false) {
-            return;
-        }
-
-        $firmaPos = strpos($xml, 'Firma del', $sectionStart);
-        $tblPos = strpos($xml, '<w:tbl>', $sectionStart);
-        $sectionEnd = strlen($xml);
-        if ($firmaPos !== false) {
-            $sectionEnd = min($sectionEnd, self::paragraphStartBeforePosition($xml, $firmaPos));
-        }
-        if ($tblPos !== false) {
-            $sectionEnd = min($sectionEnd, $tblPos);
-        }
-
-        /** @var array<string, int> $counts */
-        $counts = ['instructor' => 0, 'aprendiz' => 0, 'coformador' => 0];
-        $field = 'instructor';
-        $searchFrom = 0;
-
-        while (preg_match('/<w:p\b[^>]*>.*?<\/w:p>/s', $xml, $match, PREG_OFFSET_CAPTURE, $searchFrom)) {
-            $paragraph = $match[0][0];
-            $paraStart = $match[0][1];
-            $searchFrom = $paraStart + strlen($paragraph);
-
-            if ($paraStart < $sectionStart || $paraStart >= $sectionEnd) {
-                continue;
-            }
-
-            $plain = trim(preg_replace('/\s+/u', ' ', strip_tags($paragraph)) ?? '');
-            if (str_contains($plain, 'del aprendiz')) {
-                $field = 'aprendiz';
-                continue;
-            }
-            if (str_contains($plain, 'co-formador')) {
-                $field = 'coformador';
-                continue;
-            }
-            if ($plain !== '' && str_contains($plain, ':')) {
-                continue;
-            }
-
-            $counts[$field]++;
-        }
-
-        // #region agent log
-        F023AgentDebugLog::write('B', 'F023M2TemplateMacroInjector::logObservationLineCount', 'line rows per field', [
-            'instructorLines' => $counts['instructor'],
-            'aprendizLines' => $counts['aprendiz'],
-            'coformadorLines' => $counts['coformador'],
-        ], 'post-fix');
-        // #endregion
     }
 
     private static function ensureBottomBorderLine(string $paragraphXml): string

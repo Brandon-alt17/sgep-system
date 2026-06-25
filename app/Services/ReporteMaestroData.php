@@ -5,11 +5,12 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Helpers\Database;
+use App\Imports\ImportScalar;
 
 class ReporteMaestroData
 {
     /**
-     * @param array{estado?: string, ficha?: string, programa_id?: int|string} $filters
+     * @param array{estado?: string, ficha?: string, programa_id?: int|string, q?: string} $filters
      * @return list<array<string, mixed>>
      */
     public static function rows(array $filters = []): array
@@ -22,8 +23,15 @@ class ReporteMaestroData
         }
 
         $ids = array_map(static fn (array $r): int => (int) ($r['id'] ?? 0), $raw);
+        $documentos = array_values(array_unique(array_filter(array_map(
+            static fn (array $r): string => trim((string) ($r['numero_documento'] ?? '')),
+            $raw
+        ))));
         $reporteByAprendiz = self::loadReporteCampos($ids);
         $momentosByAprendiz = self::loadMomentosFlags($ids);
+        $modalidadInfoByAprendiz = self::loadModalidadFormacionByAprendiz($ids);
+        $modalidadImportByDocumento = self::loadModalidadFuenteImportByDocumento($documentos);
+        $jefeImportByDocumento = self::loadImportJefeGrupoByDocumento($documentos);
         $raw = self::sortRowsByGrupo($raw);
 
         $out = [];
@@ -43,14 +51,26 @@ class ReporteMaestroData
             $aprendizId = (int) ($row['id'] ?? 0);
             $rc = $reporteByAprendiz[$aprendizId] ?? [];
             $mom = $momentosByAprendiz[$aprendizId] ?? [];
-            $out[] = self::enrichRow($row, $index, $rc, $mom, $numPorGrupo);
+            $doc = trim((string) ($row['numero_documento'] ?? ''));
+            $importJefe = $jefeImportByDocumento[$doc] ?? ['jefe_grupo' => '', 'coordinacion' => ''];
+            $out[] = self::enrichRow(
+                $row,
+                $index,
+                $rc,
+                $mom,
+                $numPorGrupo,
+                $modalidadInfoByAprendiz[$aprendizId] ?? '',
+                $modalidadImportByDocumento[$doc] ?? '',
+                $importJefe['jefe_grupo'] ?? '',
+                $importJefe['coordinacion'] ?? ''
+            );
         }
 
         return $out;
     }
 
     /**
-     * @param array{estado?: string, ficha?: string, programa_id?: int|string} $filters
+     * @param array{estado?: string, ficha?: string, programa_id?: int|string, q?: string} $filters
      * @return list<array<string, mixed>>
      */
     private static function fetchBaseRows(array $filters): array
@@ -77,6 +97,7 @@ class ReporteMaestroData
                 a.alternativa_ep,
                 a.nombre_instructor_seguimiento,
                 a.telefono_instructor_seguimiento,
+                a.correo_instructor_seguimiento,
                 a.tipo_asistencia,
                 a.sugerencias_comentarios,
                 a.jefe_grupo,
@@ -120,12 +141,204 @@ class ReporteMaestroData
             $params['programa_id'] = $programaId;
         }
 
+        $q = trim((string) ($filters['q'] ?? ''));
+        if ($q !== '') {
+            $sql .= ' AND (a.nombre_completo LIKE :q_nombre OR a.numero_documento LIKE :q_documento)';
+            $likeQ = '%' . $q . '%';
+            $params['q_nombre'] = $likeQ;
+            $params['q_documento'] = $likeQ;
+        }
+
         $sql .= ' ORDER BY a.ficha ASC, a.nombre_completo ASC';
 
         $stmt = Database::connection()->prepare($sql);
         $stmt->execute($params);
 
         return $stmt->fetchAll() ?: [];
+    }
+
+    /**
+     * @param list<int> $aprendizIds
+     * @return array<int, string>
+     */
+    private static function loadModalidadFormacionByAprendiz(array $aprendizIds): array
+    {
+        $aprendizIds = array_values(array_filter($aprendizIds, static fn (int $id): bool => $id > 0));
+        if ($aprendizIds === []) {
+            return [];
+        }
+
+        $placeholders = implode(',', array_fill(0, count($aprendizIds), '?'));
+        $stmt = Database::connection()->prepare(
+            "SELECT aprendiz_id, modalidad_formacion
+             FROM aprendiz_info_general
+             WHERE aprendiz_id IN ($placeholders)"
+        );
+        $stmt->execute($aprendizIds);
+
+        $out = [];
+        while ($row = $stmt->fetch()) {
+            if (!is_array($row)) {
+                continue;
+            }
+            $aid = (int) ($row['aprendiz_id'] ?? 0);
+            $modalidad = trim((string) ($row['modalidad_formacion'] ?? ''));
+            if ($aid > 0 && $modalidad !== '') {
+                $out[$aid] = $modalidad;
+            }
+        }
+
+        return $out;
+    }
+
+    /**
+     * Modalidad capturada en la importación (columna modalidad_formacion del Excel).
+     *
+     * @param list<string> $documentos
+     * @return array<string, string> clave = número de documento
+     */
+    private static function loadModalidadFuenteImportByDocumento(array $documentos): array
+    {
+        $documentos = array_values(array_unique(array_filter(array_map(
+            static fn (mixed $doc): string => trim((string) $doc),
+            $documentos
+        ))));
+        if ($documentos === []) {
+            return [];
+        }
+
+        $placeholders = implode(',', array_fill(0, count($documentos), '?'));
+        $stmt = Database::connection()->prepare(
+            "SELECT pep.numero_documento, pep.modalidad_fuente
+             FROM programa_enlaces_pendientes pep
+             INNER JOIN (
+                 SELECT numero_documento, MAX(id) AS max_id
+                 FROM programa_enlaces_pendientes
+                 WHERE numero_documento IN ($placeholders)
+                 GROUP BY numero_documento
+             ) latest ON latest.max_id = pep.id"
+        );
+        $stmt->execute($documentos);
+
+        $out = [];
+        while ($row = $stmt->fetch()) {
+            if (!is_array($row)) {
+                continue;
+            }
+            $doc = trim((string) ($row['numero_documento'] ?? ''));
+            $modalidad = trim((string) ($row['modalidad_fuente'] ?? ''));
+            if ($doc !== '' && $modalidad !== '') {
+                $out[$doc] = $modalidad;
+            }
+        }
+
+        return $out;
+    }
+
+    /**
+     * Jefe de grupo / coordinación capturados en la importación.
+     *
+     * @param list<string> $documentos
+     * @return array<string, array{jefe_grupo: string, coordinacion: string}>
+     */
+    private static function loadImportJefeGrupoByDocumento(array $documentos): array
+    {
+        $documentos = array_values(array_unique(array_filter(array_map(
+            static fn (mixed $doc): string => trim((string) $doc),
+            $documentos
+        ))));
+        if ($documentos === []) {
+            return [];
+        }
+
+        $placeholders = implode(',', array_fill(0, count($documentos), '?'));
+        try {
+            $stmt = Database::connection()->prepare(
+                "SELECT pep.numero_documento, pep.jefe_grupo_fuente, pep.coordinacion_fuente
+                 FROM programa_enlaces_pendientes pep
+                 INNER JOIN (
+                     SELECT numero_documento, MAX(id) AS max_id
+                     FROM programa_enlaces_pendientes
+                     WHERE numero_documento IN ($placeholders)
+                     GROUP BY numero_documento
+                 ) latest ON latest.max_id = pep.id"
+            );
+            $stmt->execute($documentos);
+        } catch (\Throwable) {
+            return [];
+        }
+
+        $out = [];
+        while ($row = $stmt->fetch()) {
+            if (!is_array($row)) {
+                continue;
+            }
+            $doc = trim((string) ($row['numero_documento'] ?? ''));
+            if ($doc === '') {
+                continue;
+            }
+            $out[$doc] = [
+                'jefe_grupo' => ImportScalar::clean($row['jefe_grupo_fuente'] ?? null),
+                'coordinacion' => ImportScalar::clean($row['coordinacion_fuente'] ?? null),
+            ];
+        }
+
+        return $out;
+    }
+
+    /**
+     * @param array<string, string> $rc
+     */
+    private static function resolveInstructorJefe(
+        array $rc,
+        array $row,
+        string $importJefeGrupo,
+        string $importCoordinacion
+    ): string {
+        $manual = self::rc($rc, 'instructor_jefe');
+        if ($manual !== '') {
+            return $manual;
+        }
+
+        $jefeGrupo = ImportScalar::clean($row['jefe_grupo'] ?? null);
+        if ($jefeGrupo !== '') {
+            return $jefeGrupo;
+        }
+
+        $coordinacion = ImportScalar::clean($row['coordinacion'] ?? null);
+        if ($coordinacion !== '') {
+            return $coordinacion;
+        }
+
+        if ($importJefeGrupo !== '') {
+            return $importJefeGrupo;
+        }
+
+        return $importCoordinacion;
+    }
+
+    /**
+     * @param array<string, string> $rc
+     */
+    private static function resolveModalidadPrograma(
+        array $rc,
+        array $row,
+        string $infoGeneralModalidad,
+        string $importModalidad
+    ): string {
+        $manual = self::rc($rc, 'modalidad_programa');
+        if ($manual !== '') {
+            return $manual;
+        }
+        if ($infoGeneralModalidad !== '') {
+            return $infoGeneralModalidad;
+        }
+        $programa = trim((string) ($row['modalidad_programa_db'] ?? ''));
+        if ($programa !== '') {
+            return $programa;
+        }
+
+        return $importModalidad;
     }
 
     /**
@@ -237,7 +450,11 @@ class ReporteMaestroData
         int $index,
         array $rc,
         array $mom,
-        int|string $numPorGrupo
+        int|string $numPorGrupo,
+        string $infoGeneralModalidad = '',
+        string $importModalidad = '',
+        string $importJefeGrupo = '',
+        string $importCoordinacion = ''
     ): array {
         $aprendizId = (int) ($row['id'] ?? 0);
         $hasM1 = !empty($mom['M1']);
@@ -251,7 +468,7 @@ class ReporteMaestroData
 
         $correoInstructor = self::rc($rc, 'correo_instructor');
         if ($correoInstructor === '') {
-            $correoInstructor = trim((string) ($row['correo_institucional'] ?? ''));
+            $correoInstructor = trim((string) ($row['correo_instructor_seguimiento'] ?? ''));
         }
 
         $modalidadPractica = self::rc($rc, 'modalidad_practica');
@@ -267,22 +484,22 @@ class ReporteMaestroData
             'programa_formacion' => trim((string) ($row['programa_formacion'] ?? '')),
             'codigo_programa' => trim((string) ($row['codigo_programa'] ?? '')),
             'nivel' => trim((string) ($row['nivel'] ?? '')),
-            'modalidad_programa' => self::rc($rc, 'modalidad_programa')
-                ?: trim((string) ($row['modalidad_programa_db'] ?? '')),
-            'fecha_inicio_plataforma' => self::rc($rc, 'fecha_inicio_plataforma')
-                ?: self::formatDate($row['created_at'] ?? null),
-            'inicio_etapa_productiva' => self::rc($rc, 'inicio_etapa_productiva')
-                ?: self::formatDate($row['fecha_hora_formulario'] ?? null),
-            'fecha_fin_plataforma' => self::rc($rc, 'fecha_fin_plataforma')
-                ?: self::formatDate($row['updated_at'] ?? null),
-            'instructor_jefe' => self::rc($rc, 'instructor_jefe')
-                ?: trim((string) ($row['jefe_grupo'] ?? '')),
-            'acuerdo_007' => self::rcBool($rc, 'acuerdo_007'),
-            'acuerdo_009' => self::rcBool($rc, 'acuerdo_009'),
-            'vencimiento_terminos' => self::rcBool($rc, 'vencimiento_terminos'),
-            'inicio_18_meses' => self::rcBool($rc, 'inicio_18_meses'),
-            'inicio_12_meses' => self::rcBool($rc, 'inicio_12_meses'),
-            'semaforo_vencimiento' => self::rc($rc, 'semaforo_vencimiento'),
+            'modalidad_programa' => self::resolveModalidadPrograma(
+                $rc,
+                $row,
+                $infoGeneralModalidad,
+                $importModalidad
+            ),
+            'fecha_inicio_plataforma' => self::rcDateDmY($rc, 'fecha_inicio_plataforma'),
+            'inicio_etapa_productiva' => self::rcDateDmY($rc, 'inicio_etapa_productiva'),
+            'fecha_fin_plataforma' => self::rcDateDmY($rc, 'fecha_fin_plataforma'),
+            'instructor_jefe' => self::resolveInstructorJefe(
+                $rc,
+                $row,
+                $importJefeGrupo,
+                $importCoordinacion
+            ),
+            ...self::reglamentoFields($rc, $row),
             'nombre' => trim((string) ($row['nombre_completo'] ?? '')),
             'tipo_documento' => trim((string) ($row['tipo_documento'] ?? '')),
             'identificacion' => trim((string) ($row['numero_documento'] ?? '')),
@@ -292,9 +509,8 @@ class ReporteMaestroData
                 ?: trim((string) ($row['correo_institucional'] ?? '')),
             'modalidad_practica' => $modalidadPractica,
             'referencia_modalidad' => $modalidadPractica,
-            'fecha_aval_modalidad' => self::rc($rc, 'fecha_aval_modalidad')
-                ?: self::formatDate($row['fecha_hora_formulario'] ?? null),
-            'estado_arl' => self::rc($rc, 'estado_arl'),
+            'fecha_aval_modalidad' => self::rcDateDmY($rc, 'fecha_aval_modalidad'),
+            'estado_arl' => self::formatEstadoArlExport(self::rc($rc, 'estado_arl')),
             'arl' => self::rc($rc, 'arl'),
             'fecha_afiliacion_arl' => self::rc($rc, 'fecha_afiliacion_arl'),
             'fecha_inicio_etapa' => self::rc($rc, 'fecha_inicio_etapa')
@@ -303,21 +519,20 @@ class ReporteMaestroData
                 ?: self::formatDate($row['updated_at'] ?? null),
             'empresa' => trim((string) ($row['empresa'] ?? '')),
             'direccion_empresa' => trim((string) ($row['direccion_empresa'] ?? '')),
-            'ciudad' => trim((string) ($row['ciudad'] ?? '')),
+            'ciudad' => self::rc($rc, 'ciudad')
+                ?: trim((string) ($row['ciudad'] ?? '')),
             'contacto_empresa' => $contactoNombre,
             'telefono_contacto' => trim((string) ($row['jefe_telefono'] ?? '')),
             'correo_contacto' => trim((string) ($row['jefe_correo'] ?? ''))
                 ?: trim((string) ($row['jefe_contacto2_correo'] ?? '')),
-            'estado_etapa' => self::rc($rc, 'estado_etapa')
-                ?: trim((string) ($row['estado'] ?? '')),
+            'estado_etapa' => self::resolveEstadoEtapa($rc, $row),
             'llamados_atencion' => self::rc($rc, 'llamados_atencion'),
             'otros_novedad' => self::rc($rc, 'otros_novedad')
                 ?: self::rc($rc, 'cambio_modalidad'),
             'cambio_modalidad' => self::rc($rc, 'cambio_modalidad'),
             'comite_evaluacion' => self::rc($rc, 'comite_evaluacion'),
-            'reingreso_vencimiento' => self::rcBool($rc, 'reingreso_vencimiento'),
-            'observaciones_novedad' => self::rc($rc, 'observaciones_novedad')
-                ?: trim((string) ($row['sugerencias_comentarios'] ?? '')),
+            'reingreso_vencimiento' => self::formatReingresoVencimiento(self::rc($rc, 'reingreso_vencimiento')),
+            'observaciones_novedad' => self::resolveObservacionesNovedad($rc),
             'doc_gfpi_165' => self::rcBool($rc, 'doc_gfpi_165'),
             'doc_momento_1' => self::rcBool($rc, 'doc_momento_1') || $hasM1,
             'doc_bitacora_1' => self::rcBool($rc, 'doc_bitacora_1') || $hasM1,
@@ -350,6 +565,44 @@ class ReporteMaestroData
     }
 
     /** @param array<string, string> $rc */
+    private static function resolveObservacionesNovedad(array $rc): string
+    {
+        $novedad = self::rc($rc, 'observaciones_novedad');
+        if ($novedad !== '') {
+            return $novedad;
+        }
+
+        return self::rc($rc, 'observaciones_cert');
+    }
+
+    /**
+     * @param array<string, mixed> $row
+     */
+    private static function resolveEstadoEtapa(array $rc, array $row): string
+    {
+        foreach (['estado_etapa'] as $key) {
+            $value = self::rc($rc, $key);
+            if ($value !== '' && !self::isInvalidEstadoEtapaValue($value)) {
+                return $value;
+            }
+        }
+
+        $estado = trim((string) ($row['estado'] ?? ''));
+        if ($estado !== '' && !self::isInvalidEstadoEtapaValue($estado)) {
+            return $estado;
+        }
+
+        return '';
+    }
+
+    private static function isInvalidEstadoEtapaValue(string $value): bool
+    {
+        $normalized = strtolower(trim($value));
+
+        return in_array($normalized, ['no', '0', 'false', 'n/a', 'ninguno'], true);
+    }
+
+    /** @param array<string, string> $rc */
     private static function rc(array $rc, string $key): string
     {
         return trim($rc[$key] ?? '');
@@ -379,6 +632,45 @@ class ReporteMaestroData
         return date_iso_to_dmY($raw);
     }
 
+    /** @param array<string, string> $rc */
+    private static function rcDateDmY(array $rc, string $key): string
+    {
+        $iso = date_post_to_iso(self::rc($rc, $key));
+        if ($iso === '') {
+            return '';
+        }
+
+        return date_iso_to_dmY($iso);
+    }
+
+    /**
+     * @param list<string> $keys vacío = todos los campos guardados del aprendiz
+     * @return array<string, string>
+     */
+    public static function camposForAprendiz(int $aprendizId, array $keys = []): array
+    {
+        $aprendizId = self::resolveAprendizId($aprendizId);
+        if ($aprendizId <= 0) {
+            return [];
+        }
+
+        $loaded = self::loadReporteCampos([$aprendizId]);
+        $all = $loaded[$aprendizId] ?? [];
+        if ($keys === []) {
+            return $all;
+        }
+
+        $out = [];
+        foreach ($keys as $key) {
+            if (!is_string($key) || $key === '') {
+                continue;
+            }
+            $out[$key] = $all[$key] ?? '';
+        }
+
+        return $out;
+    }
+
     /**
      * Persiste campos editables del panel lateral (switches, certificación, novedades).
      *
@@ -391,6 +683,8 @@ class ReporteMaestroData
             return;
         }
 
+        self::normalizeReglamentoCampos($campos);
+
         /** @var array<string, mixed> $map */
         $map = require base_path('config/reporte_maestro_map.php');
         $allowed = array_keys((array) ($map['columns'] ?? []));
@@ -399,7 +693,6 @@ class ReporteMaestroData
             'observaciones_novedad',
             'arl',
             'referencia_modalidad',
-            'semaforo_vencimiento',
             'llamados_atencion',
             'otros_novedad',
             'comite_evaluacion',
@@ -429,6 +722,9 @@ class ReporteMaestroData
             }
 
             $stored = self::normalizeStoredCampoValor($key, $value, $boolKeys);
+            if ($key === 'estado_arl') {
+                $stored = self::normalizeEstadoArl($stored);
+            }
             $stmt->execute([
                 'aprendiz_id' => $aprendizId,
                 'campo' => $key,
@@ -499,6 +795,173 @@ class ReporteMaestroData
         return trim((string) $value);
     }
 
+    public static function formatReingresoVencimiento(string $value): string
+    {
+        $v = trim($value);
+        if ($v === '') {
+            return '';
+        }
+
+        $lower = mb_strtolower($v, 'UTF-8');
+        if (in_array($lower, ['1', 'true', 'sí', 'si', 'yes'], true)) {
+            return 'Sí';
+        }
+        if (in_array($lower, ['0', 'false', 'no'], true)) {
+            return '';
+        }
+
+        return $v;
+    }
+
+    public static function normalizeEstadoArl(string $value): string
+    {
+        $v = trim($value);
+        if ($v === '') {
+            return '';
+        }
+
+        $lower = mb_strtolower($v, 'UTF-8');
+        if (
+            $lower === 'en espera'
+            || $lower === 'en espera de afiliación'
+            || $lower === 'en espera de afiliacion'
+        ) {
+            return 'En espera de afiliación';
+        }
+
+        /** @var list<string> $options */
+        $options = require base_path('config/estado_arl_options.php');
+        foreach ($options as $option) {
+            if ($lower === mb_strtolower($option, 'UTF-8')) {
+                return $option;
+            }
+        }
+
+        return $v;
+    }
+
+    public static function formatEstadoArlExport(string $value): string
+    {
+        $v = self::normalizeEstadoArl($value);
+
+        return $v === '' ? '' : mb_strtoupper($v, 'UTF-8');
+    }
+
+    /**
+     * @param array<string, string> $rc
+     * @param array<string, mixed> $row
+     * @return array{
+     *   acuerdo_007: bool,
+     *   acuerdo_009: bool,
+     *   fecha_fin_plataforma: string,
+     *   vencimiento_terminos: string,
+     *   semaforo_vencimiento: string
+     * }
+     */
+    public static function reglamentoFields(array $rc, array $row): array
+    {
+        $fechaFin = self::rcDateDmY($rc, 'fecha_fin_plataforma');
+        $acuerdo007 = self::rcBool($rc, 'acuerdo_007');
+        $acuerdo009 = self::rcBool($rc, 'acuerdo_009');
+        if ($acuerdo007 && $acuerdo009) {
+            $acuerdo009 = false;
+        }
+
+        $vencimientoIso = self::computeVencimientoTerminosIso($fechaFin, $acuerdo007, $acuerdo009);
+
+        return [
+            'acuerdo_007' => $acuerdo007,
+            'acuerdo_009' => $acuerdo009,
+            'fecha_fin_plataforma' => $fechaFin,
+            'vencimiento_terminos' => $vencimientoIso !== '' ? date_iso_to_dmY($vencimientoIso) : '',
+            'semaforo_vencimiento' => self::computeSemaforoVencimiento($vencimientoIso),
+        ];
+    }
+
+  public static function computeVencimientoTerminosIso(string $fechaFinPlataforma, bool $acuerdo007, bool $acuerdo009): string
+    {
+        if (!$acuerdo007 && !$acuerdo009) {
+            return '';
+        }
+
+        $iso = date_post_to_iso($fechaFinPlataforma);
+        if ($iso === '') {
+            return '';
+        }
+
+        $months = $acuerdo007 ? 18 : 12;
+
+        try {
+            $base = new \DateTimeImmutable($iso);
+
+            return $base->modify('+' . $months . ' months')->format('Y-m-d');
+        } catch (\Throwable) {
+            return '';
+        }
+    }
+
+    public static function computeSemaforoVencimiento(string $vencimientoIso): string
+    {
+        if (trim($vencimientoIso) === '') {
+            return 'SIN FECHA';
+        }
+
+        try {
+            $vencimiento = new \DateTimeImmutable($vencimientoIso);
+            $hoy = new \DateTimeImmutable('today');
+            if ($vencimiento < $hoy) {
+                return '🔴 VENCIDO';
+            }
+
+            $dias = (int) $hoy->diff($vencimiento)->format('%r%a');
+            if ($dias < 90) {
+                return '🟠 PRÓXIMO';
+            }
+
+            return '🟢 VIGENTE';
+        } catch (\Throwable) {
+            return 'SIN FECHA';
+        }
+    }
+
+    /**
+     * @param array<string, mixed> $campos
+     */
+    private static function normalizeReglamentoCampos(array &$campos): void
+    {
+        if (array_key_exists('reglamento_acuerdo', $campos)) {
+            $seleccion = trim((string) $campos['reglamento_acuerdo']);
+            $campos['acuerdo_007'] = $seleccion === '007';
+            $campos['acuerdo_009'] = $seleccion === '009';
+            unset($campos['reglamento_acuerdo']);
+        }
+
+        $acuerdo007 = self::valueToBool($campos['acuerdo_007'] ?? false);
+        $acuerdo009 = self::valueToBool($campos['acuerdo_009'] ?? false);
+
+        if ($acuerdo007) {
+            $campos['acuerdo_007'] = true;
+            $campos['acuerdo_009'] = false;
+        } elseif ($acuerdo009) {
+            $campos['acuerdo_007'] = false;
+            $campos['acuerdo_009'] = true;
+        } else {
+            $campos['acuerdo_007'] = false;
+            $campos['acuerdo_009'] = false;
+        }
+    }
+
+    private static function valueToBool(mixed $value): bool
+    {
+        if (is_bool($value)) {
+            return $value;
+        }
+
+        $v = strtolower(trim((string) $value));
+
+        return $v !== '' && $v !== '0' && $v !== 'false' && $v !== 'no';
+    }
+
     /**
      * Valor listo para escribir en Excel según tipo de campo.
      *
@@ -517,7 +980,11 @@ class ReporteMaestroData
         }
 
         if ($key === 'reingreso_vencimiento') {
-            return !empty($row[$key]) ? 'Sí' : 'No';
+            return self::formatReingresoVencimiento((string) ($row[$key] ?? ''));
+        }
+
+        if ($key === 'estado_arl') {
+            return self::formatEstadoArlExport((string) ($row[$key] ?? ''));
         }
 
         return $row[$key] ?? '';

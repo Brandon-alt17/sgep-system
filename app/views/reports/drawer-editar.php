@@ -22,10 +22,117 @@
 
     <!-- CONTENT - CON SCROLL CORRECTO -->
     <div class="flex-1 overflow-y-auto p-4 space-y-4" style="min-height: 0;">
-        
-        <!-- SECTION 1 -->
+        <?php
+        /** @var array<string, list<string>> $novedadesEtapaOptions */
+        $novedadesEtapaOptions = require base_path('config/novedades_etapa_options.php');
+        $novedadesEtapaLabels = [
+            'estado_etapa' => 'Estado de la etapa productiva',
+            'llamados_atencion' => 'Llamados de atención',
+            'otros_novedad' => 'Otros',
+            'comite_evaluacion' => 'Comité de evaluación',
+            'reingreso_vencimiento' => 'Reingreso especial por vencimiento de términos',
+        ];
+        ?>
+
+        <!-- REGLAMENTO -->
         <div class="border border-gray-200 rounded-xl overflow-hidden">
-            <button type="button" class="section-toggle w-full flex items-center justify-between bg-gray-100 px-4 py-3 text-sm font-semibold text-left" data-section="s1">
+            <button type="button" class="section-toggle w-full flex items-center justify-between bg-purple-50 px-4 py-3 text-sm font-semibold text-left" data-section="s0">
+                Reglamento
+                <span class="section-icon" data-section="s0">⌄</span>
+            </button>
+            <div id="s0" class="section-content p-4 space-y-4" style="display: block;">
+                <p class="text-xs text-gray-500 m-0">Seleccione un solo acuerdo. El vencimiento se calcula desde la fecha fin de plataforma.</p>
+                <div class="space-y-2 text-sm">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="radio" name="reglamento_acuerdo" value="007" id="reglamento_acuerdo_007" class="h-4 w-4">
+                        <span>Acuerdo 007 de 2012 (18 meses)</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="radio" name="reglamento_acuerdo" value="009" id="reglamento_acuerdo_009" class="h-4 w-4">
+                        <span>Acuerdo 009 de 2024 (12 meses)</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="radio" name="reglamento_acuerdo" value="" id="reglamento_acuerdo_ninguno" class="h-4 w-4">
+                        <span>Ninguno</span>
+                    </label>
+                </div>
+                <div>
+                    <label class="text-xs text-gray-500 font-medium block mb-1" for="vencimiento_terminos_display">Venc. términos</label>
+                    <input type="text" id="vencimiento_terminos_display" readonly class="w-full h-10 border border-gray-200 rounded-lg px-3 bg-gray-50 text-sm text-gray-700" placeholder="Seleccione un acuerdo y registre fecha fin de plataforma">
+                </div>
+                <div>
+                    <label class="text-xs text-gray-500 font-medium block mb-1" for="semaforo_vencimiento_display">Semáforo de vencimiento</label>
+                    <input type="text" id="semaforo_vencimiento_display" readonly class="w-full h-10 border border-gray-200 rounded-lg px-3 bg-gray-50 text-sm text-gray-700" placeholder="SIN FECHA">
+                </div>
+            </div>
+        </div>
+
+        <!-- INFORMACIÓN DEL PROGRAMA -->
+        <div class="border border-orange-200 rounded-xl overflow-hidden">
+            <button type="button" class="section-toggle w-full flex items-center justify-between bg-orange-50 px-4 py-3 text-sm font-semibold text-orange-900 text-left" data-section="s_programa">
+                Información del programa
+                <span class="section-icon" data-section="s_programa">⌄</span>
+            </button>
+            <div id="s_programa" class="section-content p-4 space-y-3" style="display: block;">
+                <p class="text-xs text-gray-500 m-0">Estas fechas no vienen en el Excel de importación; regístrelas aquí para el reporte.</p>
+                <div>
+                    <label class="text-xs text-gray-500 font-medium block mb-1" for="fecha_inicio_plataforma">Fecha de inicio en plataforma</label>
+                    <input type="date" id="fecha_inicio_plataforma" class="w-full h-10 border border-gray-300 rounded-lg px-3 text-sm">
+                </div>
+                <div>
+                    <label class="text-xs text-gray-500 font-medium block mb-1" for="inicio_etapa_productiva">Inicio de etapa productiva</label>
+                    <input type="date" id="inicio_etapa_productiva" class="w-full h-10 border border-gray-300 rounded-lg px-3 text-sm">
+                </div>
+                <div>
+                    <label class="text-xs text-gray-500 font-medium block mb-1" for="fecha_fin_plataforma">Fecha de terminación en plataforma</label>
+                    <input type="date" id="fecha_fin_plataforma" class="w-full h-10 border border-gray-300 rounded-lg px-3 text-sm">
+                </div>
+            </div>
+        </div>
+
+        <!-- INFORMACIÓN DEL APRENDIZ -->
+        <div class="border border-sky-200 rounded-xl overflow-hidden">
+            <button type="button" class="section-toggle w-full flex items-center justify-between bg-sky-50 px-4 py-3 text-sm font-semibold text-sky-900 text-left" data-section="s_aprendiz">
+                Información del aprendiz
+                <span class="section-icon" data-section="s_aprendiz">⌄</span>
+            </button>
+            <div id="s_aprendiz" class="section-content p-4 space-y-3" style="display: block;">
+                <p class="text-xs text-gray-500 m-0">La fecha aval no viene en el Excel de importación; regístrela aquí para el reporte.</p>
+                <div>
+                    <label class="text-xs text-gray-500 font-medium block mb-1" for="fecha_aval_modalidad">Fecha aval modalidad</label>
+                    <input type="date" id="fecha_aval_modalidad" class="w-full h-10 border border-gray-300 rounded-lg px-3 text-sm">
+                </div>
+            </div>
+        </div>
+        
+        <!-- NOVEDADES DE LA ETAPA PRODUCTIVA -->
+        <div class="border border-lime-300 rounded-xl overflow-hidden">
+            <button type="button" class="section-toggle w-full flex items-center justify-between bg-lime-50 px-4 py-3 text-sm font-semibold text-lime-900 text-left" data-section="s_etapa">
+                Novedades de la etapa productiva
+                <span class="section-icon" data-section="s_etapa">⌄</span>
+            </button>
+            <div id="s_etapa" class="section-content p-4 space-y-3" style="display: block;">
+                <?php foreach ($novedadesEtapaLabels as $fieldId => $fieldLabel): ?>
+                    <div>
+                        <label class="text-xs text-gray-500 font-medium block mb-1" for="<?= e($fieldId) ?>"><?= e($fieldLabel) ?></label>
+                        <select id="<?= e($fieldId) ?>" class="w-full min-h-10 border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                            <option value="">— Sin seleccionar —</option>
+                            <?php foreach ($novedadesEtapaOptions[$fieldId] ?? [] as $option): ?>
+                                <option value="<?= e($option) ?>"><?= e($option) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                <?php endforeach; ?>
+                <div>
+                    <label class="text-xs text-gray-500 font-medium block mb-1" for="observaciones_novedad">Observaciones de novedad</label>
+                    <textarea id="observaciones_novedad" rows="3" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"></textarea>
+                </div>
+            </div>
+        </div>
+
+        <!-- PROCESO DOCUMENTAL DEL SEGUIMIENTO -->
+        <div class="border border-orange-200 rounded-xl overflow-hidden">
+            <button type="button" class="section-toggle w-full flex items-center justify-between bg-orange-50 px-4 py-3 text-sm font-semibold text-orange-900 text-left" data-section="s1">
                 Datos del proceso documental
                 <span class="section-icon" data-section="s1">⌄</span>
             </button>
@@ -57,9 +164,13 @@
             </div>
         </div>
 
-        <!-- SECTION 2 -->
-        <div class="border border-gray-200 rounded-xl overflow-hidden">
-            <button type="button" class="section-toggle w-full flex items-center justify-between bg-gray-100 px-4 py-3 text-sm font-semibold text-left" data-section="s2">
+        <div class="flex items-center gap-3 py-1" aria-hidden="true">
+            <div class="flex-1 border-t-2 border-dashed border-gray-300"></div>
+        </div>
+
+        <!-- DOCUMENTOS PARA CERTIFICACIÓN -->
+        <div class="border border-emerald-200 rounded-xl overflow-hidden">
+            <button type="button" class="section-toggle w-full flex items-center justify-between bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-900 text-left" data-section="s2">
                 Documentos para certificación
                 <span class="section-icon" data-section="s2">⌄</span>
             </button>
@@ -105,39 +216,6 @@
                 <div>
                     <label class="text-xs text-gray-500 font-medium block mb-1">Observaciones</label>
                     <textarea id="observaciones" rows="3" class="w-full border border-gray-300 rounded-lg px-3 py-2"></textarea>
-                </div>
-            </div>
-        </div>
-
-        <!-- SECTION 3 -->
-        <div class="border border-gray-200 rounded-xl overflow-hidden">
-            <button type="button" class="section-toggle w-full flex items-center justify-between bg-gray-100 px-4 py-3 text-sm font-semibold text-left" data-section="s3">
-                Novedades / cambios
-                <span class="section-icon" data-section="s3">⌄</span>
-            </button>
-            <div id="s3" class="section-content p-4 space-y-3" style="display: block;">
-                <div>
-                    <label class="text-xs text-gray-500 font-medium block mb-1">Observaciones de novedad</label>
-                    <textarea id="observaciones_novedad" rows="3" class="w-full border border-gray-300 rounded-lg px-3 py-2"></textarea>
-                </div>
-                
-                <div>
-                    <label class="text-xs text-gray-500 font-medium block mb-1">Cambio modalidad</label>
-                    <select id="cambio_modalidad" class="w-full h-10 border border-gray-300 rounded-lg px-3">
-                        <option>Ninguno</option>
-                        <option>Condicionado</option>
-                        <option>Cancelado</option>
-                    </select>
-                </div>
-                
-                <div class="flex items-center justify-between text-sm pt-2">
-                    <span>Reingreso por vencimiento</span>
-                    <label class="inline-flex items-center cursor-pointer">
-                        <input type="checkbox" id="reingreso" class="doc-checkbox hidden">
-                        <div class="w-11 h-6 bg-gray-200 rounded-full relative transition-colors duration-200 cursor-pointer">
-                            <div class="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-transform duration-200"></div>
-                        </div>
-                    </label>
                 </div>
             </div>
         </div>

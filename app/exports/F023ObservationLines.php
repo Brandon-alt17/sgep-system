@@ -74,16 +74,6 @@ final class F023ObservationLines
             }
         }
 
-        // #region agent log
-        F023AgentDebugLog::write('A', 'F023ObservationLines::splitLines', 'split result', [
-            'inputHasNewlines' => str_contains($normalized, "\n"),
-            'explicitRowCount' => count(array_filter($explicitRows, static fn (string $r): bool => trim($r) !== '')),
-            'outputLineCount' => count($lines),
-            'lineLengths' => array_map(static fn (string $l): int => mb_strlen($l), $lines),
-            'lines' => $lines,
-        ], 'post-fix');
-        // #endregion
-
         return $lines;
     }
 

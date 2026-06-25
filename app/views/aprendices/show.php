@@ -91,6 +91,8 @@
                 infoRow('Teléfono instructor seguimiento', $aprendiz['telefono_instructor_seguimiento'] ?? '', 'phone');
                 infoRow('Jefe de grupo', $aprendiz['jefe_grupo'] ?? '', 'user-check');
                 infoRow('Área de coordinación', $aprendiz['coordinacion'] ?? '', 'layers');
+                infoRow('Estado ARL', $aprendiz['estado_arl_label'] ?? '', 'circle-check');
+                infoRow('ARL', $aprendiz['arl'] ?? '', 'briefcase');
                 ?>
 
                 <div class="pt-2">

@@ -272,6 +272,7 @@ class ImportacionController
             'alternativa_ep',
             'nombre_instructor_seguimiento',
             'telefono_instructor_seguimiento',
+            'correo_instructor_seguimiento',
             'tipo_asistencia',
             'sugerencias_comentarios',
             'jefe_grupo',

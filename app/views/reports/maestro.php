@@ -2,9 +2,7 @@
 <?php require __DIR__ . '/drawer-editar.php'; ?>
 
 
-<!-- CONTENEDOR PRINCIPAL CON ANCHO FIJO Y OVERFLOW ESCONDIDO -->
-<div class="w-full overflow-x-hidden" style="max-width: 100vw;">
-<div style="max-width: 100vw; overflow-x: hidden;">
+<div class="min-w-0 w-full">
 <div class="space-y-6">
 
     <!-- HEADER -->
@@ -20,7 +18,13 @@
     </div>
 
     <!-- FILTROS -->
-    <form method="GET" action="" class="flex flex-wrap items-center gap-3">
+    <?php
+    $activeFilters = is_array($activeFilters ?? null) ? $activeFilters : [];
+    $initialQ = trim((string) ($activeFilters['q'] ?? ($_GET['q'] ?? '')));
+    $initialFicha = trim((string) ($activeFilters['ficha'] ?? ($_GET['ficha'] ?? '')));
+    $initialEstado = trim((string) ($activeFilters['estado'] ?? ($_GET['estado'] ?? '')));
+    ?>
+    <form method="GET" action="<?= e(APP_BASE_PATH) ?>/reportes/maestro" class="flex flex-wrap items-center gap-3">
         <?php
         // Extraer SOLO los valores que aparecen en la tabla actual
         $fichas_arr = [];
@@ -33,19 +37,47 @@
         $estados = array_unique(array_filter($estados_arr)); sort($estados);
         ?>
 
+        <div class="relative min-w-[220px] flex-1 sm:max-w-md">
+            <span class="pointer-events-none absolute inset-y-0 left-3 flex items-center text-gray-400">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-4 w-4" aria-hidden="true">
+                    <circle cx="11" cy="11" r="7"></circle>
+                    <path d="m20 20-3.5-3.5"></path>
+                </svg>
+            </span>
+            <input
+                type="search"
+                name="q"
+                value="<?= e($initialQ) ?>"
+                placeholder="Buscar por nombre o documento"
+                class="h-10 w-full rounded-lg border border-gray-300 bg-white pl-10 pr-3 text-sm"
+                autocomplete="off"
+            >
+        </div>
+
+        <button type="submit" class="inline-flex h-10 items-center rounded-lg border border-gray-300 bg-white px-4 text-sm font-medium text-gray-700 hover:bg-gray-50">
+            Buscar
+        </button>
+
+        <?php if ($initialQ !== ''): ?>
+            <a href="<?= e(APP_BASE_PATH) ?>/reportes/maestro<?= $initialFicha !== '' || $initialEstado !== '' ? '?' . http_build_query(array_filter(['ficha' => $initialFicha, 'estado' => $initialEstado])) : '' ?>"
+               class="inline-flex h-10 items-center rounded-lg px-3 text-sm text-gray-500 hover:text-gray-800">
+                Limpiar búsqueda
+            </a>
+        <?php endif; ?>
+
         <select name="ficha" onchange="this.form.submit()" class="h-10 px-3 rounded-lg border border-gray-300 bg-white text-sm min-w-[160px]">
-            <option value="">Todos</option>
+            <option value="">Todas las fichas</option>
             <?php foreach ($fichas as $f): ?>
-                <option value="<?= htmlspecialchars($f) ?>" <?= ((string)$f === (string)($_GET['ficha'] ?? '')) ? 'selected' : '' ?>>
+                <option value="<?= htmlspecialchars($f) ?>" <?= ((string)$f === $initialFicha) ? 'selected' : '' ?>>
                     <?= htmlspecialchars($f) ?>
                 </option>
             <?php endforeach; ?>
         </select>
 
         <select name="estado" onchange="this.form.submit()" class="h-10 px-3 rounded-lg border border-gray-300 bg-white text-sm min-w-[180px]">
-            <option value="">Todos</option>
+            <option value="">Todos los estados</option>
             <?php foreach ($estados as $e): ?>
-                <option value="<?= htmlspecialchars($e) ?>" <?= ((string)$e === (string)($_GET['estado'] ?? '')) ? 'selected' : '' ?>>
+                <option value="<?= htmlspecialchars($e) ?>" <?= ((string)$e === $initialEstado) ? 'selected' : '' ?>>
                     <?= htmlspecialchars($e) ?>
                 </option>
             <?php endforeach; ?>
@@ -54,13 +86,11 @@
         <div class="flex-1"></div>
 
         <?php
-        $exportQuery = [];
-        foreach (['estado', 'ficha', 'programa_id'] as $filterKey) {
-            $v = trim((string) ($_GET[$filterKey] ?? ''));
-            if ($v !== '') {
-                $exportQuery[$filterKey] = $v;
-            }
-        }
+        $exportQuery = array_filter([
+            'estado' => $initialEstado,
+            'ficha' => $initialFicha,
+            'q' => $initialQ,
+        ], static fn (string $v): bool => $v !== '');
         $exportUrl = APP_BASE_PATH . '/reportes/exportar'
             . ($exportQuery === [] ? '' : '?' . http_build_query($exportQuery));
         ?>
@@ -108,17 +138,18 @@
     </div>
 
     <!-- SOLO LA TABLA SE DESPLAZA HORIZONTALMENTE -->
-    <div class="bg-white border border-gray-200 rounded-2xl overflow-hidden" data-reporte-maestro-root>
-        <div class="reporte-maestro-table-scroll" data-reporte-table-scroll>
-            <table style="min-width: 2800px; width: 100%; border-collapse: collapse;" class="text-xs" data-reporte-table>
+    <div class="bg-white border border-gray-200 rounded-2xl" data-reporte-maestro-root>
+        <div class="reporte-maestro-table-scroll pb-2" data-reporte-table-scroll>
+            <table style="width: max-content; min-width: 100%; border-collapse: separate; border-spacing: 0;" class="text-xs" data-reporte-table>
                 <thead>
                     <tr>
                         <th colspan="11" style="padding: 10px 8px; text-align: center; font-weight: 600; border: 1px solid #e5e7eb; background: #f3f4f6;">Aprendices y grupos</th>
-                        <th colspan="5" style="padding: 10px 8px; text-align: center; font-weight: 600; border: 1px solid #e5e7eb; background: #f3e8ff;">Reglamento</th>
-                        <th colspan="8" style="padding: 10px 8px; text-align: center; font-weight: 600; border: 1px solid #e5e7eb; background: #dbeafe;">Información del aprendiz</th>
-                        <th colspan="12" style="padding: 10px 8px; text-align: center; font-weight: 600; border: 1px solid #e5e7eb; background: #ccfbf1;">Información de la etapa productiva</th>
-                        <th colspan="9" style="padding: 10px 8px; text-align: center; font-weight: 600; border: 1px solid #e5e7eb; background: #ffedd5;">Proceso documental del seguimiento</th>
-                        <th colspan="11" style="padding: 10px 8px; text-align: center; font-weight: 600; border: 1px solid #e5e7eb; background: #d1fae5;">Documentos para certificación</th>
+                        <th colspan="4" style="padding: 10px 8px; text-align: center; font-weight: 600; border: 1px solid #e5e7eb; background: #f3e8ff; cursor: pointer;" data-drawer-section="s0">Reglamento</th>
+                        <th colspan="8" style="padding: 10px 8px; text-align: center; font-weight: 600; border: 1px solid #e5e7eb; background: #dbeafe; cursor: pointer;" data-drawer-section="s_aprendiz">Información del aprendiz</th>
+                        <th colspan="8" style="padding: 10px 8px; text-align: center; font-weight: 600; border: 1px solid #e5e7eb; background: #ccfbf1; cursor: pointer;" data-drawer-section="s_etapa">Información de la etapa productiva</th>
+                        <th colspan="6" style="padding: 10px 8px; text-align: center; font-weight: 600; border: 1px solid #e5e7eb; background: #bbf7d0; cursor: pointer;" data-drawer-section="s_etapa">Novedades de la etapa productiva</th>
+                        <th colspan="9" style="padding: 10px 8px; text-align: center; font-weight: 600; border: 1px solid #e5e7eb; background: #ffedd5; cursor: pointer;" data-drawer-section="s1">Proceso documental del seguimiento</th>
+                        <th colspan="11" style="padding: 10px 8px; text-align: center; font-weight: 600; border: 1px solid #e5e7eb; background: #d1fae5; cursor: pointer;" data-drawer-section="s2">Documentos para certificación</th>
                         <th colspan="3" style="padding: 10px 8px; text-align: center; font-weight: 600; border: 1px solid #e5e7eb; background: #f3f4f6;">Instructor de seguimiento</th>
                     </tr>
                     <tr style="background: #f9fafb;">
@@ -129,15 +160,15 @@
                         <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">Programa</th>
                         <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">Nivel</th>
                         <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">Modalidad</th>
-                        <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">F. inicio plat.</th>
-                        <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">F. fin plat.</th>
+                        <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap; cursor: pointer;" data-drawer-section="s_programa">F. inicio plat.</th>
+                        <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap; cursor: pointer;" data-drawer-section="s_programa">Inicio EP</th>
+                        <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap; cursor: pointer;" data-drawer-section="s_programa">F. fin plat.</th>
                         <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">Instructor jefe</th>
                         <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">Ac. 007</th>
                         <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">Ac. 009</th>
-                        <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">≤18 meses</th>
-                        <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">≤12 meses</th>
                         <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">Venc. términos</th>
-                        <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">Nombre</th>
+                        <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">Semáforo</th>
+                        <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;" class="reporte-sticky-nombre">Nombre</th>
                         <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">N° identificación</th>
                         <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">Celular</th>
                         <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">Correo</th>
@@ -153,10 +184,12 @@
                         <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">Contacto</th>
                         <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">Tel. contacto</th>
                         <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">Correo contacto</th>
-                        <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">Estado etapa</th>
-                        <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">Reingreso</th>
-                        <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">Cambio/Cond./Canc.</th>
-                        <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">Obs. novedad</th>
+                        <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap; min-width: 120px;">Estado etapa</th>
+                        <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap; min-width: 100px;">Llamados atenc.</th>
+                        <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap; min-width: 120px;">Otros</th>
+                        <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap; min-width: 110px;">Comité eval.</th>
+                        <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap; min-width: 140px;">Reingreso esp.</th>
+                        <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap; min-width: 120px;">Obs. novedad</th>
                         <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">F-165</th>
                         <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">M1 023</th>
                         <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">Bit. 1</th>
@@ -191,7 +224,10 @@
                             data-identificacion="<?= e((string) ($a['identificacion'] ?? '')) ?>"
                             data-nombre="<?= htmlspecialchars($a['nombre'] ?? '') ?>"
                             data-index="<?= $index ?>"
-                        >                        
+                            data-fecha-fin-plataforma="<?= e((string) ($a['fecha_fin_plataforma'] ?? '')) ?>"
+                            data-acuerdo-007="<?= !empty($a['acuerdo_007']) ? '1' : '0' ?>"
+                            data-acuerdo-009="<?= !empty($a['acuerdo_009']) ? '1' : '0' ?>"
+                        >
                             <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;"><?= $a['num_aprendiz'] ?? '' ?></td>
                             <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap; text-align: center;"><?= e((string) ($a['num_por_grupo'] ?? '')) ?></td>
                             <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;"><?= $a['ficha'] ?? '' ?></td>
@@ -199,20 +235,20 @@
                             <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap; max-width: 150px; overflow: hidden; text-overflow: ellipsis;"><?= $a['programa_formacion'] ?? '' ?></td>
                             <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;"><span style="display: inline-flex; border-radius: 9999px; padding: 2px 8px; font-size: 11px; background: #dbeafe;"><?= $a['nivel'] ?? '' ?></span></td>
                             <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;"><?= $a['modalidad_programa'] ?? '' ?></td>
-                            <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;"><?= $a['fecha_inicio_plataforma'] ?? '' ?></td>
-                            <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;"><?= $a['fecha_fin_plataforma'] ?? '' ?></td>
+                            <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;" class="fecha-inicio-plataforma" data-drawer-section="s_programa"><?= e((string) ($a['fecha_inicio_plataforma'] ?? '')) ?></td>
+                            <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;" class="inicio-etapa-productiva" data-drawer-section="s_programa"><?= e((string) ($a['inicio_etapa_productiva'] ?? '')) ?></td>
+                            <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;" class="fecha-fin-plataforma" data-drawer-section="s_programa"><?= e((string) ($a['fecha_fin_plataforma'] ?? '')) ?></td>
                             <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap; max-width: 150px; overflow: hidden; text-overflow: ellipsis;"><?= $a['instructor_jefe'] ?? '' ?></td>
-                            <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: center;"><?= !empty($a['acuerdo_007']) ? '✓' : '' ?></td>
-                            <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: center;"><?= !empty($a['acuerdo_009']) ? '✓' : '' ?></td>
-                            <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: center;"><?= !empty($a['inicio_18_meses']) ? '✓' : '' ?></td>
-                            <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: center;"><?= !empty($a['inicio_12_meses']) ? '✓' : '' ?></td>
-                            <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: center;"><?= !empty($a['vencimiento_terminos']) ? '✓' : '' ?></td>
-                            <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap; font-weight: 500;"><?= $a['nombre'] ?? '' ?></td>
+                            <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: center;" class="acuerdo-007"><?= !empty($a['acuerdo_007']) ? 'X' : '' ?></td>
+                            <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: center;" class="acuerdo-009"><?= !empty($a['acuerdo_009']) ? 'X' : '' ?></td>
+                            <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;" class="vencimiento-terminos"><?= e((string) ($a['vencimiento_terminos'] ?? '')) ?></td>
+                            <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;" class="semaforo-vencimiento"><?= e((string) ($a['semaforo_vencimiento'] ?? '')) ?></td>
+                            <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap; font-weight: 500;" class="reporte-sticky-nombre aprendiz-nombre"><?= $a['nombre'] ?? '' ?></td>
                             <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;"><?= $a['identificacion'] ?? '' ?></td>
                             <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;"><?= $a['celular'] ?? '' ?></td>
                             <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap; max-width: 150px; overflow: hidden; text-overflow: ellipsis;"><?= $a['correo'] ?? '' ?></td>
                             <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;"><?= $a['modalidad_practica'] ?? '' ?></td>
-                            <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;"><?= $a['fecha_aval_modalidad'] ?? '' ?></td>
+                            <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;" class="fecha-aval-modalidad"><?= e((string) ($a['fecha_aval_modalidad'] ?? '')) ?></td>
                             <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;"><?= $a['estado_arl'] ?? '' ?></td>
                             <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;"><?= $a['arl'] ?? '' ?></td>
                             <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;"><?= $a['fecha_inicio_etapa'] ?? '' ?></td>
@@ -223,10 +259,12 @@
                             <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap; max-width: 150px; overflow: hidden; text-overflow: ellipsis;"><?= $a['contacto_empresa'] ?? '' ?></td>
                             <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;"><?= $a['telefono_contacto'] ?? '' ?></td>
                             <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap; max-width: 150px; overflow: hidden; text-overflow: ellipsis;"><?= $a['correo_contacto'] ?? '' ?></td>
-                            <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;"><span style="display: inline-flex; border-radius: 9999px; padding: 2px 8px; font-size: 11px; background: #dbeafe;"><?= $a['estado_etapa'] ?? '' ?></span></td>
-                            <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: center;"><?= !empty($a['reingreso_vencimiento']) ? 'Sí' : 'No' ?></td>
-                            <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;" class="cambio-modalidad"><?= $a['cambio_modalidad'] ?? '' ?></td>
-                            <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap; max-width: 150px; overflow: hidden; text-overflow: ellipsis;"><?= $a['observaciones_novedad'] ?: '—' ?></td>
+                            <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap; max-width: 160px; overflow: hidden; text-overflow: ellipsis;"><span style="display: inline-flex; border-radius: 9999px; padding: 2px 8px; font-size: 11px; background: #dbeafe;" class="estado-etapa"><?= e((string) ($a['estado_etapa'] ?? '')) ?></span></td>
+                            <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap; max-width: 120px; overflow: hidden; text-overflow: ellipsis;" class="llamados-atencion"><?= e((string) ($a['llamados_atencion'] ?? '')) ?: '—' ?></td>
+                            <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap; max-width: 160px; overflow: hidden; text-overflow: ellipsis;" class="otros-novedad"><?= e((string) ($a['otros_novedad'] ?? '')) ?: '—' ?></td>
+                            <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap; max-width: 140px; overflow: hidden; text-overflow: ellipsis;" class="comite-evaluacion"><?= e((string) ($a['comite_evaluacion'] ?? '')) ?: '—' ?></td>
+                            <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap; max-width: 180px; overflow: hidden; text-overflow: ellipsis;" class="reingreso-vencimiento"><?= e((string) ($a['reingreso_vencimiento'] ?? '')) ?: '—' ?></td>
+                            <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap; max-width: 150px; overflow: hidden; text-overflow: ellipsis;" class="obs-novedad"><?= e((string) ($a['observaciones_novedad'] ?? '')) ?: '—' ?></td>
                             
                             <!-- PROCESO DOCUMENTAL DEL SEGUIMIENTO - Con clases específicas -->
                             <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: center;" class="doc-status-gfpi-165"><?= !empty($a['doc_gfpi_165']) ? '✓' : '—' ?></td>
@@ -253,7 +291,7 @@
                             <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap; max-width: 150px; overflow: hidden; text-overflow: ellipsis;" class="observaciones"><?= e((string) ($a['observaciones_cert'] ?? '')) ?: '—' ?></td>
                             <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;"><?= e((string) ($a['instructor_asignado'] ?? '')) ?></td>
                             <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;"><?= $a['telefono_instructor'] ?? '' ?></td>
-                            <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap; max-width: 150px; overflow: hidden; text-overflow: ellipsis;"><?= $a['correo_instructor'] ?? '' ?></td>
+                            <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;"><?= $a['correo_instructor'] ?? '' ?></td>
                         </tr>
                     <?php endforeach; ?>
                 </tbody>
@@ -263,7 +301,6 @@
             <div class="reporte-maestro-hscroll-spacer" data-reporte-hscroll-spacer></div>
         </div>
     </div>
-</div>
 </div>
 </div>
 
@@ -285,17 +322,42 @@
   };
 
   var updateGeometry = function () {
+    var tableRect = tableScroll.getBoundingClientRect();
     var mainRect = main.getBoundingClientRect();
-    hScrollBar.style.left = mainRect.left + "px";
-    hScrollBar.style.width = mainRect.width + "px";
+    hScrollBar.style.left = tableRect.left + "px";
+    hScrollBar.style.width = tableRect.width + "px";
     hScrollBar.style.bottom = Math.max(0, window.innerHeight - mainRect.bottom) + "px";
+  };
+
+  var nombreColumnOffset = 0;
+
+  var measureNombreColumnOffset = function () {
+    var table = tableScroll.querySelector("[data-reporte-table]");
+    if (!table) return;
+    var headerRow = table.querySelector("thead tr:last-child");
+    if (!headerRow) return;
+    var offset = 0;
+    var cells = headerRow.querySelectorAll("th");
+    for (var i = 0; i < cells.length; i++) {
+      if (cells[i].classList.contains("reporte-sticky-nombre")) {
+        break;
+      }
+      offset += cells[i].offsetWidth;
+    }
+    nombreColumnOffset = offset;
+  };
+
+  var updateStickyNombreState = function () {
+    tableScroll.classList.toggle("reporte-nombre-pinned", tableScroll.scrollLeft + 1 >= nombreColumnOffset);
   };
 
   var updateBar = function () {
     var table = tableScroll.querySelector("[data-reporte-table]");
-    var scrollWidth = table ? table.offsetWidth : tableScroll.scrollWidth;
+    var scrollWidth = Math.max(tableScroll.scrollWidth, table ? table.scrollWidth : 0);
     hScrollSpacer.style.width = scrollWidth + "px";
     updateGeometry();
+    measureNombreColumnOffset();
+    updateStickyNombreState();
 
     var tableRect = tableScroll.getBoundingClientRect();
     var mainRect = main.getBoundingClientRect();
@@ -306,9 +368,11 @@
 
   tableScroll.addEventListener("scroll", function () {
     syncScroll(tableScroll, hScrollBar);
+    updateStickyNombreState();
   });
   hScrollBar.addEventListener("scroll", function () {
     syncScroll(hScrollBar, tableScroll);
+    updateStickyNombreState();
   });
 
   main.addEventListener("scroll", updateBar, { passive: true });
@@ -324,6 +388,8 @@
   }
 
   updateBar();
+  window.addEventListener("load", updateBar);
+  setTimeout(updateBar, 600);
 })();
 </script>
 <script>

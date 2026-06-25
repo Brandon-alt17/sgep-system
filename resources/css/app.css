@@ -313,18 +313,23 @@
   }
 }
 
-/* Reporte maestro: scroll horizontal fijo en la parte baja del viewport */
+/* Reporte maestro: scroll horizontal en la tabla y barra fija sincronizada */
 .reporte-maestro-table-scroll {
   overflow-x: auto;
   overflow-y: visible;
   width: 100%;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
+  max-width: 100%;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
 }
 
 .reporte-maestro-table-scroll::-webkit-scrollbar {
-  display: none;
-  height: 0;
+  height: 8px;
+}
+
+.reporte-maestro-table-scroll::-webkit-scrollbar-thumb {
+  background: rgb(203 213 225);
+  border-radius: 9999px;
 }
 
 .reporte-maestro-hscroll-bar {
@@ -344,4 +349,31 @@
 
 .reporte-maestro-hscroll-bar.is-hidden {
   display: none;
+}
+
+/* Columna nombre: fija a la izquierda solo cuando el scroll la sacaría de vista */
+.reporte-maestro-table-scroll [data-reporte-table] th.reporte-sticky-nombre,
+.reporte-maestro-table-scroll [data-reporte-table] td.reporte-sticky-nombre {
+  position: sticky;
+  left: 0;
+  z-index: 4;
+  background-color: #ffffff;
+  min-width: 11rem;
+  max-width: 14rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.reporte-maestro-table-scroll.reporte-nombre-pinned [data-reporte-table] th.reporte-sticky-nombre,
+.reporte-maestro-table-scroll.reporte-nombre-pinned [data-reporte-table] td.reporte-sticky-nombre {
+  box-shadow: 4px 0 8px -4px rgba(15, 23, 42, 0.12);
+}
+
+.reporte-maestro-table-scroll [data-reporte-table] thead th.reporte-sticky-nombre {
+  z-index: 5;
+  background-color: #f9fafb;
+}
+
+.reporte-maestro-table-scroll [data-reporte-table] tbody tr:hover td.reporte-sticky-nombre {
+  background-color: #f9fafb;
 }

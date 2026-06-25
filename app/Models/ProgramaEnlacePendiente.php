@@ -86,17 +86,66 @@ class ProgramaEnlacePendiente
         }
 
         $sql = 'INSERT INTO programa_enlaces_pendientes
-                (numero_documento, nombre_aprendiz, programa_fuente, nivel_fuente, modalidad_fuente, candidatos_json, motivo, estado, created_at, updated_at)
+                (numero_documento, nombre_aprendiz, programa_fuente, nivel_fuente, modalidad_fuente, jefe_grupo_fuente, coordinacion_fuente, candidatos_json, motivo, estado, created_at, updated_at)
                 VALUES
-                (:numero_documento, :nombre_aprendiz, :programa_fuente, :nivel_fuente, :modalidad_fuente, :candidatos_json, :motivo, "pendiente", NOW(), NOW())';
+                (:numero_documento, :nombre_aprendiz, :programa_fuente, :nivel_fuente, :modalidad_fuente, :jefe_grupo_fuente, :coordinacion_fuente, :candidatos_json, :motivo, "pendiente", NOW(), NOW())';
         $pdo->prepare($sql)->execute([
             'numero_documento' => $doc,
             'nombre_aprendiz' => trim((string) ($data['nombre_aprendiz'] ?? '')),
             'programa_fuente' => $programaFuente,
             'nivel_fuente' => trim((string) ($data['nivel_fuente'] ?? '')),
             'modalidad_fuente' => trim((string) ($data['modalidad_fuente'] ?? '')),
+            'jefe_grupo_fuente' => trim((string) ($data['jefe_grupo_fuente'] ?? '')),
+            'coordinacion_fuente' => trim((string) ($data['coordinacion_fuente'] ?? '')),
             'candidatos_json' => (string) ($data['candidatos_json'] ?? '[]'),
             'motivo' => trim((string) ($data['motivo'] ?? 'not_found')),
+        ]);
+    }
+
+    /**
+     * Conserva datos de importación (modalidad, jefe de grupo) aunque el programa ya esté vinculado.
+     *
+     * @param array{modalidad_fuente?: string, jefe_grupo_fuente?: string, coordinacion_fuente?: string} $data
+     */
+    public static function saveImportFuente(string $numeroDocumento, array $data): void
+    {
+        $doc = trim($numeroDocumento);
+        if ($doc === '') {
+            return;
+        }
+
+        $modalidad = trim((string) ($data['modalidad_fuente'] ?? ''));
+        $jefeGrupo = trim((string) ($data['jefe_grupo_fuente'] ?? ''));
+        $coordinacion = trim((string) ($data['coordinacion_fuente'] ?? ''));
+        if ($modalidad === '' && $jefeGrupo === '' && $coordinacion === '') {
+            return;
+        }
+
+        $pdo = Database::connection();
+        $stmt = $pdo->prepare(
+            'SELECT id FROM programa_enlaces_pendientes
+             WHERE numero_documento = :doc
+             ORDER BY updated_at DESC, id DESC
+             LIMIT 1'
+        );
+        $stmt->execute(['doc' => $doc]);
+        $row = $stmt->fetch();
+        if (!is_array($row)) {
+            return;
+        }
+
+        $pdo->prepare(
+            'UPDATE programa_enlaces_pendientes
+             SET modalidad_fuente = COALESCE(NULLIF(:modalidad, ""), modalidad_fuente),
+                 jefe_grupo_fuente = COALESCE(NULLIF(:jefe_grupo, ""), jefe_grupo_fuente),
+                 coordinacion_fuente = COALESCE(NULLIF(:coordinacion, ""), coordinacion_fuente),
+                 updated_at = NOW()
+             WHERE id = :id'
+        )->execute([
+            'id' => (int) ($row['id'] ?? 0),
+            'modalidad' => $modalidad,
+            'jefe_grupo' => $jefeGrupo,
+            'coordinacion' => $coordinacion,
         ]);
     }
 

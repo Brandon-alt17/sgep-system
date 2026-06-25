@@ -350,6 +350,25 @@
                     </div>
 
                     <div class="form-field">
+                        <label class="form-label">Estado ARL</label>
+                        <?php
+                        $estadoArlActual = trim((string) ($aprendiz['estado_arl'] ?? ''));
+                        /** @var list<string> $estadoArlOptions */
+                        $estadoArlOptions = require base_path('config/estado_arl_options.php');
+                        ?>
+                        <select name="estado_arl" class="form-input">
+                            <option value="" <?= $estadoArlActual === '' ? 'selected' : '' ?>>Sin especificar</option>
+                            <?php foreach ($estadoArlOptions as $estadoArlOpt): ?>
+                                <option value="<?= e($estadoArlOpt) ?>" <?= $estadoArlActual === $estadoArlOpt ? 'selected' : '' ?>><?= e($estadoArlOpt) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="form-field">
+                        <label class="form-label">ARL</label>
+                        <input type="text" name="arl" value="<?= e($aprendiz['arl'] ?? '') ?>" class="form-input" placeholder="Ej. SURA, Positiva, Colmena">
+                    </div>
+
+                    <div class="form-field">
                         <label class="form-label">Estado</label>
                         <select name="estado" class="form-input">
                             <?php

@@ -33,4 +33,6 @@ return [
     27 => 'sugerencias_comentarios',
     28 => 'jefe_grupo',
     29 => 'coordinacion',
+    30 => 'ciudad_empresa',
+    31 => 'correo_instructor_seguimiento',
 ];

@@ -24,6 +24,8 @@ class AprendicesImport
         $highestDataRow = $sheet->getHighestDataRow();
         $highestDataColumn = $sheet->getHighestDataColumn();
         $rows = $sheet->rangeToArray('A1:' . $highestDataColumn . $highestDataRow, null, true, true, false);
+        $headerRow = $rows[0] ?? [];
+        $columnMap = ImportColumnResolver::resolve($headerRow, $mapping);
         $results = [
             'inserted' => 0,
             'updated' => 0,
@@ -49,10 +51,12 @@ class AprendicesImport
             }
             try {
                 $assoc = [];
-                foreach ($mapping as $i => $field) {
-                    $assoc[$field] = $row[$i] ?? null;
+                foreach ($columnMap as $field => $columnIndex) {
+                    $assoc[$field] = $row[$columnIndex] ?? null;
                 }
                 $assoc = Normalizer::normalizeRow($assoc);
+                $assoc['jefe_grupo'] = ImportScalar::clean($assoc['jefe_grupo'] ?? null);
+                $assoc['coordinacion'] = ImportScalar::clean($assoc['coordinacion'] ?? null);
 
                 $doc = $this->normalizeDocumento(
                     $assoc['documento_identidad_vigente']
@@ -181,6 +185,12 @@ class AprendicesImport
                     $results['inserted_rows'][] = $rowSummary;
                 }
 
+                ProgramaEnlacePendiente::saveImportFuente($doc, [
+                    'modalidad_fuente' => trim((string) ($assoc['modalidad_formacion'] ?? '')),
+                    'jefe_grupo_fuente' => trim((string) ($assoc['jefe_grupo'] ?? '')),
+                    'coordinacion_fuente' => trim((string) ($assoc['coordinacion'] ?? '')),
+                ]);
+
                 $pendingFields = $this->missingImportColumns($assoc);
                 if ($pendingFields !== []) {
                     $results['pending_rows'][] = [
@@ -292,6 +302,7 @@ class AprendicesImport
             'alternativa_ep',
             'nombre_instructor_seguimiento',
             'telefono_instructor_seguimiento',
+            'correo_instructor_seguimiento',
             'tipo_asistencia',
             'sugerencias_comentarios',
             'jefe_grupo',
@@ -326,6 +337,9 @@ class AprendicesImport
             }
 
             $current = $existing[$field] ?? null;
+            if (in_array($field, ['jefe_grupo', 'coordinacion'], true) && ImportScalar::isIgnorable($current)) {
+                $current = null;
+            }
             if ($field === 'jefe_id') {
                 $incomingJefe = (int) $incoming;
                 if ($incomingJefe <= 0) {
@@ -769,9 +783,9 @@ class AprendicesImport
         }
 
         if ($fromImport && $fileNombre !== '') {
-            $sub = $this->conflictCatalogSubline($fileNombre, $label) ? ('Vinculado en catálogo: ' . $label) : null;
+            $sub = $this->conflictCatalogSubline($fileNombre, $label) ? ('Texto en archivo: ' . $fileNombre) : null;
 
-            return [$fileNombre, $sub];
+            return [$label, $sub];
         }
 
         return [$label, null];
@@ -846,6 +860,7 @@ class AprendicesImport
             'alternativa_ep' => $this->stringOrNull($assoc['alternativa_ep'] ?? null),
             'nombre_instructor_seguimiento' => $this->stringOrNull($assoc['nombre_instructor_seguimiento'] ?? null),
             'telefono_instructor_seguimiento' => $this->stringOrNull($assoc['telefono_instructor_seguimiento'] ?? null),
+            'correo_instructor_seguimiento' => $this->stringOrNull($assoc['correo_instructor_seguimiento'] ?? null),
             'tipo_asistencia' => $this->stringOrNull($assoc['tipo_asistencia'] ?? null),
             'sugerencias_comentarios' => $this->stringOrNull($assoc['sugerencias_comentarios'] ?? null),
             'jefe_grupo' => $this->stringOrNull($jefeGrupo !== '' ? $jefeGrupo : null),
@@ -952,6 +967,8 @@ class AprendicesImport
             'programa_fuente' => $programaFuente,
             'nivel_fuente' => (string) ($programaResolution['detected_level'] ?? ''),
             'modalidad_fuente' => trim((string) ($assoc['modalidad_formacion'] ?? '')),
+            'jefe_grupo_fuente' => trim((string) ($assoc['jefe_grupo'] ?? '')),
+            'coordinacion_fuente' => trim((string) ($assoc['coordinacion'] ?? '')),
             'candidatos_json' => json_encode((array) ($programaResolution['candidates'] ?? []), JSON_UNESCAPED_UNICODE),
             'motivo' => $reason,
         ]);
@@ -987,8 +1004,8 @@ class AprendicesImport
             return (int) $row['id'];
         }
 
-        $sql = 'INSERT INTO empresas (nombre, nit, direccion, correo_org, nombre_contacto2, correo_contacto2, direccion_practica, created_at, updated_at)
-                VALUES (:nombre, :nit, :direccion, :correo_org, :nombre_contacto2, :correo_contacto2, :direccion_practica, NOW(), NOW())';
+        $sql = 'INSERT INTO empresas (nombre, nit, direccion, ciudad, correo_org, nombre_contacto2, correo_contacto2, direccion_practica, created_at, updated_at)
+                VALUES (:nombre, :nit, :direccion, :ciudad, :correo_org, :nombre_contacto2, :correo_contacto2, :direccion_practica, NOW(), NOW())';
         $params = $this->empresaParams($assoc);
         $pdo->prepare($sql)->execute($params);
 
@@ -1002,6 +1019,7 @@ class AprendicesImport
             'nombre' => $this->stringOrNull($assoc['empresa_entidad_coformadora'] ?? null) ?? '',
             'nit' => $this->stringOrNull($assoc['nit_empresa'] ?? null),
             'direccion' => $this->stringOrNull($assoc['direccion_empresa'] ?? null),
+            'ciudad' => $this->stringOrNull($assoc['ciudad_empresa'] ?? null),
             'correo_org' => $this->stringOrNull($assoc['correo_organizacional'] ?? null),
             'nombre_contacto2' => $this->stringOrNull($assoc['nombre_contacto_2'] ?? null),
             'correo_contacto2' => $this->stringOrNull($assoc['correo_contacto_2'] ?? null),
@@ -1014,6 +1032,7 @@ class AprendicesImport
         $sql = 'UPDATE empresas SET
                     nit = COALESCE(NULLIF(:nit, ""), nit),
                     direccion = COALESCE(NULLIF(:direccion, ""), direccion),
+                    ciudad = COALESCE(NULLIF(:ciudad, ""), ciudad),
                     correo_org = COALESCE(NULLIF(:correo_org, ""), correo_org),
                     nombre_contacto2 = COALESCE(NULLIF(:nombre_contacto2, ""), nombre_contacto2),
                     correo_contacto2 = COALESCE(NULLIF(:correo_contacto2, ""), correo_contacto2),
@@ -1041,14 +1060,14 @@ class AprendicesImport
                     nombre_completo, tipo_documento, numero_documento, telefono, correo_personal, correo_institucional,
                     ficha, programa_id, empresa_id, jefe_id, estado,
                     fecha_hora_formulario, direccion_domicilio, ciudad_domicilio, alternativa_ep,
-                    nombre_instructor_seguimiento, telefono_instructor_seguimiento, tipo_asistencia, sugerencias_comentarios,
+                    nombre_instructor_seguimiento, telefono_instructor_seguimiento, correo_instructor_seguimiento, tipo_asistencia, sugerencias_comentarios,
                     jefe_grupo, coordinacion,
                     created_at, updated_at
                 ) VALUES (
                     :nombre_completo, :tipo_documento, :numero_documento, :telefono, :correo_personal, :correo_institucional,
                     :ficha, :programa_id, :empresa_id, :jefe_id, :estado,
                     :fecha_hora_formulario, :direccion_domicilio, :ciudad_domicilio, :alternativa_ep,
-                    :nombre_instructor_seguimiento, :telefono_instructor_seguimiento, :tipo_asistencia, :sugerencias_comentarios,
+                    :nombre_instructor_seguimiento, :telefono_instructor_seguimiento, :correo_instructor_seguimiento, :tipo_asistencia, :sugerencias_comentarios,
                     :jefe_grupo, :coordinacion,
                     NOW(), NOW()
                 )';
@@ -1072,6 +1091,7 @@ class AprendicesImport
             'alternativa_ep' => $data['alternativa_ep'],
             'nombre_instructor_seguimiento' => $data['nombre_instructor_seguimiento'],
             'telefono_instructor_seguimiento' => $data['telefono_instructor_seguimiento'],
+            'correo_instructor_seguimiento' => $data['correo_instructor_seguimiento'],
             'tipo_asistencia' => $data['tipo_asistencia'],
             'sugerencias_comentarios' => $data['sugerencias_comentarios'],
             'jefe_grupo' => $data['jefe_grupo'],
@@ -1100,6 +1120,7 @@ class AprendicesImport
             alternativa_ep = COALESCE(NULLIF(:alternativa_ep, ""), alternativa_ep),
             nombre_instructor_seguimiento = COALESCE(NULLIF(:nombre_instructor_seguimiento, ""), nombre_instructor_seguimiento),
             telefono_instructor_seguimiento = COALESCE(NULLIF(:telefono_instructor_seguimiento, ""), telefono_instructor_seguimiento),
+            correo_instructor_seguimiento = COALESCE(NULLIF(:correo_instructor_seguimiento, ""), correo_instructor_seguimiento),
             tipo_asistencia = COALESCE(NULLIF(:tipo_asistencia, ""), tipo_asistencia),
             sugerencias_comentarios = COALESCE(NULLIF(:sugerencias_comentarios, ""), sugerencias_comentarios),
             jefe_grupo = COALESCE(NULLIF(:jefe_grupo, ""), jefe_grupo),
@@ -1124,6 +1145,7 @@ class AprendicesImport
             'alternativa_ep' => $data['alternativa_ep'] ?? '',
             'nombre_instructor_seguimiento' => $data['nombre_instructor_seguimiento'] ?? '',
             'telefono_instructor_seguimiento' => $data['telefono_instructor_seguimiento'] ?? '',
+            'correo_instructor_seguimiento' => $data['correo_instructor_seguimiento'] ?? '',
             'tipo_asistencia' => $data['tipo_asistencia'] ?? '',
             'sugerencias_comentarios' => $data['sugerencias_comentarios'] ?? '',
             'jefe_grupo' => $data['jefe_grupo'] ?? '',
@@ -1155,6 +1177,7 @@ class AprendicesImport
             'alternativa_ep',
             'nombre_instructor_seguimiento',
             'telefono_instructor_seguimiento',
+            'correo_instructor_seguimiento',
             'tipo_asistencia',
             'sugerencias_comentarios',
             'jefe_grupo',

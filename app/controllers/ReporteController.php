@@ -28,6 +28,7 @@ class ReporteController
 
         view('reports/maestro', [
             'rows' => $rows,
+            'activeFilters' => $this->filtersFromRequest(),
         ]);
     }
 
@@ -151,7 +152,7 @@ class ReporteController
     }
 
     /**
-     * @return array{estado?: string, ficha?: string, programa_id?: int}
+     * @return array{estado?: string, ficha?: string, programa_id?: int, q?: string}
      */
     private function filtersFromRequest(): array
     {
@@ -169,6 +170,11 @@ class ReporteController
         $programaId = (int) ($_GET['programa_id'] ?? 0);
         if ($programaId > 0) {
             $filters['programa_id'] = $programaId;
+        }
+
+        $q = trim((string) ($_GET['q'] ?? ''));
+        if ($q !== '') {
+            $filters['q'] = $q;
         }
 
         return $filters;
