@@ -39,6 +39,8 @@ $routes = [
     ['POST', '/momentos/update', [MomentoController::class, 'update']],
     ['GET', '/documentos/generar', [DocumentoController::class, 'create']],
     ['POST', '/documentos/generar', [DocumentoController::class, 'generate']],
+    ['GET', '/documentos/historial', [DocumentoController::class, 'historial']],
+    ['GET', '/documentos/descargar', [DocumentoController::class, 'download']],
     ['GET', '/documentos/info', [DocumentoController::class, 'info']],
     ['POST', '/documentos/info', [DocumentoController::class, 'saveInfo']],
     ['GET', '/reportes/maestro', [ReporteController::class, 'index']],

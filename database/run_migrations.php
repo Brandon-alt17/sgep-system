@@ -24,7 +24,6 @@ require BASE_PATH . '/config/app.php';
 use App\Helpers\Database;
 
 $pdo = Database::connection();
-ensureInnoDbTables($pdo);
 
 $files = glob(__DIR__ . '/migrations/*.sql');
 sort($files);
@@ -58,11 +57,13 @@ foreach ($files as $file) {
             throw $e;
         }
     }
+    ensureInnoDbTables($pdo);
     echo 'Ejecutado: ' . basename($file) . PHP_EOL;
 }
 
 /**
  * WAMP puede crear tablas en MyISAM; las FK de migraciones 021+ requieren InnoDB.
+ * Se ejecuta tras cada archivo de migración para convertir tablas recién creadas.
  */
 function ensureInnoDbTables(\PDO $pdo): void
 {

@@ -10,6 +10,8 @@ $toastKey = trim((string) ($_GET['toast'] ?? ''));
 $toastMessage = match ($toastKey) {
     'programa_importado' => 'PDF del programa importado correctamente.',
     'programa_eliminado' => 'Programa eliminado correctamente.',
+    'programa_no_eliminado_aprendices' => 'No se puede eliminar: hay aprendices vinculados a este programa.',
+    'programa_no_encontrado' => 'No se encontró el programa.',
     default => '',
 };
 $pendientesCount = (int) ($pendientesCount ?? 0);

@@ -31,21 +31,9 @@ class ImportacionController
 
     public function process(): void
     {
-        if (empty($_FILES['archivo']['tmp_name'])) {
-            $errorMessage = 'Seleccione un archivo.';
-            if ($this->isAjaxRequest()) {
-                $this->jsonResponse(['ok' => false, 'message' => $errorMessage], 422);
-                return;
-            }
-            $historyState = $this->historyPaginationState();
-            view('import/upload', [
-                'history' => $historyState['items'],
-                'historyPage' => $historyState['page'],
-                'historyTotalPages' => $historyState['totalPages'],
-                'templateUrl' => $this->templateUrl(),
-                'templateAvailable' => $this->templateAvailable(),
-                'flashError' => $errorMessage,
-            ]);
+        $uploadIssue = $this->resolveUploadFileIssue();
+        if ($uploadIssue !== null) {
+            $this->respondImportUploadIssue($uploadIssue);
             return;
         }
 
@@ -503,6 +491,68 @@ class ImportacionController
     /**
      * @param list<string> $errors
      */
+    /** @return array{message: string}|null */
+    private function resolveUploadFileIssue(): ?array
+    {
+        if (!isset($_FILES['archivo'])) {
+            return ['message' => 'Seleccione un archivo.'];
+        }
+
+        $file = $_FILES['archivo'];
+        $error = (int) ($file['error'] ?? UPLOAD_ERR_NO_FILE);
+        $tmpPath = trim((string) ($file['tmp_name'] ?? ''));
+
+        if ($error === UPLOAD_ERR_NO_FILE || $tmpPath === '') {
+            return ['message' => 'Seleccione un archivo.'];
+        }
+
+        if ($error !== UPLOAD_ERR_OK) {
+            return ['message' => $this->uploadErrorMessage($error)];
+        }
+
+        if (!is_uploaded_file($tmpPath)) {
+            return ['message' => 'No se pudo validar el archivo subido.'];
+        }
+
+        if ((int) ($file['size'] ?? 0) <= 0) {
+            return ['message' => 'El archivo está vacío.'];
+        }
+
+        return null;
+    }
+
+    private function uploadErrorMessage(int $code): string
+    {
+        return match ($code) {
+            UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE => 'El archivo supera el tamaño máximo permitido.',
+            UPLOAD_ERR_PARTIAL => 'La carga del archivo se interrumpió. Inténtelo de nuevo.',
+            UPLOAD_ERR_NO_TMP_DIR => 'Error del servidor: carpeta temporal no disponible.',
+            UPLOAD_ERR_CANT_WRITE => 'Error del servidor: no se pudo guardar el archivo.',
+            UPLOAD_ERR_EXTENSION => 'El servidor bloqueó la carga del archivo.',
+            default => 'No se pudo subir el archivo. Inténtelo de nuevo.',
+        };
+    }
+
+    /** @param array{message: string} $issue */
+    private function respondImportUploadIssue(array $issue): void
+    {
+        $errorMessage = trim($issue['message']);
+        if ($this->isAjaxRequest()) {
+            $this->jsonResponse(['ok' => false, 'message' => $errorMessage], 422);
+            return;
+        }
+
+        $historyState = $this->historyPaginationState();
+        view('import/upload', [
+            'history' => $historyState['items'],
+            'historyPage' => $historyState['page'],
+            'historyTotalPages' => $historyState['totalPages'],
+            'templateUrl' => $this->templateUrl(),
+            'templateAvailable' => $this->templateAvailable(),
+            'flashError' => $errorMessage,
+        ]);
+    }
+
     private function respondImportValidationFailed(array $errors): void
     {
         $message = $errors[0] ?? 'El archivo no coincide con la plantilla.';

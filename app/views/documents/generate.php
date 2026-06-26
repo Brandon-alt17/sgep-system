@@ -44,6 +44,14 @@ $rowClass = 'flex gap-3 py-2.5';
         </div>
     <?php endif; ?>
 
+    <div class="mb-4">
+        <a href="<?= e(APP_BASE_PATH) ?>/documentos/historial?aprendiz_id=<?= $aprendizId ?>"
+           class="<?= e(ui_button_small_classes()) ?> inline-flex items-center gap-2">
+            <span class="inline-flex h-4 w-4 [&_svg]:h-4 [&_svg]:w-4"><?= ui_icon('clock') ?></span>
+            Ver historial de documentos
+        </a>
+    </div>
+
     <form
         method="post"
         action="<?= e(APP_BASE_PATH) ?>/documentos/generar"

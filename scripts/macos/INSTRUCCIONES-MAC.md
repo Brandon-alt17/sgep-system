@@ -1,5 +1,8 @@
 # SGEP en macOS (MAMP) — Guía rápida
 
+> **Guía completa (USB, alcance, errores WAMP/MAMP, placeholders de imágenes):**  
+> [docs/GUIA-INSTALACION-ENTREGA.md](../../docs/GUIA-INSTALACION-ENTREGA.md)
+
 ## Archivos en esta carpeta
 
 | Archivo | Uso |

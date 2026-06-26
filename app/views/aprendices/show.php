@@ -201,7 +201,12 @@
                     <span class="inline-flex h-4 w-4 [&_svg]:h-4 [&_svg]:w-4"><?= ui_icon('file-spreadsheet') ?></span>
                     Generar documento GFPI-F-023
                 </a>
-                <a href="<?= e(APP_BASE_PATH) ?>/reportes/maestro"
+                <a href="<?= e(APP_BASE_PATH) ?>/documentos/historial?aprendiz_id=<?= (int) $aprendiz['id'] ?>"
+                   class="font-app flex w-full items-center justify-center gap-2 rounded-lg border border-app-border bg-white px-4 py-3 text-sm font-medium text-app-text shadow-sm transition-colors duration-200 hover:bg-app-panelSubtle hover:no-underline">
+                    <span class="inline-flex h-4 w-4 [&_svg]:h-4 [&_svg]:w-4"><?= ui_icon('clock') ?></span>
+                    Historial de documentos
+                </a>
+                <a href="<?= e(APP_BASE_PATH) ?>/reportes/maestro?aprendiz_id=<?= (int) $aprendiz['id'] ?>"
                    class="text-center text-sm font-medium text-app-link no-underline hover:text-app-accent hover:underline">
                     Ver en reporte general →
                 </a>

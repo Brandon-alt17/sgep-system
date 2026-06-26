@@ -68,6 +68,7 @@ final class F023ExTemplateMacroInjector
         $xml = self::injectCompromisosFields($xml);
         $xml = self::injectSignatures($xml);
         $xml = self::normalizeFooterParagraph($xml);
+        $xml = self::stripDecorativeTableColors($xml);
 
         if ($zip->locateName(self::DOCUMENT_XML) !== false) {
             $zip->deleteName(self::DOCUMENT_XML);
@@ -99,6 +100,7 @@ final class F023ExTemplateMacroInjector
         $xml = self::reinforceCompromisosUnderlines($xml);
         $xml = self::pruneUnusedCompromisoLineParagraphs($xml);
         $xml = self::trimEmptyParagraphsBeforeSignatureTable($xml);
+        $xml = self::stripDecorativeTableColors($xml);
 
         if ($zip->locateName(self::DOCUMENT_XML) !== false) {
             $zip->deleteName(self::DOCUMENT_XML);
@@ -379,6 +381,45 @@ final class F023ExTemplateMacroInjector
         return $m[1] . $content . $sectPr . $m[3];
     }
 
+    /**
+     * Fin de la zona de compromisos (antes de la tabla de firmas).
+     */
+    private static function compromisosSectionEnd(string $xml, int $sectionStart): int
+    {
+        $labelPos = strpos($xml, 'Nombre y Firma del aprendiz', $sectionStart);
+        if ($labelPos === false) {
+            return strlen($xml);
+        }
+
+        $tblStart = strrpos(substr($xml, 0, $labelPos), '<w:tbl');
+        if ($tblStart !== false && $tblStart >= $sectionStart) {
+            return $tblStart;
+        }
+
+        return $labelPos;
+    }
+
+    /**
+     * Quita bandas de color del tema (verde/azul) y resaltado amarillo en tablas.
+     */
+    private static function stripDecorativeTableColors(string $xml): string
+    {
+        $xml = preg_replace('/<w:tblStyle w:val="[^"]*"\s*\/>/', '', $xml) ?? $xml;
+        $xml = preg_replace('/w:noHBand="0"/', 'w:noHBand="1"', $xml) ?? $xml;
+        $xml = preg_replace('/w:noVBand="0"/', 'w:noVBand="1"', $xml) ?? $xml;
+        $xml = preg_replace('/<w:highlight w:val="[^"]*"\s*\/>/', '', $xml) ?? $xml;
+
+        return preg_replace_callback(
+            '/<w:shd w:val="clear" w:color="auto" w:fill="([^"]+)"\s*\/>/',
+            static function (array $match): string {
+                return $match[1] === '262626'
+                    ? $match[0]
+                    : '<w:shd w:val="clear" w:color="auto" w:fill="auto"/>';
+            },
+            $xml
+        ) ?? $xml;
+    }
+
     private static function pruneUnusedCompromisoLineParagraphs(string $xml): string
     {
         $sectionStart = strpos($xml, 'Compromisos por parte del instructor');
@@ -386,8 +427,8 @@ final class F023ExTemplateMacroInjector
             return $xml;
         }
 
-        $tblPos = strpos($xml, 'Nombre y Firma del aprendiz', $sectionStart);
-        $sectionEnd = $tblPos !== false ? $tblPos : strlen($xml);
+        $tblPos = self::compromisosSectionEnd($xml, $sectionStart);
+        $sectionEnd = $tblPos;
 
         /** @var list<array{start: int, length: int}> $removals */
         $removals = [];
@@ -419,6 +460,10 @@ final class F023ExTemplateMacroInjector
 
     private static function isRemovableUnusedCompromisoLine(string $paragraph): bool
     {
+        if (str_contains($paragraph, '${nombre_')) {
+            return false;
+        }
+
         $plain = trim(preg_replace('/\s+/u', ' ', strip_tags($paragraph)) ?? '');
         if ($plain !== '' && str_contains($plain, 'Compromisos por parte')) {
             return false;
@@ -444,8 +489,7 @@ final class F023ExTemplateMacroInjector
             return $xml;
         }
 
-        $tblPos = strpos($xml, 'Nombre y Firma del aprendiz', $sectionStart);
-        $sectionEnd = $tblPos !== false ? $tblPos : strlen($xml);
+        $sectionEnd = self::compromisosSectionEnd($xml, $sectionStart);
 
         /** @var list<array{start: int, length: int, new: string}> $replacements */
         $replacements = [];
@@ -457,6 +501,10 @@ final class F023ExTemplateMacroInjector
             $searchFrom = $paraStart + strlen($paragraph);
 
             if ($paraStart < $sectionStart || $paraStart >= $sectionEnd) {
+                continue;
+            }
+
+            if (str_contains($paragraph, '${nombre_')) {
                 continue;
             }
 

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use App\Exports\ReporteMaestroExport;
-use App\Helpers\Database;
+use App\Models\Programa;
 use App\Services\ReporteMaestroData;
 use RuntimeException;
 
@@ -29,47 +29,30 @@ class ReporteController
         view('reports/maestro', [
             'rows' => $rows,
             'activeFilters' => $this->filtersFromRequest(),
+            'programasOptions' => Programa::all(),
+            'highlightAprendizId' => (int) ($_GET['aprendiz_id'] ?? 0),
         ]);
     }
 
     public function update(): void
     {
         $aprendizId = (int) ($_POST['aprendiz_id'] ?? 0);
-
         $campo = trim((string) ($_POST['campo'] ?? ''));
-
         $valor = (string) ($_POST['valor'] ?? '');
 
         if ($campo === '' || $aprendizId <= 0) {
             redirect(APP_BASE_PATH . '/reportes/maestro');
+            return;
         }
 
-        $sql = '
-            INSERT INTO reporte_campos (
-                aprendiz_id,
-                campo,
-                valor,
-                updated_at
-            )
-            VALUES (
-                :aprendiz_id,
-                :campo,
-                :valor,
-                NOW()
-            )
-            ON DUPLICATE KEY UPDATE
-                valor = VALUES(valor),
-                updated_at = NOW()
-        ';
+        if (!ReporteMaestroData::isEditableCampo($campo)) {
+            log_error('Reporte maestro update: campo no permitido: ' . $campo);
+            redirect(APP_BASE_PATH . '/reportes/maestro');
+            return;
+        }
 
         try {
-            Database::connection()
-                ->prepare($sql)
-                ->execute([
-                    'aprendiz_id' => $aprendizId,
-                    'campo' => $campo,
-                    'valor' => $valor,
-                ]);
+            ReporteMaestroData::persistCampos($aprendizId, [$campo => $valor]);
         } catch (\Throwable $e) {
             log_error('Reporte maestro update: ' . $e->getMessage());
         }
@@ -152,7 +135,7 @@ class ReporteController
     }
 
     /**
-     * @return array{estado?: string, ficha?: string, programa_id?: int, q?: string}
+     * @return array{estado?: string, ficha?: string, programa_id?: int, q?: string, aprendiz_id?: int, mostrar_finalizados?: bool}
      */
     private function filtersFromRequest(): array
     {
@@ -175,6 +158,15 @@ class ReporteController
         $q = trim((string) ($_GET['q'] ?? ''));
         if ($q !== '') {
             $filters['q'] = $q;
+        }
+
+        $aprendizId = (int) ($_GET['aprendiz_id'] ?? 0);
+        if ($aprendizId > 0) {
+            $filters['aprendiz_id'] = $aprendizId;
+        }
+
+        if (in_array(strtolower(trim((string) ($_GET['mostrar_finalizados'] ?? ''))), ['1', 'true', 'on', 'yes'], true)) {
+            $filters['mostrar_finalizados'] = true;
         }
 
         return $filters;

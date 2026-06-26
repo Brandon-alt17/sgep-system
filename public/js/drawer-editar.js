@@ -220,11 +220,11 @@
                 const cell = row.querySelector('.' + className);
                 if (cell) {
                     if (data[key]) {
-                        cell.innerHTML = '✓';
+                        cell.textContent = '✓';
                         cell.style.color = '#059669';
                         cell.style.fontWeight = 'bold';
                     } else {
-                        cell.innerHTML = '—';
+                        cell.textContent = '—';
                         cell.style.color = '';
                         cell.style.fontWeight = '';
                     }
@@ -327,7 +327,7 @@
         if (data.fecha_entrega !== undefined) {
             const fechaCell = row.querySelector('.fecha-entrega');
             if (fechaCell) {
-                fechaCell.innerHTML = data.fecha_entrega || '';
+                fechaCell.textContent = data.fecha_entrega || '';
             }
         }
         
@@ -335,7 +335,7 @@
         if (data.estado_aprendiz !== undefined) {
             const estadoCell = row.querySelector('.estado-aprendiz');
             if (estadoCell) {
-                estadoCell.innerHTML = data.estado_aprendiz || '';
+                estadoCell.textContent = data.estado_aprendiz || '';
             }
         }
         
@@ -343,7 +343,7 @@
         if (data.observaciones !== undefined) {
             const obsCell = row.querySelector('.observaciones');
             if (obsCell) {
-                obsCell.innerHTML = data.observaciones || '—';
+                obsCell.textContent = data.observaciones || '—';
             }
         }
     }
@@ -695,6 +695,21 @@
         if (avalCell && avalInput) {
             avalInput.value = dmYToIso((avalCell.textContent || '').trim());
         }
+
+        const estadoCell = row.querySelector('.estado-aprendiz');
+        const estadoSelect = document.getElementById('estado_aprendiz');
+        if (estadoCell && estadoSelect) {
+            const value = (estadoCell.textContent || '').trim();
+            if (value !== '' && value !== '—') {
+                const options = Array.from(estadoSelect.options);
+                const match = options.find(function (opt) {
+                    return opt.value === value || opt.textContent === value;
+                });
+                if (match) {
+                    estadoSelect.value = match.value;
+                }
+            }
+        }
     }
 
     function hydrateNovedadesFromRow(row) {
@@ -836,6 +851,11 @@
         syncReporteCamposToServer([{ aprendiz_id: aprendizId, campos: syncPayload }])
             .then(function () {
                 showNotification('Datos guardados correctamente', 'success');
+                if (formData.estado_aprendiz === 'Finalizado' && !document.querySelector('input[name="mostrar_finalizados"]')?.checked) {
+                    if (row) {
+                        row.remove();
+                    }
+                }
                 closePopup();
             })
             .catch(function (err) {

@@ -210,7 +210,9 @@
                         <option>En formación</option>
                         <option>Por certificar</option>
                         <option>Certificado</option>
+                        <option>Finalizado</option>
                     </select>
+                    <p class="mt-1 text-xs text-gray-500">«Finalizado» oculta al aprendiz del reporte activo. Use «Mostrar finalizados» en el reporte para verlo de nuevo.</p>
                 </div>
                 
                 <div>

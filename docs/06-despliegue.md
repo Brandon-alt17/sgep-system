@@ -8,6 +8,7 @@
 ### Índice
 
 - [Entornos de ejecución](#entornos-de-ejecución)
+- [Guía de instalación para el cliente](#guía-de-instalación-para-el-cliente)
 - [Proceso de empaquetado](#proceso-de-empaquetado)
 - [Instalación en Windows (WAMP)](#instalación-en-windows-wamp)
 - [LibreOffice para exportar PDF (opcional)](#libreoffice-para-exportar-pdf-opcional)
@@ -31,6 +32,20 @@ El SGEP es una aplicación web **100% local**. No requiere internet para funcion
 | **Carpeta del SGEP** | Código PHP + dependencias + assets | El equipo, en cada versión |
 | **LibreOffice** (opcional) | Exportación F-023 a PDF | El directivo o el equipo, si se usa PDF |
 | **Base de datos MySQL** | Tablas vacías o con datos | El script de instalación o migraciones |
+
+---
+
+## Guía de instalación para el cliente
+
+Documento principal para entrega en **memoria USB**, con alcance/limitaciones, capturas (`docs/imagenes/`) y solución de problemas (WAMP sin servicios verdes, MAMP `mod_rewrite`, etc.):
+
+**[GUIA-INSTALACION-ENTREGA.md](./GUIA-INSTALACION-ENTREGA.md)**
+
+Incluir en la USB junto al ZIP:
+
+- `LEEME.txt` (raíz del repositorio)
+- `docs/GUIA-INSTALACION-ENTREGA.md` (dentro del proyecto descomprimido)
+- Carpeta `docs/imagenes/` con capturas una vez el instalador las haya tomado
 
 ---
 
@@ -161,6 +176,7 @@ Estructura del ZIP de distribución:
 
 ```
 SGEP_v1.0.zip
+├── LEEME.txt                   ← Texto breve en la raíz de la USB
 ├── sgep/                       ← Carpeta del proyecto completa
 │   ├── app/
 │   ├── database/
@@ -175,10 +191,12 @@ SGEP_v1.0.zip
 │   ├── actualizar.bat
 │   ├── abrir_sgep.bat          ← Abre el navegador en la URL del SGEP
 │   ├── SGEP.url                ← Acceso directo (copiar al escritorio)
+│   ├── LEEME.txt
+│   ├── docs/GUIA-INSTALACION-ENTREGA.md
 │   └── database/run_migrations.php
 ├── instalar.bat                ← (legacy: puede ir solo dentro de sgep/)
 ├── actualizar.bat
-└── INSTRUCCIONES.pdf           ← Guía de 1 página para el directivo
+└── INSTRUCCIONES.pdf           ← Opcional: resumen de 1 página para el directivo
 ```
 
 > Verificar que `.env` real **NO** está en el ZIP (solo `.env.example`).
@@ -216,7 +234,7 @@ SGEP_v1.0.zip
    → Responder S para abrir el navegador, o usar el atajo abajo
 
 6. Abrir el navegador:
-   → http://localhost/sgep/public
+   → http://localhost/sgep/
    → O doble clic en "abrir_sgep.bat"
    → O copiar "SGEP.url" al escritorio y usarlo cada día
 ```
@@ -314,15 +332,11 @@ mysql -u root -p -P 8889 -e "CREATE DATABASE sgep CHARACTER SET utf8mb4 COLLATE 
 # 2. Entrar a la carpeta del proyecto
 cd /Applications/MAMP/htdocs/sgep
 
-# 3. Copiar y configurar .env
-cp .env.example .env
-# Editar .env: APP_URL=http://localhost:8888/sgep/public (ajusta la ruta si cambia el puerto)
+# 3. Ejecutar instalador (configura .env para MAMP)
+cd scripts/macos && bash instalar.sh
 
-# 4. Ejecutar migraciones
-php database/run_migrations.php
-
-# 5. Abrir en el navegador (ejemplo con puerto 8888):
-# http://localhost:8888/sgep/public
+# 4. Abrir en el navegador:
+# http://localhost:8888/sgep/
 ```
 
 > **Exportación PDF:** instalar LibreOffice en el Mac y verificar con `php scripts/check_pdf_converter.php` ([detalle](#libreoffice-para-exportar-pdf-opcional)).

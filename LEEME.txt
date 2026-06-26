@@ -1,0 +1,24 @@
+SGEP - Sistema de Gestion de Etapa Productiva
+SENA CDITI
+============================================
+
+1. Descomprima SGEP_v1.0.zip en su PC.
+
+2. Windows (WAMP):
+   - Instale WAMP desde wampserver.com (icono VERDE en la bandeja).
+   - Copie la carpeta "sgep" a: C:\wamp64\www\sgep\
+   - Ejecute: instalar.bat
+   - Abra: http://localhost/sgep/
+
+3. Mac (MAMP):
+   - Instale MAMP desde mamp.info
+   - Copie "sgep" a: /Applications/MAMP/htdocs/sgep/
+   - Terminal: cd .../sgep/scripts/macos && bash instalar.sh
+   - Abra: http://localhost:8888/sgep/
+
+4. Guia completa (alcance, errores, imagenes):
+   Abra en el proyecto: docs/GUIA-INSTALACION-ENTREGA.md
+
+5. Sin login: use el sistema solo en red interna o PC controlado.
+
+Soporte: consulte docs/GUIA-INSTALACION-ENTREGA.md seccion 8 (Errores comunes).

@@ -9,6 +9,7 @@ use App\Exports\F023Generator;
 use App\Helpers\Database;
 use App\Models\Aprendiz;
 use App\Models\AprendizInfoGeneral;
+use App\Models\DocumentoGenerado;
 use App\Models\Empresa;
 use App\Models\Momento;
 use App\Models\Programa;
@@ -129,6 +130,84 @@ class DocumentoController
             // El archivo ya se generó; se entrega aunque falle el registro en historial.
         }
 
+        $mime = $formato === 'pdf'
+            ? 'application/pdf'
+            : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+        header('Content-Type: ' . $mime);
+        header('Content-Disposition: ' . content_disposition_attachment(basename($path)));
+        readfile($path);
+        exit;
+    }
+
+    public function historial(): void
+    {
+        $aprendizId = (int) ($_GET['aprendiz_id'] ?? 0);
+        if ($aprendizId <= 0) {
+            redirect(APP_BASE_PATH . '/aprendices');
+
+            return;
+        }
+
+        $aprendiz = Aprendiz::findById($aprendizId);
+        if ($aprendiz === null) {
+            http_response_code(404);
+            view('errors/404', ['uri' => '/documentos/historial?aprendiz_id=' . $aprendizId]);
+
+            return;
+        }
+
+        $perPage = 15;
+        $currentPage = (int) ($_GET['page'] ?? 1);
+        if ($currentPage < 1) {
+            $currentPage = 1;
+        }
+        $totalItems = DocumentoGenerado::countByAprendiz($aprendizId);
+        $totalPages = max(1, (int) ceil($totalItems / $perPage));
+        if ($currentPage > $totalPages) {
+            $currentPage = $totalPages;
+        }
+        $offset = ($currentPage - 1) * $perPage;
+        $documentos = DocumentoGenerado::listByAprendiz($aprendizId, $perPage, $offset);
+
+        view('documents/historial', [
+            'aprendiz' => $aprendiz,
+            'aprendiz_id' => $aprendizId,
+            'documentos' => $documentos,
+            'currentPage' => $currentPage,
+            'totalPages' => $totalPages,
+            'totalItems' => $totalItems,
+            'perPage' => $perPage,
+        ]);
+    }
+
+    public function download(): void
+    {
+        $id = (int) ($_GET['id'] ?? 0);
+        if ($id <= 0) {
+            redirect(APP_BASE_PATH . '/aprendices');
+
+            return;
+        }
+
+        $row = DocumentoGenerado::findById($id);
+        if ($row === null) {
+            http_response_code(404);
+            view('errors/404', ['uri' => '/documentos/descargar?id=' . $id]);
+
+            return;
+        }
+
+        $path = trim((string) ($row['ruta_archivo'] ?? ''));
+        if (!DocumentoGenerado::isPathAllowed($path)) {
+            redirect(
+                APP_BASE_PATH . '/documentos/historial?aprendiz_id=' . (int) ($row['aprendiz_id'] ?? 0)
+                . '&error=archivo_no_disponible'
+            );
+
+            return;
+        }
+
+        $formato = strtolower(trim((string) ($row['formato'] ?? 'docx')));
         $mime = $formato === 'pdf'
             ? 'application/pdf'
             : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';

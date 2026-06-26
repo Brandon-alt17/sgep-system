@@ -62,6 +62,16 @@ final class F023M3P2TemplateMacroInjectorTest extends TestCase
             $xml,
             'El cuadro de Aprobado debe centrarse verticalmente dentro del recuadro'
         );
+        $this->assertMatchesRegularExpression(
+            '/<w:tc\b[^>]*>.*?<w:jc w:val="left"\/>.*?\$\{nombre_aprendiz\}/s',
+            $xml,
+            'El nombre del aprendiz en la línea de firma debe ir alineado a la izquierda'
+        );
+        $this->assertMatchesRegularExpression(
+            '/<w:tc\b[^>]*>.*?<w:jc w:val="left"\/>.*?\$\{nombre_instructor_seguimiento\}/s',
+            $xml,
+            'El nombre del instructor en la línea de firma debe ir alineado a la izquierda'
+        );
     }
 
     public function test_m3_p2_apply_juicio_marca_writes_x_inside_checkbox_after_save(): void

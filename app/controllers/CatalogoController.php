@@ -1051,10 +1051,19 @@ class CatalogoController
     public function eliminarPrograma(): void
     {
         $programaId = (int) ($_POST['programa_id'] ?? 0);
-        if ($programaId > 0) {
-            Programa::deleteById($programaId);
+        if ($programaId <= 0) {
+            redirect(APP_BASE_PATH . '/catalogo/programas');
+            return;
         }
-        redirect(APP_BASE_PATH . '/catalogo/programas?toast=programa_eliminado');
+        if (Programa::countAprendices($programaId) > 0) {
+            redirect(APP_BASE_PATH . '/catalogo/programas?toast=programa_no_eliminado_aprendices');
+            return;
+        }
+        if (Programa::deleteById($programaId)) {
+            redirect(APP_BASE_PATH . '/catalogo/programas?toast=programa_eliminado');
+            return;
+        }
+        redirect(APP_BASE_PATH . '/catalogo/programas?toast=programa_no_encontrado');
     }
 
     private function guessProgramNameFromFileName(string $fileName): string

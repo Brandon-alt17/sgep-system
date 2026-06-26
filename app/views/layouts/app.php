@@ -30,6 +30,12 @@ if ($pathForTitle === '/documentos/generar') {
         $currentPath = '/aprendices';
     }
 }
+if ($pathForTitle === '/documentos/historial') {
+    parse_str((string) (parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_QUERY) ?? ''), $queryGenerar);
+    if ((int) ($queryGenerar['aprendiz_id'] ?? 0) > 0) {
+        $currentPath = '/aprendices';
+    }
+}
 
 $titles = [
     '/dashboard' => 'Dashboard',
@@ -47,6 +53,7 @@ $titles = [
     '/catalogo/empresas/ver' => 'Catálogo',
     '/catalogo/empresas/editar' => 'Catálogo',
     '/documentos/generar' => 'Generar F-023',
+    '/documentos/historial' => 'Historial F-023',
     '/momentos/create' => 'Momento F-023',
 ];
 $pageTitle = $titles[$pathForTitle] ?? $titles[$currentPath] ?? 'SGEP';

@@ -11,17 +11,27 @@ Sistema de Gestión de Etapa Productiva para SENA CDITI, migrado a PHP puro con 
 - PHPWord
 - DOMPDF
 
-## Ejecución local
+## Ejecución local (desarrollo)
 
 1. Instalar dependencias:
    - `composer install`
+   - `npm install && npm run build:css`
 2. Configurar variables:
    - copiar `.env.example` a `.env`
-3. Crear base de datos `sgep`.
-4. Ejecutar migraciones SQL:
-   - `php database/run_migrations.php`
-5. Configurar Apache DocumentRoot a `public/`.
-6. Abrir `http://localhost/sgep/`.
+3. Ejecutar migraciones:
+   - `php database/run_migrations.php` (crea BD `sgep` si no existe)
+4. Configurar Apache DocumentRoot a `public/`.
+5. Abrir `http://localhost/sgep/` (WAMP) o `http://localhost:8888/sgep/` (MAMP).
+
+## Instalación en PC del cliente (memoria USB)
+
+**Guía completa:** [docs/GUIA-INSTALACION-ENTREGA.md](docs/GUIA-INSTALACION-ENTREGA.md)
+
+Incluye alcance y limitaciones, pasos Windows/Mac, placeholders para capturas en `docs/imagenes/`, y errores frecuentes (WAMP sin servicios verdes, `mod_rewrite` en MAMP, etc.).
+
+Resumen: descomprimir ZIP → copiar a `www` / `htdocs` → ejecutar `instalar.bat` (Windows) o `scripts/macos/instalar.sh` (Mac) → abrir navegador.
+
+Archivo de texto en la USB: `LEEME.txt`
 
 ## Estructura clave
 
@@ -42,3 +52,5 @@ Sistema de Gestión de Etapa Productiva para SENA CDITI, migrado a PHP puro con 
 - Instalación rápida Windows: `instalar.bat`
 - Actualización incremental: `actualizar.bat`
 - Abrir SGEP en el navegador: `abrir_sgep.bat` o `SGEP.url` (copiar al escritorio)
+- Mac: `scripts/macos/instalar.sh`, `actualizar.sh`, `abrir_sgep.sh`
+- **Guía de entrega e instalación (USB):** [docs/GUIA-INSTALACION-ENTREGA.md](docs/GUIA-INSTALACION-ENTREGA.md)

@@ -149,12 +149,45 @@ class ReporteMaestroData
             $params['q_documento'] = $likeQ;
         }
 
+        self::appendActiveReportVisibilitySql($sql, $params, $filters);
+
         $sql .= ' ORDER BY a.ficha ASC, a.nombre_completo ASC';
 
         $stmt = Database::connection()->prepare($sql);
         $stmt->execute($params);
 
         return $stmt->fetchAll() ?: [];
+    }
+
+    /**
+     * Oculta aprendices finalizados del reporte activo salvo que se pidan explícitamente.
+     *
+     * @param array{mostrar_finalizados?: bool|int|string, aprendiz_id?: int|string} $filters
+     * @param array<string, mixed> $params
+     */
+    private static function appendActiveReportVisibilitySql(string &$sql, array &$params, array $filters): void
+    {
+        if (!empty($filters['mostrar_finalizados'])) {
+            return;
+        }
+
+        $highlightId = (int) ($filters['aprendiz_id'] ?? 0);
+        $activeClause = "(a.estado IS NULL OR a.estado <> 'Finalizada')
+            AND NOT EXISTS (
+                SELECT 1 FROM reporte_campos rc_f
+                WHERE rc_f.aprendiz_id = a.id
+                  AND rc_f.campo = 'estado_aprendiz'
+                  AND rc_f.valor = 'Finalizado'
+            )";
+
+        if ($highlightId > 0) {
+            $sql .= ' AND (a.id = :highlight_aprendiz_id OR (' . $activeClause . '))';
+            $params['highlight_aprendiz_id'] = $highlightId;
+
+            return;
+        }
+
+        $sql .= ' AND ' . $activeClause;
     }
 
     /**
@@ -672,18 +705,14 @@ class ReporteMaestroData
     }
 
     /**
-     * Persiste campos editables del panel lateral (switches, certificación, novedades).
-     *
-     * @param array<string, mixed> $campos claves del formulario (con alias de UI)
+     * @return array{allowed: list<string>, aliases: array<string, string>, boolKeys: list<string>}
      */
-    public static function persistCampos(int $aprendizId, array $campos): void
+    private static function editableCampoConfig(): array
     {
-        $aprendizId = self::resolveAprendizId($aprendizId);
-        if ($aprendizId <= 0 || $campos === []) {
-            return;
+        static $cache = null;
+        if ($cache !== null) {
+            return $cache;
         }
-
-        self::normalizeReglamentoCampos($campos);
 
         /** @var array<string, mixed> $map */
         $map = require base_path('config/reporte_maestro_map.php');
@@ -697,14 +726,51 @@ class ReporteMaestroData
             'otros_novedad',
             'comite_evaluacion',
         ]);
-        /** @var list<string> $boolKeys */
-        $boolKeys = array_values((array) ($map['boolean_keys'] ?? []));
 
-        $aliases = [
-            'fecha_entrega' => 'fecha_entrega_admin',
-            'observaciones' => 'observaciones_cert',
-            'reingreso' => 'reingreso_vencimiento',
+        $cache = [
+            'allowed' => $allowed,
+            'aliases' => [
+                'fecha_entrega' => 'fecha_entrega_admin',
+                'observaciones' => 'observaciones_cert',
+                'reingreso' => 'reingreso_vencimiento',
+            ],
+            'boolKeys' => array_values((array) ($map['boolean_keys'] ?? [])),
         ];
+
+        return $cache;
+    }
+
+    public static function isEditableCampo(string $rawKey): bool
+    {
+        return self::resolveEditableCampoKey($rawKey) !== null;
+    }
+
+    public static function resolveEditableCampoKey(string $rawKey): ?string
+    {
+        $config = self::editableCampoConfig();
+        $key = $config['aliases'][$rawKey] ?? $rawKey;
+
+        return in_array($key, $config['allowed'], true) ? $key : null;
+    }
+
+    /**
+     * Persiste campos editables del panel lateral (switches, certificación, novedades).
+     *
+     * @param array<string, mixed> $campos claves del formulario (con alias de UI)
+     */
+    public static function persistCampos(int $aprendizId, array $campos): void
+    {
+        $aprendizId = self::resolveAprendizId($aprendizId);
+        if ($aprendizId <= 0 || $campos === []) {
+            return;
+        }
+
+        self::normalizeReglamentoCampos($campos);
+
+        $config = self::editableCampoConfig();
+        $allowed = $config['allowed'];
+        $aliases = $config['aliases'];
+        $boolKeys = $config['boolKeys'];
 
         $stmt = Database::connection()->prepare(
             'INSERT INTO reporte_campos (aprendiz_id, campo, valor, updated_at)
@@ -731,6 +797,30 @@ class ReporteMaestroData
                 'valor' => $stored,
             ]);
         }
+
+        self::syncAprendizEstadoFromReporte($aprendizId, $campos);
+    }
+
+    /**
+     * @param array<string, mixed> $campos
+     */
+    private static function syncAprendizEstadoFromReporte(int $aprendizId, array $campos): void
+    {
+        if (!array_key_exists('estado_aprendiz', $campos)) {
+            return;
+        }
+
+        $estadoReporte = trim((string) $campos['estado_aprendiz']);
+        if ($estadoReporte !== 'Finalizado') {
+            return;
+        }
+
+        Database::connection()->prepare(
+            'UPDATE aprendices SET estado = :estado, updated_at = NOW() WHERE id = :id'
+        )->execute([
+            'estado' => 'Finalizada',
+            'id' => $aprendizId,
+        ]);
     }
 
     /**

@@ -200,10 +200,31 @@ class Programa
         ]);
     }
 
-    public static function deleteById(int $id): void
+    public static function countAprendices(int $programaId): int
     {
-        $stmt = Database::connection()->prepare('DELETE FROM programas WHERE id = :id');
+        if ($programaId <= 0) {
+            return 0;
+        }
+        $stmt = Database::connection()->prepare(
+            'SELECT COUNT(*) FROM aprendices WHERE programa_id = :id'
+        );
+        $stmt->execute(['id' => $programaId]);
+
+        return (int) $stmt->fetchColumn();
+    }
+
+    public static function deleteById(int $id): bool
+    {
+        if ($id <= 0) {
+            return false;
+        }
+        if (self::countAprendices($id) > 0) {
+            return false;
+        }
+        $stmt = Database::connection()->prepare('DELETE FROM programas WHERE id = :id LIMIT 1');
         $stmt->execute(['id' => $id]);
+
+        return $stmt->rowCount() > 0;
     }
 
     public static function countPendientesEnlace(): int

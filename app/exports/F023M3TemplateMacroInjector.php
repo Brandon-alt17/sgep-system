@@ -77,7 +77,7 @@ final class F023M3TemplateMacroInjector
             $xml = F023FactorValoracionMacroSupport::injectIntoDocumentXml($xml);
         } else {
             $xml = self::injectP2ContentFields($xml);
-            $xml = F023SignatureNameSupport::injectIntoDocumentXml($xml);
+            $xml = F023SignatureNameSupport::injectIntoDocumentXml($xml, 'left');
             $xml = self::normalizeFooterParagraphs($xml);
             $xml = self::insertSpacerParagraphsBeforeFooter($xml, 3);
             $xml = self::shrinkSignatureRowHeights($xml);

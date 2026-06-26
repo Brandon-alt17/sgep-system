@@ -14,7 +14,7 @@ declare(strict_types=1);
  * }
  */
 return [
-    'required_columns' => 30,
+    'required_columns' => 32,
     'max_bytes' => 5 * 1024 * 1024,
     'extensions' => ['xlsx', 'xls', 'csv'],
     'critical_headers' => [
