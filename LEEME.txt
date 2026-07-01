@@ -2,23 +2,36 @@ SGEP - Sistema de Gestion de Etapa Productiva
 SENA CDITI
 ============================================
 
-1. Descomprima SGEP_v1.0.zip en su PC.
+La memoria USB trae 4 carpetas numeradas:
 
-2. Windows (WAMP):
-   - Instale WAMP desde wampserver.com (icono VERDE en la bandeja).
-   - Copie la carpeta "sgep" a: C:\wamp64\www\sgep\
-   - Ejecute: instalar.bat
-   - Abra: http://localhost/sgep/
+  01_WAMP/        WAMP + Visual C++ (Windows)
+  02_LibreOffice/ PDF del F-023 (opcional)
+  03_SGEP/        Aplicacion (carpeta sgep/)
+  04_MAMP/        Instalador MAMP (Mac)
 
-3. Mac (MAMP):
-   - Instale MAMP desde mamp.info
-   - Copie "sgep" a: /Applications/MAMP/htdocs/sgep/
-   - Terminal: cd .../sgep/scripts/macos && bash instalar.sh
-   - Abra: http://localhost:8888/sgep/
+--- WINDOWS ---
 
-4. Guia completa (alcance, errores, imagenes):
-   Abra en el proyecto: docs/GUIA-INSTALACION-ENTREGA.md
+1. 01_WAMP/  -> Instalar TODOS los vcredist_*.exe, luego WAMP (icono VERDE).
+2. 03_SGEP/  -> Copiar carpeta "sgep" a: C:\wamp64\www\sgep\
+3. Ejecutar: C:\wamp64\www\sgep\instalar.bat
+4. Abrir: http://localhost/sgep/
+5. (Opcional PDF) 02_LibreOffice/ -> instalar LibreOffice
 
-5. Sin login: use el sistema solo en red interna o PC controlado.
+--- MAC ---
 
-Soporte: consulte docs/GUIA-INSTALACION-ENTREGA.md seccion 8 (Errores comunes).
+1. 04_MAMP/  -> Descomprimir MAMP-MAMP-PRO-Downloader.zip e instalar MAMP
+2. 03_SGEP/  -> Copiar "sgep" a: /Applications/MAMP/htdocs/sgep/
+3. Terminal: cd .../sgep/scripts/macos && bash instalar.sh
+4. Abrir: http://localhost:8888/sgep/
+5. (Opcional PDF) 02_LibreOffice/
+
+--- ACTUALIZAR (nueva version en USB) ---
+
+Solo se reemplaza 03_SGEP/sgep/ en el PC (NO borrar .env):
+  Windows: actualizar.bat
+  Mac:     bash actualizar.sh
+
+Guia completa: docs/GUIA-INSTALACION-ENTREGA.md
+Errores comunes: misma guia, seccion 8.
+
+Sin login: use el sistema solo en red interna o PC controlado.

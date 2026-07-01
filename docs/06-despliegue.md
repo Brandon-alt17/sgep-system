@@ -41,11 +41,13 @@ Documento principal para entrega en **memoria USB**, con alcance/limitaciones, c
 
 **[GUIA-INSTALACION-ENTREGA.md](./GUIA-INSTALACION-ENTREGA.md)**
 
-Incluir en la USB junto al ZIP:
+Incluir en la USB:
 
-- `LEEME.txt` (raíz del repositorio)
-- `docs/GUIA-INSTALACION-ENTREGA.md` (dentro del proyecto descomprimido)
-- Carpeta `docs/imagenes/` con capturas una vez el instalador las haya tomado
+- `LEEME.txt` (raíz de la memoria)
+- `01_WAMP/` — instalador WAMP + `vcredist_*.exe`
+- `02_LibreOffice/` — instalador LibreOffice (opcional)
+- `03_SGEP/sgep/` — proyecto completo
+- `04_MAMP/MAMP-MAMP-PRO-Downloader.zip` — instalador MAMP
 
 ---
 
@@ -170,36 +172,55 @@ Doble clic después de instalar. Si WAMP no está en verde, la página no cargar
 
 **`SGEP.url`** — acceso directo de Windows (Internet Shortcut). Copiar al escritorio o anclar a la barra de tareas; al hacer doble clic abre `http://localhost/sgep/public` en el navegador predeterminado.
 
-### Paso 5 — Empaquetar en ZIP
+### Paso 5 — Armar la memoria USB
 
-Estructura del ZIP de distribución:
+Estructura de la **memoria USB** de distribución:
 
 ```
-SGEP_v1.0.zip
-├── LEEME.txt                   ← Texto breve en la raíz de la USB
-├── sgep/                       ← Carpeta del proyecto completa
-│   ├── app/
-│   ├── database/
-│   ├── public/
-│   ├── config/
-│   ├── docs/
-│   ├── storage/
-│   ├── vendor/                 ← INCLUIDA (dependencias PHP)
-│   ├── .env.example
-│   ├── router.php
-│   ├── instalar.bat
-│   ├── actualizar.bat
-│   ├── abrir_sgep.bat          ← Abre el navegador en la URL del SGEP
-│   ├── SGEP.url                ← Acceso directo (copiar al escritorio)
-│   ├── LEEME.txt
-│   ├── docs/GUIA-INSTALACION-ENTREGA.md
-│   └── database/run_migrations.php
-├── instalar.bat                ← (legacy: puede ir solo dentro de sgep/)
+USB/
+├── LEEME.txt
+├── 01_WAMP/
+│   ├── (instalador WAMP)
+│   ├── vcredist_2010_sp1_x64.exe
+│   ├── vcredist_2010_sp1_x86.exe
+│   ├── vcredist_2012_upd4_x64.exe
+│   ├── vcredist_2012_upd4_x86.exe
+│   ├── vcredist_2013_upd5_x64.exe
+│   ├── vcredist_2013_upd5_x86.exe
+│   ├── vcredist_V14_x64.exe
+│   └── vcredist_V14_x86.exe
+├── 02_LibreOffice/
+│   └── (instalador LibreOffice)
+├── 03_SGEP/
+│   └── sgep/                   ← Proyecto completo (ver abajo)
+└── 04_MAMP/
+    └── MAMP-MAMP-PRO-Downloader.zip
+```
+
+Contenido mínimo de **`03_SGEP/sgep/`**:
+
+```
+sgep/
+├── app/
+├── database/
+├── public/
+├── config/
+├── docs/
+├── storage/
+├── vendor/
+├── .env.example
+├── router.php
+├── instalar.bat
 ├── actualizar.bat
-└── INSTRUCCIONES.pdf           ← Opcional: resumen de 1 página para el directivo
+├── abrir_sgep.bat
+├── SGEP.url
+├── LEEME.txt
+└── scripts/macos/
 ```
 
-> Verificar que `.env` real **NO** está en el ZIP (solo `.env.example`).
+> Verificar que `.env` real **NO** está en la USB (solo `.env.example`).
+
+**Actualizaciones:** en entregas posteriores basta con reemplazar **`03_SGEP/sgep/`**; el directivo conserva `.env` en su PC local y ejecuta `actualizar.bat` o `actualizar.sh`.
 
 ---
 
@@ -207,41 +228,33 @@ SGEP_v1.0.zip
 
 ### Prerrequisito: Instalar WAMP
 
-1. Descargar WAMP desde [wampserver.com](https://www.wampserver.com)
-2. Instalar con siguiente → siguiente → finalizar (~10 minutos)
-3. Iniciar WAMP — el ícono en la barra de tareas debe ponerse **verde**
+1. Abrir **`01_WAMP/`** en la USB.
+2. Instalar **todos** los `vcredist_*.exe` (Visual C++).
+3. Ejecutar el instalador de WAMP en la misma carpeta (~10 minutos).
+4. Iniciar WAMP — el ícono en la bandeja de tareas debe ponerse **verde**.
 
-> Solo se hace una vez. Las próximas versiones del SGEP no requieren reinstalar WAMP.
+> Solo se hace una vez. Las próximas versiones del SGEP solo actualizan **`03_SGEP/`**.
 
 ### Instalación del SGEP
 
 ```
-1. Descomprimir SGEP_v1.0.zip en el escritorio
+1. Abrir 03_SGEP/ en la USB
 
 2. Copiar la carpeta "sgep/" a:
    C:\wamp64\www\sgep\
 
-3. Abrir phpMyAdmin: http://localhost/phpmyadmin
-   → Nueva base de datos
-   → Nombre: sgep
-   → Cotejamiento: utf8mb4_unicode_ci
-   → Crear
+3. (Opcional) phpMyAdmin: http://localhost/phpmyadmin → crear BD "sgep"
+   El script instalar.bat también puede crearla.
 
-4. Ir a la carpeta C:\wamp64\www\sgep\
+4. Doble clic en C:\wamp64\www\sgep\instalar.bat
+   → Responder S para abrir el navegador, o usar abrir_sgep.bat / SGEP.url
 
-5. Hacer doble clic en "instalar.bat"
-   → Esperar a que aparezca "INSTALACION COMPLETADA"
-   → Responder S para abrir el navegador, o usar el atajo abajo
-
-6. Abrir el navegador:
-   → http://localhost/sgep/
-   → O doble clic en "abrir_sgep.bat"
-   → O copiar "SGEP.url" al escritorio y usarlo cada día
+5. Abrir: http://localhost/sgep/
 ```
 
 **Uso diario:** WAMP en verde → doble clic en `SGEP.url` o `abrir_sgep.bat` (no hace falta volver a ejecutar `instalar.bat`).
 
-> **Exportación PDF:** solo si el directivo va a generar F-023 en PDF, instale LibreOffice en el mismo PC (ver [LibreOffice para exportar PDF](#libreoffice-para-exportar-pdf-opcional)). Word (.docx) funciona sin LibreOffice.
+> **Exportación PDF:** instale LibreOffice desde **`02_LibreOffice/`** en la USB (ver [LibreOffice para exportar PDF](#libreoffice-para-exportar-pdf-opcional)). Word (.docx) funciona sin LibreOffice.
 
 ---
 
@@ -312,31 +325,22 @@ Opcionalmente se puede empaquetar LibreOffice en `tools/libreoffice/` dentro del
 
 ### Prerrequisito: Instalar MAMP
 
-1. Descargar **MAMP** desde [mamp.info](https://www.mamp.info) e instalarlo.
-2. Iniciar MAMP y poner **Apache** y **MySQL** en verde.
-3. Por defecto, el sitio web sirve desde `http://localhost:8888` y la carpeta de documentos suele ser `/Applications/MAMP/htdocs/`.
-
-**Crear la base de datos** (terminal o cliente MySQL; el puerto puede ser `8889` en MAMP):
-
-```bash
-# Ajusta -P si tu MySQL usa otro puerto (MAMP suele usar 8889)
-mysql -u root -p -P 8889 -e "CREATE DATABASE sgep CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
-```
+1. Abrir **`04_MAMP/`** en la USB.
+2. Descomprimir **`MAMP-MAMP-PRO-Downloader.zip`** e instalar MAMP.
+3. Iniciar MAMP → Apache y MySQL en verde.
+4. Activar `mod_rewrite` en `/Applications/MAMP/conf/apache/httpd.conf` (ver [GUIA-INSTALACION-ENTREGA.md §6.2](./GUIA-INSTALACION-ENTREGA.md)).
 
 ### Instalación del SGEP
 
 ```bash
-# 1. Descomprimir el ZIP y colocar la carpeta del proyecto en htdocs
-#    Ejemplo: /Applications/MAMP/htdocs/sgep/
+# 1. Copiar desde 03_SGEP/sgep/ a htdocs
+#    /Applications/MAMP/htdocs/sgep/
 
-# 2. Entrar a la carpeta del proyecto
-cd /Applications/MAMP/htdocs/sgep
+# 2. Instalar
+cd /Applications/MAMP/htdocs/sgep/scripts/macos
+bash instalar.sh
 
-# 3. Ejecutar instalador (configura .env para MAMP)
-cd scripts/macos && bash instalar.sh
-
-# 4. Abrir en el navegador:
-# http://localhost:8888/sgep/
+# 3. Abrir: http://localhost:8888/sgep/
 ```
 
 > **Exportación PDF:** instalar LibreOffice en el Mac y verificar con `php scripts/check_pdf_converter.php` ([detalle](#libreoffice-para-exportar-pdf-opcional)).
@@ -350,22 +354,19 @@ Cuando el equipo lanza una nueva versión del SGEP:
 ### En Windows (WAMP)
 
 ```
-1. Descargar el nuevo ZIP
+1. Recibir USB con 03_SGEP/sgep/ actualizado
 
-2. Reemplazar el contenido de C:\wamp64\www\sgep\
-   (conservar el .env actual — NO sobreescribir)
+2. Copiar sobre C:\wamp64\www\sgep\ (conservar .env)
 
-3. Hacer doble clic en "actualizar.bat"
+3. Doble clic en actualizar.bat
 ```
 
 ### En macOS (MAMP)
 
 ```bash
-# Reemplazar archivos (excepto .env); ajusta la ruta a tu instalación
-rsync -av --exclude='.env' nueva-version/ /Applications/MAMP/htdocs/sgep/
-
-cd /Applications/MAMP/htdocs/sgep
-php database/run_migrations.php
+# Copiar desde 03_SGEP/sgep/ (conservar .env)
+cd /Applications/MAMP/htdocs/sgep/scripts/macos
+bash actualizar.sh
 ```
 
 > Los datos ya guardados se conservan. `php database/run_migrations.php` aplica migraciones SQL nuevas.

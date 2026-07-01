@@ -6,6 +6,7 @@ namespace App\Controllers;
 
 use App\Exports\ReporteMaestroExport;
 use App\Models\Programa;
+use App\Services\DocumentoGeneradoRetention;
 use App\Services\ReporteMaestroData;
 use RuntimeException;
 
@@ -107,6 +108,8 @@ class ReporteController
 
     public function export(): void
     {
+        DocumentoGeneradoRetention::purgeLegacyReporteMaestroExports();
+
         try {
             $path = (new ReporteMaestroExport())
                 ->export($this->filtersFromRequest());
@@ -131,6 +134,9 @@ class ReporteController
         );
 
         readfile($path);
+        if (is_file($path)) {
+            @unlink($path);
+        }
         exit;
     }
 

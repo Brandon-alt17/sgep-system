@@ -14,15 +14,17 @@
 
 ## Copiar solo estos scripts en la memoria USB
 
-Copie **toda la carpeta** `scripts/macos/` a la USB:
+Los scripts van **dentro del proyecto** en `03_SGEP/sgep/scripts/macos/`. También puede copiar esta carpeta aparte si lo prefiere:
 
 ```
 USB/
-└── macos/
-    ├── instalar.sh
-    ├── actualizar.sh
-    ├── abrir_sgep.sh
-    └── INSTRUCCIONES-MAC.md
+└── 03_SGEP/
+    └── sgep/
+        └── scripts/macos/
+            ├── instalar.sh
+            ├── actualizar.sh
+            ├── abrir_sgep.sh
+            └── INSTRUCCIONES-MAC.md
 ```
 
 En el Mac del directivo, pegue los `.sh` dentro de la carpeta del proyecto:

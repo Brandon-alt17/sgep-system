@@ -3,7 +3,7 @@
 > **Guía principal de entrega e instalación (USB, WAMP, MAMP, errores comunes):**  
 > **[GUIA-INSTALACION-ENTREGA.md](./GUIA-INSTALACION-ENTREGA.md)**
 
-Incluye alcance y limitaciones v1.0, pasos con espacio para capturas en `docs/imagenes/`, e instalación desde memoria USB.
+Incluye alcance y limitaciones v1.0, estructura USB (`01_WAMP` … `04_MAMP`), capturas en `docs/imagenes/`, e instalación desde memoria.
 
 ### Resumen rápido (desarrollo)
 

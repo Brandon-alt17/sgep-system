@@ -111,12 +111,15 @@ class ReporteMaestroExport
             }
         }
 
-        $dir = base_path('storage/documents');
+        $dir = sys_get_temp_dir();
+        if (!is_dir($dir) || !is_writable($dir)) {
+            $dir = base_path('storage/documents');
+        }
         if (!is_dir($dir)) {
             mkdir($dir, 0755, true);
         }
 
-        $path = $dir . '/reporte_maestro_' . date('Ymd_His') . '.xlsx';
+        $path = $dir . DIRECTORY_SEPARATOR . 'reporte_maestro_' . date('Ymd_His') . '_' . getmypid() . '.xlsx';
         IOFactory::createWriter($spreadsheet, 'Xlsx')->save($path);
 
         return $path;

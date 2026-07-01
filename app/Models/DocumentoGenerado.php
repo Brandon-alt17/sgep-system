@@ -72,6 +72,24 @@ class DocumentoGenerado
         return is_array($row) ? $row : null;
     }
 
+    public static function deleteRecordAndFile(array $row): bool
+    {
+        $id = (int) ($row['id'] ?? 0);
+        if ($id <= 0) {
+            return false;
+        }
+
+        $path = trim((string) ($row['ruta_archivo'] ?? ''));
+        if ($path !== '' && DocumentoGenerado::isPathAllowed($path)) {
+            @unlink($path);
+        }
+
+        $stmt = Database::connection()->prepare('DELETE FROM documentos_generados WHERE id = :id LIMIT 1');
+        $stmt->execute(['id' => $id]);
+
+        return $stmt->rowCount() > 0;
+    }
+
     /**
      * @param list<string>|string $partes
      */

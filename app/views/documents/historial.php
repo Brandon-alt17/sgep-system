@@ -47,7 +47,9 @@ $generarUrl = APP_BASE_PATH . '/documentos/generar?aprendiz_id=' . $aprendizId;
     <div class="<?= e(ui_card_header_classes()) ?>">
         <div class="<?= e(ui_card_header_stack_classes()) ?>">
             <h3 class="<?= e(ui_card_title_classes()) ?>">Documentos generados</h3>
-            <p class="<?= e(ui_card_description_classes()) ?>">Fecha, partes incluidas y formato de cada exportación.</p>
+            <p class="<?= e(ui_card_description_classes()) ?>">
+                Se conservan como máximo los 5 documentos más recientes por aprendiz y hasta 90 días.
+            </p>
         </div>
     </div>
     <div class="<?= e(ui_card_body_classes()) ?>">

@@ -38,7 +38,7 @@ Documento para el **directivo o administrador** que recibe el sistema en **memor
 
 - **Autenticación / login:** el sistema **no tiene usuarios ni contraseñas**. Está pensado para uso en **red interna** o en un **PC controlado** del centro de formación.
 - **Servidor en la nube:** todo corre **en local** en el PC donde se instala. No requiere internet para operar.
-- **LibreOffice:** no viene incluido. Solo hace falta si se desea exportar F-023 a **PDF** (Word funciona sin LibreOffice).
+- **LibreOffice:** viene en la carpeta **`02_LibreOffice/`** de la USB. Solo hace falta instalarlo si se desea exportar F-023 a **PDF** (Word funciona sin LibreOffice).
 - **WAMP / MAMP:** el directivo debe instalarlos **una sola vez** en el PC; el paquete SGEP trae el código de la aplicación, no el servidor web.
 
 ### Supuestos de operación
@@ -51,24 +51,62 @@ Documento para el **directivo o administrador** que recibe el sistema en **memor
 
 ## 2. Contenido de la memoria USB
 
-Al conectar la USB debería ver algo similar a esto:
+Al conectar la USB verá **cuatro carpetas numeradas** en este orden:
 
 ```
-USB (memoria)
-├── LEEME.txt                 ← Inicio rápido (texto plano)
-├── SGEP_v1.0.zip             ← Paquete completo del sistema
-└── (opcional) INSTRUCCIONES.pdf
+USB (memoria)/
+├── LEEME.txt                 ← Inicio rápido (texto plano, opcional)
+├── 01_WAMP/                  ← WAMP + Visual C++ (Windows)
+├── 02_LibreOffice/           ← LibreOffice (PDF del F-023, opcional)
+├── 03_SGEP/                  ← Aplicación SGEP
+│   └── sgep/                 ← Copiar esta carpeta al PC
+└── 04_MAMP/                  ← Instalador MAMP (macOS)
+    └── MAMP-MAMP-PRO-Downloader.zip
 ```
-
-**Imagen sugerida** — agregue la captura en `docs/imagenes/01-contenido-usb.png`:
 
 ![Contenido de la memoria USB](imagenes/01-contenido-usb.png)
 
-> **Nota:** Si la imagen aún no existe, verá un enlace roto en algunos visores Markdown. Coloque el PNG en `docs/imagenes/` con el nombre indicado. Convención completa: [imagenes/README.md](imagenes/README.md).
+| Carpeta | Cuándo usarla | Sistema |
+|---------|---------------|---------|
+| **01_WAMP** | Primera instalación en Windows | Windows |
+| **02_LibreOffice** | Solo si necesita exportar F-023 a **PDF** | Windows y Mac |
+| **03_SGEP** | Siempre — contiene la aplicación | Windows y Mac |
+| **04_MAMP** | Primera instalación en Mac | macOS |
 
-### Dentro del ZIP (`SGEP_v1.0.zip`)
+> **No hace falta internet** si la USB trae todos los instaladores. Todo se ejecuta desde la memoria o copiando al disco local.
 
-Tras descomprimir:
+### Dentro de `01_WAMP/` (Windows)
+
+Además del instalador de WAMP, incluye los **Visual C++ Redistributable** que WAMP necesita para arrancar Apache y MySQL:
+
+```
+01_WAMP/
+├── (instalador WAMP)
+├── vcredist_2010_sp1_x64.exe
+├── vcredist_2010_sp1_x86.exe
+├── vcredist_2012_upd4_x64.exe
+├── vcredist_2012_upd4_x86.exe
+├── vcredist_2013_upd5_x64.exe
+├── vcredist_2013_upd5_x86.exe
+├── vcredist_V14_x64.exe
+└── vcredist_V14_x86.exe
+```
+
+![Visual C++ en 01_WAMP](imagenes/01-wamp-vcredist.png)
+
+**Instale todos los `vcredist_*.exe`** (doble clic, Siguiente → Finalizar en cada uno) **antes** de instalar WAMP, o cuando el icono de WAMP no pase a verde tras la instalación.
+
+### Dentro de `03_SGEP/`
+
+La carpeta del proyecto está en:
+
+```
+03_SGEP/sgep/
+```
+
+![Carpeta sgep en 03_SGEP](imagenes/03-sgep-carpeta.png)
+
+Contenido relevante de `sgep/`:
 
 ```
 sgep/
@@ -79,19 +117,33 @@ sgep/
 ├── LEEME.txt
 ├── docs/
 │   ├── GUIA-INSTALACION-ENTREGA.md   ← Este documento
-│   └── imagenes/                     ← Carpeta para capturas
+│   └── imagenes/
 ├── scripts/macos/
 │   ├── instalar.sh
 │   ├── actualizar.sh
 │   └── abrir_sgep.sh
-├── public/                   ← Raíz web (Apache apunta aquí)
+├── public/
 ├── database/
-│   └── run_migrations.php
 ├── .env.example
-└── vendor/                   ← Dependencias PHP (ya incluidas)
+└── vendor/
 ```
 
-**Importante:** copie **toda** la carpeta `sgep` al servidor local (`www` o `htdocs`). No extraiga solo archivos sueltos.
+**Importante:** copie **toda** la carpeta `sgep` desde `03_SGEP/` hacia el servidor local (`www` o `htdocs`). No ejecute el sistema directamente desde la USB.
+
+### Dentro de `04_MAMP/` (macOS)
+
+```
+04_MAMP/
+└── MAMP-MAMP-PRO-Downloader.zip
+```
+
+![Instalador MAMP en la USB](imagenes/04-mamp-downloader.png)
+
+Descomprima el ZIP y ejecute el instalador de MAMP incluido. No es necesario descargar nada desde internet.
+
+### Dentro de `02_LibreOffice/` (opcional)
+
+Instalador de LibreOffice para exportar el GFPI-F-023 a **PDF**. La exportación **Word (.docx)** funciona sin este paso.
 
 ---
 
@@ -105,7 +157,7 @@ sgep/
 | MySQL | 8.0+ (incluido) | 8.0+ (incluido) |
 | Navegador | Chrome, Edge o Firefox | Safari, Chrome o Firefox |
 | Espacio en disco | ~500 MB (proyecto + BD) | ~500 MB |
-| Internet | Solo para **descargar** WAMP/MAMP la primera vez | Igual |
+| Internet | No obligatorio si la USB trae los instaladores | Igual |
 
 El directivo **no** necesita instalar Composer, Node.js ni Git.
 
@@ -113,54 +165,74 @@ El directivo **no** necesita instalar Composer, Node.js ni Git.
 
 ## 4. Instalación desde la memoria USB (visión general)
 
-Pasos comunes en **ambos** sistemas operativos:
+### Windows (orden recomendado)
 
-1. **Insertar la USB** y copiar `SGEP_v1.0.zip` al escritorio (o descomprimir directamente desde la USB).
-2. **Descomprimir** el ZIP (clic derecho → *Extraer todo* en Windows; doble clic en Mac).
-3. **Instalar WAMP o MAMP** si aún no está instalado (solo la primera vez).
-4. **Verificar** que Apache y MySQL están **activos** (icono verde).
-5. **Copiar** la carpeta `sgep` a la carpeta web del servidor:
-   - Windows: `C:\wamp64\www\sgep\`
-   - Mac: `/Applications/MAMP/htdocs/sgep/`
-6. **Ejecutar el instalador** del proyecto (`instalar.bat` o `bash instalar.sh`).
-7. **Abrir el navegador** en la URL indicada al finalizar.
+1. Insertar la **USB**.
+2. Abrir **`01_WAMP/`** → instalar todos los **`vcredist_*.exe`** → instalar **WAMP**.
+3. Verificar icono WAMP **verde** en la bandeja.
+4. Abrir **`03_SGEP/`** → copiar la carpeta **`sgep`** a `C:\wamp64\www\sgep\`.
+5. Ejecutar **`instalar.bat`** dentro de esa carpeta.
+6. Abrir `http://localhost/sgep/`.
+7. *(Opcional)* Instalar LibreOffice desde **`02_LibreOffice/`** si necesita PDF.
+
+### macOS (orden recomendado)
+
+1. Insertar la **USB**.
+2. Abrir **`04_MAMP/`** → descomprimir **`MAMP-MAMP-PRO-Downloader.zip`** → instalar MAMP.
+3. Activar **`mod_rewrite`** en Apache (ver [§6.2](#62-activar-reescritura-de-urls-obligatorio-en-mac)).
+4. Verificar MAMP con Apache y MySQL en **verde**.
+5. Abrir **`03_SGEP/`** → copiar la carpeta **`sgep`** a `/Applications/MAMP/htdocs/sgep/`.
+6. Terminal: `cd .../sgep/scripts/macos && bash instalar.sh`.
+7. Abrir `http://localhost:8888/sgep/`.
+8. *(Opcional)* Instalar LibreOffice desde **`02_LibreOffice/`** si necesita PDF.
 
 ---
 
 ## 5. Instalación en Windows con WAMP
 
-### 5.1 Instalar WAMP (solo la primera vez)
+### 5.1 Instalar Visual C++ y WAMP (solo la primera vez)
 
-1. Descargue WAMP desde [wampserver.com](https://www.wampserver.com).
-2. Ejecute el instalador → Siguiente → Finalizar.
+Todo está en la carpeta **`01_WAMP/`** de la USB.
+
+#### Paso A — Visual C++ Redistributable (obligatorio antes de WAMP)
+
+1. Abra la USB → **`01_WAMP/`**.
+2. Ejecute **cada** archivo `vcredist_*.exe` (doble clic → Siguiente → Finalizar):
+   - En PC de **64 bits**: instale los **ocho** archivos (x64 y x86).
+   - Si Windows pide reiniciar tras alguno, reinicie y continúe con el resto.
+
+![Visual C++ en 01_WAMP](imagenes/01-wamp-vcredist.png)
+
+> Si omite este paso, WAMP suele quedarse con icono **naranja o rojo** aunque la instalación termine “correctamente”. Vea también [§8.1](#81-wamp-no-activa-todos-los-servicios-icono-naranja-o-rojo).
+
+#### Paso B — Instalar WAMP
+
+1. En la misma carpeta **`01_WAMP/`**, ejecute el instalador de WAMP.
+2. Siguiente → Finalizar (~10 minutos).
 3. Inicie WAMP desde el menú Inicio.
 
-**Imagen:** `docs/imagenes/02-wamp-instalador.png`
+**Imagen (opcional):** `docs/imagenes/02-wamp-instalador.png`
 
-![Instalador de WAMP](imagenes/02-wamp-instalador.png)
+4. En la **bandeja del sistema**, el icono de WAMP debe quedar **verde**.
 
-4. En la **bandeja del sistema** (esquina inferior derecha), el icono de WAMP debe quedar **verde**.
+**Imagen (opcional):** `docs/imagenes/04-wamp-icono-verde.png`
 
-**Imagen:** `docs/imagenes/04-wamp-icono-verde.png`
-
-![Icono WAMP verde](imagenes/04-wamp-icono-verde.png)
-
-> Si el icono está **naranja** o **rojo**, Apache o MySQL no están activos. Vea [§8.1 WAMP no pone todos los servicios en verde](#81-wamp-no-activa-todos-los-servicios-icono-naranja-o-rojo).
+> Si el icono está **naranja** o **rojo**, Apache o MySQL no están activos. Vea [§8.1](#81-wamp-no-activa-todos-los-servicios-icono-naranja-o-rojo).
 
 ### 5.2 Copiar el proyecto desde la USB
 
-1. Descomprima `SGEP_v1.0.zip`.
-2. Copie la carpeta `sgep` completa a:
+1. Abra la USB → carpeta **`03_SGEP/`**.
+2. Copie la carpeta **`sgep`** completa a:
 
    ```
    C:\wamp64\www\sgep\
    ```
 
-   La ruta final debe contener, por ejemplo: `C:\wamp64\www\sgep\instalar.bat`
+   Ruta final de ejemplo: `C:\wamp64\www\sgep\instalar.bat`
 
-**Imagen:** `docs/imagenes/06-copiar-carpeta-www.png`
+![Carpeta sgep en 03_SGEP](imagenes/03-sgep-carpeta.png)
 
-![Copiar carpeta sgep a www](imagenes/06-copiar-carpeta-www.png)
+> Puede copiar desde la USB directamente o pegar primero en el Escritorio y luego en `www`. **No** trabaje con el proyecto dejándolo solo en la USB.
 
 ### 5.3 Crear la base de datos (opcional)
 
@@ -206,19 +278,34 @@ http://localhost/sgep/
 
 Requisito previo: **WAMP en verde** antes de abrir el navegador.
 
+### 5.7 LibreOffice desde la USB (opcional, para PDF)
+
+1. Abra **`02_LibreOffice/`** en la USB.
+2. Ejecute el instalador → Finalizar.
+3. Verifique desde `C:\wamp64\www\sgep\`:
+
+   ```bat
+   php scripts\check_pdf_converter.php
+   ```
+
+   Debe mostrar: `OK: motor PDF disponible.`
+
+Detalle: [§8.8](#88-exportación-pdf-del-f-023-no-funciona) y [06-despliegue.md § LibreOffice](06-despliegue.md#libreoffice-para-exportar-pdf-opcional).
+
 ---
 
 ## 6. Instalación en macOS con MAMP
 
-### 6.1 Instalar MAMP (solo la primera vez)
+### 6.1 Instalar MAMP desde la USB (solo la primera vez)
 
-1. Descargue **MAMP** (versión gratuita) desde [mamp.info](https://www.mamp.info).
-2. Arrastre MAMP a **Aplicaciones** e ábralo.
-3. Pulse **Start** — Apache y MySQL deben mostrarse en **verde**.
+1. Abra la USB → carpeta **`04_MAMP/`**.
+2. Descomprima **`MAMP-MAMP-PRO-Downloader.zip`** (doble clic en Mac).
+3. Ejecute el instalador que descarga o incluye el ZIP → arrastre MAMP a **Aplicaciones**.
+4. Abra MAMP y pulse **Start** — Apache y MySQL deben mostrarse en **verde**.
 
-**Imagen:** `docs/imagenes/10-mamp-start.png`
+![Instalador MAMP en la USB](imagenes/04-mamp-downloader.png)
 
-![MAMP con servicios activos](imagenes/10-mamp-start.png)
+**Imagen (opcional):** `docs/imagenes/10-mamp-start.png` — MAMP con servicios activos.
 
 ### 6.2 Activar reescritura de URLs (obligatorio en Mac)
 
@@ -251,14 +338,16 @@ Sin este paso, la portada puede abrir pero rutas como `/dashboard` darán **404*
 
 ### 6.3 Copiar el proyecto desde la USB
 
-1. Descomprima `SGEP_v1.0.zip` (puede hacerlo en el Escritorio).
-2. Copie la carpeta `sgep` a:
+1. Abra la USB → carpeta **`03_SGEP/`**.
+2. Copie la carpeta **`sgep`** a:
 
    ```
    /Applications/MAMP/htdocs/sgep/
    ```
 
    En Finder: **Ir → Ir a la carpeta…** (`Cmd + Shift + G`) y pegue la ruta.
+
+![Carpeta sgep en 03_SGEP](imagenes/03-sgep-carpeta.png)
 
 > **Tip:** Si copió scripts `.sh` desde una USB formateada en Windows, puede aparecer el error `bash\r`. Vea [§8.6](#86-mac-error-env-bashr-al-ejecutar-scripts-desde-usb).
 
@@ -325,11 +414,28 @@ Plantilla alternativa visible: `scripts/macos/env.ejemplo.mamp` → copiar a `.e
 
 ### Actualizar a una nueva versión (desde USB)
 
-1. Copie el nuevo ZIP y descomprima.
-2. **Reemplace** archivos en la carpeta del proyecto **excepto** `.env` (conserva la configuración y datos).
-3. Ejecute:
-   - Windows: **`actualizar.bat`**
-   - Mac: **`bash actualizar.sh`**
+Cuando reciba una USB actualizada, solo cambia el contenido de **`03_SGEP/sgep/`**. WAMP, MAMP y LibreOffice **no** se reinstalan.
+
+#### Windows
+
+1. Con WAMP **verde**, abra la USB → **`03_SGEP/sgep/`**.
+2. Copie los archivos nuevos sobre `C:\wamp64\www\sgep\`.
+3. **No sobrescriba** el archivo **`.env`** (conserva configuración y conexión a la BD).
+4. Doble clic en **`actualizar.bat`** en `C:\wamp64\www\sgep\`.
+5. Recargue el navegador en `http://localhost/sgep/`.
+
+#### macOS
+
+1. Con MAMP **verde**, copie desde **`03_SGEP/sgep/`** sobre `/Applications/MAMP/htdocs/sgep/`.
+2. **No sobrescriba** **`.env`**.
+3. Terminal:
+
+   ```bash
+   cd /Applications/MAMP/htdocs/sgep/scripts/macos
+   bash actualizar.sh
+   ```
+
+4. Recargue el navegador en `http://localhost:8888/sgep/`.
 
 Los datos en MySQL se conservan; el script aplica migraciones nuevas.
 
@@ -352,7 +458,7 @@ Los datos en MySQL se conservan; el script aplica migraciones nuevas.
 | Apache no arrancó | Clic en icono WAMP → **Apache** → **Service administration** → **Start/Resume Service** |
 | MySQL no arrancó | Igual con **MySQL** → Start/Resume |
 | Puerto 80 ocupado (Skype, IIS, otro Apache) | WAMP → **Tools** → **Check port 80**; cierre la app que lo usa o cambie el puerto de Apache en WAMP |
-| Falta Visual C++ Redistributable | Instale los VC++ que indica el instalador de WAMP al finalizar |
+| Falta Visual C++ Redistributable | Abra **`01_WAMP/`** en la USB e instale **todos** los `vcredist_*.exe` (ver [§5.1 paso A](#paso-a--visual-c-redistributable-obligatorio-antes-de-wamp)); reinicie el PC si Windows lo pide |
 | Servicio bloqueado tras apagado incorrecto | Reinicie el PC; luego inicie WAMP como administrador (clic derecho → Ejecutar como administrador) |
 
 **Imagen:** `docs/imagenes/05-wamp-menu-servicios.png`
@@ -434,7 +540,7 @@ bash instalar.sh
 
 ### 8.7 Los estilos se ven rotos (sin colores / diseño)
 
-Falta `public/css/app.css` en el paquete. Contacte al equipo de desarrollo para un ZIP reconstruido con CSS compilado.
+Falta `public/css/app.css` en el paquete. Contacte al equipo de desarrollo para una **`03_SGEP/sgep/`** reconstruida con CSS compilado.
 
 ---
 
@@ -442,7 +548,7 @@ Falta `public/css/app.css` en el paquete. Contacte al equipo de desarrollo para 
 
 Word (.docx) **sí** funciona sin LibreOffice. Para PDF:
 
-1. Instale [LibreOffice](https://www.libreoffice.org).
+1. Instale LibreOffice desde **`02_LibreOffice/`** en la USB.
 2. En la carpeta del proyecto:
 
    ```bash
@@ -508,9 +614,9 @@ Marque cada ítem tras la primera instalación:
 
 ### Agregar capturas de pantalla (equipo de documentación)
 
-1. Tome las capturas según la tabla en [imagenes/README.md](imagenes/README.md).
-2. Guárdelas en **`docs/imagenes/`** con el nombre exacto (ej. `04-wamp-icono-verde.png`).
-3. Vuelva a incluir la carpeta `docs/` en el ZIP de entrega.
+Las cuatro capturas de la estructura USB ya están en **`docs/imagenes/`** (`01-contenido-usb`, `01-wamp-vcredist`, `03-sgep-carpeta`, `04-mamp-downloader`).
+
+Para completar la guía, agregue las opcionales listadas en [imagenes/README.md](imagenes/README.md) y vuelva a empaquetar **`03_SGEP/sgep/`** en la memoria USB.
 
 Formato recomendado: **PNG**, ancho máximo **1200 px**.
 

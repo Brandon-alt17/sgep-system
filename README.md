@@ -27,9 +27,12 @@ Sistema de Gestión de Etapa Productiva para SENA CDITI, migrado a PHP puro con 
 
 **Guía completa:** [docs/GUIA-INSTALACION-ENTREGA.md](docs/GUIA-INSTALACION-ENTREGA.md)
 
-Incluye alcance y limitaciones, pasos Windows/Mac, placeholders para capturas en `docs/imagenes/`, y errores frecuentes (WAMP sin servicios verdes, `mod_rewrite` en MAMP, etc.).
+La USB trae cuatro carpetas: `01_WAMP/`, `02_LibreOffice/`, `03_SGEP/sgep/`, `04_MAMP/`.
 
-Resumen: descomprimir ZIP → copiar a `www` / `htdocs` → ejecutar `instalar.bat` (Windows) o `scripts/macos/instalar.sh` (Mac) → abrir navegador.
+Resumen:
+- **Windows:** `01_WAMP` (VC++ + WAMP) → copiar `03_SGEP/sgep` a `C:\wamp64\www\sgep\` → `instalar.bat`
+- **Mac:** `04_MAMP` → copiar `03_SGEP/sgep` a `/Applications/MAMP/htdocs/sgep/` → `bash instalar.sh`
+- **Actualizar:** reemplazar solo `03_SGEP/sgep` (conservar `.env`) → `actualizar.bat` / `actualizar.sh`
 
 Archivo de texto en la USB: `LEEME.txt`
 

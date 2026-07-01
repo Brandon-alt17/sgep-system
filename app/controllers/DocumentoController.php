@@ -13,6 +13,7 @@ use App\Models\DocumentoGenerado;
 use App\Models\Empresa;
 use App\Models\Momento;
 use App\Models\Programa;
+use App\Services\DocumentoGeneradoRetention;
 use App\Services\F023InfoData;
 
 class DocumentoController
@@ -130,6 +131,12 @@ class DocumentoController
             // El archivo ya se generó; se entrega aunque falle el registro en historial.
         }
 
+        try {
+            DocumentoGeneradoRetention::pruneForAprendiz($aprendizId);
+        } catch (\Throwable $e) {
+            log_error('F023 retención: ' . $e->getMessage());
+        }
+
         $mime = $formato === 'pdf'
             ? 'application/pdf'
             : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
@@ -154,6 +161,12 @@ class DocumentoController
             view('errors/404', ['uri' => '/documentos/historial?aprendiz_id=' . $aprendizId]);
 
             return;
+        }
+
+        try {
+            DocumentoGeneradoRetention::pruneForAprendiz($aprendizId);
+        } catch (\Throwable $e) {
+            log_error('F023 retención: ' . $e->getMessage());
         }
 
         $perPage = 15;
