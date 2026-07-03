@@ -47,11 +47,14 @@ foreach ($files as $file) {
             $statement->closeCursor();
         } catch (\PDOException $e) {
             $driverCode = (int) ($e->errorInfo[1] ?? 0);
+            $message = $e->getMessage();
             // MySQL/MariaDB: 1060 = columna duplicada, 1061 = índice duplicado,
             // 1054 = columna inexistente (migraciones idempotentes tras DROP),
             // 1091 = no se puede DROP columna que ya no existe,
-            // 1826 = FK duplicada / ya existe (re-ejecución).
-            if (in_array($driverCode, [1060, 1061, 1054, 1091, 1826], true)) {
+            // 1826 = FK duplicada / ya existe (re-ejecución, MySQL 8).
+            // 1005 + errno 121 = FK duplicada (re-ejecución, MariaDB/WAMP).
+            $duplicateFk = $driverCode === 1005 && str_contains($message, '121');
+            if (in_array($driverCode, [1060, 1061, 1054, 1091, 1826], true) || $duplicateFk) {
                 continue;
             }
             throw $e;

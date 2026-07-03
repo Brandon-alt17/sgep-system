@@ -16,6 +16,13 @@ if not exist .env (
 
 set /p DBPASS=Ingrese la contrasena de MySQL (root, enter si vacia): 
 
+call "%~dp0scripts\configure_env_wamp.bat" "%DBPASS%"
+if %errorlevel% neq 0 (
+  echo ERROR: No se pudo configurar .env para WAMP.
+  pause
+  exit /b 1
+)
+
 call "%~dp0scripts\php.cmd" -r "require 'vendor/autoload.php';"
 if %errorlevel% neq 0 (
   echo ERROR: No se pudo cargar autoload de Composer.
