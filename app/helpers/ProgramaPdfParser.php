@@ -348,7 +348,7 @@ class ProgramaPdfParser
             if (preg_match('/^red de conocimiento:/iu', $line)) {
                 continue;
             }
-            if (preg_match('/^p[aá]gina\s+\d+\s+de\s+\d+/iu', $line)) {
+            if (preg_match('/^p[aá]gina\s+\d+\s*de\s*\d+/iu', $line)) {
                 continue;
             }
             if (preg_match('/\b\d{1,2}\/\d{1,2}\/\d{2,4}\s+\d{1,2}:\d{2}\b/u', $line)) {
@@ -382,6 +382,15 @@ class ProgramaPdfParser
 
     private static function detectNombre(string $text): string
     {
+        // Estrategia primaria: el nombre real del programa aparece como titulo suelto justo antes
+        // del encabezado "1. INFORMACION BASICA...". El tramo "1.1 Denominacion...1.2" que usan las
+        // estrategias siguientes no es fiable: en los PDF reales, esa celda de tabla se extrae
+        // desordenada e incluye texto ajeno como "El programa aun se encuentra vigente".
+        $headingCandidate = self::detectNombreFromSectionHeading($text);
+        if ($headingCandidate !== '') {
+            return $headingCandidate;
+        }
+
         // Captura el valor completo entre "denominacion" y "1.2", incluso si el OCR lo parte en varias lineas con el label "del Programa:" intercalado.
         if (preg_match('/1[\.\s]*1\b[^\n]*?denominaci[oó]n\s*(?:del\s+programa)?\s*[:\-]?\s*(.+?)\s*\n?\s*1[\.\s]*2\b/isu', $text, $mFull)) {
             $rawFull = (string) ($mFull[1] ?? '');
@@ -465,6 +474,52 @@ class ProgramaPdfParser
             }
         }
         return '';
+    }
+
+    private static function detectNombreFromSectionHeading(string $text): string
+    {
+        $lines = array_values(array_filter(array_map(
+            static fn ($line): string => trim((string) $line),
+            preg_split('/\R/u', $text) ?: []
+        ), static fn (string $line): bool => $line !== ''));
+
+        $total = count($lines);
+        $headingIndex = -1;
+        for ($i = 0; $i < $total; $i++) {
+            if (preg_match('/^1[\.\s]*\s*INFORMACI[OÓ]N\s+B[AÁ]SICA\s+DEL\s+PROGRAMA\s+DE\s+FORMACI[OÓ]N/iu', $lines[$i])) {
+                $headingIndex = $i;
+                break;
+            }
+        }
+        if ($headingIndex <= 0) {
+            return '';
+        }
+
+        // Recorre hacia atras acumulando lineas del titulo (a veces el nombre se parte en 2 lineas,
+        // p. ej. "IMPLEMENTACION DE INFRAESTRUCTURA DE TECNOLOGIAS DE LA" / "INFORMACION Y LAS
+        // COMUNICACIONES."), deteniendose ante cualquier linea que ya no parezca parte del titulo.
+        $precedingLines = [];
+        $earliest = max(0, $headingIndex - 4);
+        for ($j = $headingIndex - 1; $j >= $earliest; $j--) {
+            $candidate = self::sanitizeProgramNameCandidate($lines[$j]);
+            if ($candidate === '' || preg_match('/^\d/u', $candidate) === 1) {
+                break;
+            }
+            if (self::isInvalidProgramNameCandidate($candidate) || self::isNoiseSegment($candidate)) {
+                break;
+            }
+            array_unshift($precedingLines, $candidate);
+        }
+
+        if ($precedingLines === []) {
+            return '';
+        }
+
+        $combined = self::normalizeSentence(implode(' ', $precedingLines));
+        if ($combined === '' || self::isInvalidProgramNameCandidate($combined)) {
+            return '';
+        }
+        return $combined;
     }
 
     private static function sanitizeProgramNameCandidate(string $candidate): string
@@ -907,7 +962,7 @@ class ProgramaPdfParser
         if ($value === '') {
             return true;
         }
-        if (preg_match('/\bp[aá]gina\s+\d+\s+de\s+\d+\b/iu', $value)) {
+        if (preg_match('/\bp[aá]gina\s+\d+\s*de\s*\d+/iu', $value)) {
             return true;
         }
         if (preg_match('/\b\d{1,2}\/\d{1,2}\/\d{2,4}\s+\d{1,2}:\d{2}\b/u', $value)) {
