@@ -164,6 +164,10 @@ if (!function_exists('e')) {
                 <div class="text-right">
                     <p class="text-sm font-medium text-gray-800">
                         <?= e(date('d M Y', strtotime($alert['proxima_visita']))) ?>
+                        <?php $horaVisita = trim((string) ($alert['proxima_visita_hora'] ?? '')); ?>
+                        <?php if ($horaVisita !== ''): ?>
+                            <span class="text-gray-500 font-normal">· <?= e(date('g:i a', strtotime($horaVisita))) ?></span>
+                        <?php endif; ?>
                     </p>
                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium <?= $badgeColor ?>">
                         <?= $badgeText ?>

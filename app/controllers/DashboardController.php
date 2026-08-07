@@ -62,11 +62,12 @@ class DashboardController
             // =========================
             try {
                 $alerts = $pdo->query("
-                    SELECT 
+                    SELECT
                         a.id,
                         a.nombre_completo,
                         e.nombre AS empresa,
-                        a.proxima_visita
+                        a.proxima_visita,
+                        a.proxima_visita_hora
                     FROM aprendices a
                     LEFT JOIN empresas e ON e.id = a.empresa_id
                     WHERE a.proxima_visita IS NOT NULL

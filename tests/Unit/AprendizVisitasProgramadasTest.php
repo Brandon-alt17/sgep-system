@@ -95,4 +95,97 @@ final class AprendizVisitasProgramadasTest extends TestCase
             )
         );
     }
+
+    public function test_resolve_proxima_visita_hora_usa_hora_m1_si_esta_pendiente(): void
+    {
+        $this->assertSame(
+            '09:00',
+            Aprendiz::resolveProximaVisitaHoraFromProgramadas(
+                '2026-06-01',
+                '2026-07-01',
+                '2026-08-01',
+                false,
+                false,
+                false,
+                [],
+                '09:00',
+                '10:00',
+                '11:00',
+            )
+        );
+    }
+
+    public function test_resolve_proxima_visita_hora_pasa_a_m2_cuando_m1_completa(): void
+    {
+        $this->assertSame(
+            '10:00',
+            Aprendiz::resolveProximaVisitaHoraFromProgramadas(
+                '2026-06-01',
+                '2026-07-01',
+                '2026-08-01',
+                true,
+                false,
+                false,
+                [],
+                '09:00',
+                '10:00',
+                '11:00',
+            )
+        );
+    }
+
+    public function test_resolve_proxima_visita_hora_usa_hora_de_la_extraordinaria_pendiente(): void
+    {
+        $this->assertSame(
+            '14:30',
+            Aprendiz::resolveProximaVisitaHoraFromProgramadas(
+                '2026-06-01',
+                '2026-07-01',
+                '2026-08-01',
+                true,
+                true,
+                true,
+                [
+                    ['fecha_programada' => '2026-09-01', 'hora_programada' => '14:30', 'completada' => 0],
+                ],
+                '09:00',
+                '10:00',
+                '11:00',
+            )
+        );
+    }
+
+    public function test_resolve_proxima_visita_hora_null_cuando_momento_no_tiene_hora(): void
+    {
+        $this->assertNull(
+            Aprendiz::resolveProximaVisitaHoraFromProgramadas(
+                '2026-06-01',
+                '2026-07-01',
+                '2026-08-01',
+                false,
+                false,
+                false,
+            )
+        );
+    }
+
+    public function test_resolve_proxima_visita_hora_null_cuando_todo_completado(): void
+    {
+        $this->assertNull(
+            Aprendiz::resolveProximaVisitaHoraFromProgramadas(
+                '2026-06-01',
+                '2026-07-01',
+                '2026-08-01',
+                true,
+                true,
+                true,
+                [
+                    ['fecha_programada' => '2026-09-01', 'hora_programada' => '14:30', 'completada' => 1],
+                ],
+                '09:00',
+                '10:00',
+                '11:00',
+            )
+        );
+    }
 }

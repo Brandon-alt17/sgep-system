@@ -35,6 +35,9 @@ if ($visitaProgramadaM1 === '') {
 }
 $visitaProgramadaM2 = trim((string) ($aprendiz['visita_programada_m2'] ?? ''));
 $visitaProgramadaM3 = trim((string) ($aprendiz['visita_programada_m3'] ?? ''));
+$horaMomento1 = trim((string) ($aprendiz['hora_momento1'] ?? ''));
+$horaMomento2 = trim((string) ($aprendiz['hora_momento2'] ?? ''));
+$horaMomento3 = trim((string) ($aprendiz['hora_momento3'] ?? ''));
 $modalidadVisitaM1 = trim((string) ($aprendiz['modalidad_visita_m1'] ?? 'Presencial'));
 $modalidadVisitaM2 = trim((string) ($aprendiz['modalidad_visita_m2'] ?? 'Presencial'));
 $modalidadVisitaM3 = trim((string) ($aprendiz['modalidad_visita_m3'] ?? 'Presencial'));
@@ -92,6 +95,10 @@ $modalidadVisitaSelected = static function (string $current, string $option): st
                                    class="form-input" placeholder="dd/mm/aaaa" title="Formato día/mes/año (dd/mm/aaaa)" inputmode="numeric" maxlength="10" spellcheck="false" autocomplete="off" data-date-input="dmy">
                         </div>
                         <div>
+                            <label class="form-label">Hora</label>
+                            <input type="time" name="hora_momento1" id="hora-m1" value="<?= e(substr($horaMomento1, 0, 5)) ?>" class="form-input">
+                        </div>
+                        <div>
                             <label class="form-label">Modalidad</label>
                             <select name="modalidad_momento1" class="form-input">
                                 <option value="Presencial"<?= $modalidadVisitaSelected($modalidadVisitaM1, 'Presencial') ?>>Presencial</option>
@@ -117,6 +124,10 @@ $modalidadVisitaSelected = static function (string $current, string $option): st
                             <input type="text" name="fecha_momento2" id="fecha-m2"
                                    value="<?= e(date_iso_to_dmY($visitaProgramadaM2)) ?>"
                                    class="form-input" placeholder="dd/mm/aaaa" title="Formato día/mes/año (dd/mm/aaaa)" inputmode="numeric" maxlength="10" spellcheck="false" autocomplete="off" data-date-input="dmy">
+                        </div>
+                        <div>
+                            <label class="form-label">Hora</label>
+                            <input type="time" name="hora_momento2" id="hora-m2" value="<?= e(substr($horaMomento2, 0, 5)) ?>" class="form-input">
                         </div>
                         <div>
                             <label class="form-label">Modalidad</label>
@@ -146,6 +157,10 @@ $modalidadVisitaSelected = static function (string $current, string $option): st
                                    class="form-input" placeholder="dd/mm/aaaa" title="Formato día/mes/año (dd/mm/aaaa)" inputmode="numeric" maxlength="10" spellcheck="false" autocomplete="off" data-date-input="dmy">
                         </div>
                         <div>
+                            <label class="form-label">Hora</label>
+                            <input type="time" name="hora_momento3" id="hora-m3" value="<?= e(substr($horaMomento3, 0, 5)) ?>" class="form-input">
+                        </div>
+                        <div>
                             <label class="form-label">Modalidad</label>
                             <select name="modalidad_momento3" class="form-input">
                                 <option value="Presencial"<?= $modalidadVisitaSelected($modalidadVisitaM3, 'Presencial') ?>>Presencial</option>
@@ -172,6 +187,7 @@ $modalidadVisitaSelected = static function (string $current, string $option): st
                             $exCompletada = !empty($visitaEx['completada']);
                             $exModalidad = trim((string) ($visitaEx['modalidad'] ?? 'Presencial'));
                             $exFecha = trim((string) ($visitaEx['fecha_programada'] ?? ''));
+                            $exHora = trim((string) ($visitaEx['hora_programada'] ?? ''));
                             $exNumero = (int) ($visitaEx['numero_visita'] ?? ($index + 1));
                             ?>
                             <div class="visita-card extraordinaria-row" data-extra-row>
@@ -192,6 +208,11 @@ $modalidadVisitaSelected = static function (string $current, string $option): st
                                         <input type="text" name="extraordinarias[<?= (int) $index ?>][fecha]"
                                                value="<?= e(date_iso_to_dmY($exFecha)) ?>"
                                                class="form-input" placeholder="dd/mm/aaaa" title="Formato día/mes/año (dd/mm/aaaa)" inputmode="numeric" maxlength="10" spellcheck="false" autocomplete="off" data-date-input="dmy">
+                                    </div>
+                                    <div>
+                                        <label class="form-label">Hora</label>
+                                        <input type="time" name="extraordinarias[<?= (int) $index ?>][hora]"
+                                               value="<?= e(substr($exHora, 0, 5)) ?>" class="form-input">
                                     </div>
                                     <div>
                                         <label class="form-label">Modalidad</label>
@@ -293,9 +314,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const title = row.querySelector('.text-sm.font-medium');
             if (title) title.textContent = 'Visita extraordinaria ' + (index + 1);
             const fecha = row.querySelector('input[name*="[fecha]"]');
+            const hora = row.querySelector('input[name*="[hora]"]');
             const modalidad = row.querySelector('select[name*="[modalidad]"]');
             const completada = row.querySelector('input[type="checkbox"][name*="[completada]"]');
             if (fecha) fecha.name = 'extraordinarias[' + index + '][fecha]';
+            if (hora) hora.name = 'extraordinarias[' + index + '][hora]';
             if (modalidad) modalidad.name = 'extraordinarias[' + index + '][modalidad]';
             if (completada) completada.name = 'extraordinarias[' + index + '][completada]';
         });
@@ -321,6 +344,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     <label class="form-label">Fecha</label>
                     <input type="text" name="extraordinarias[${index}][fecha]" value=""
                            class="form-input" placeholder="dd/mm/aaaa" title="Formato día/mes/año (dd/mm/aaaa)" inputmode="numeric" maxlength="10" spellcheck="false" autocomplete="off" data-date-input="dmy">
+                </div>
+                <div>
+                    <label class="form-label">Hora</label>
+                    <input type="time" name="extraordinarias[${index}][hora]" value="" class="form-input">
                 </div>
                 <div>
                     <label class="form-label">Modalidad</label>

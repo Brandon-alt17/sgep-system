@@ -18,7 +18,7 @@ final class VisitaExtraordinariaProgramada
         }
 
         $stmt = Database::connection()->prepare(
-            'SELECT id, aprendiz_id, numero_visita, fecha_programada, modalidad, completada
+            'SELECT id, aprendiz_id, numero_visita, fecha_programada, hora_programada, modalidad, completada
              FROM visitas_extraordinarias_programadas
              WHERE aprendiz_id = :aprendiz_id
              ORDER BY numero_visita ASC'
@@ -31,7 +31,7 @@ final class VisitaExtraordinariaProgramada
     /**
      * Reemplaza las visitas extraordinarias programadas del aprendiz.
      *
-     * @param list<array{fecha: ?string, modalidad: ?string, completada: bool}> $rows
+     * @param list<array{fecha: ?string, hora: ?string, modalidad: ?string, completada: bool}> $rows
      */
     public static function syncForAprendiz(int $aprendizId, array $rows): void
     {
@@ -49,16 +49,17 @@ final class VisitaExtraordinariaProgramada
 
         $stmt = $pdo->prepare(
             'INSERT INTO visitas_extraordinarias_programadas
-                (aprendiz_id, numero_visita, fecha_programada, modalidad, completada, created_at, updated_at)
+                (aprendiz_id, numero_visita, fecha_programada, hora_programada, modalidad, completada, created_at, updated_at)
              VALUES
-                (:aprendiz_id, :numero_visita, :fecha_programada, :modalidad, :completada, NOW(), NOW())'
+                (:aprendiz_id, :numero_visita, :fecha_programada, :hora_programada, :modalidad, :completada, NOW(), NOW())'
         );
 
         $numero = 1;
         foreach ($rows as $row) {
             $fecha = trim((string) ($row['fecha'] ?? ''));
+            $hora = trim((string) ($row['hora'] ?? ''));
             $modalidad = trim((string) ($row['modalidad'] ?? ''));
-            if ($fecha === '' && $modalidad === '' && empty($row['completada'])) {
+            if ($fecha === '' && $hora === '' && $modalidad === '' && empty($row['completada'])) {
                 continue;
             }
 
@@ -66,6 +67,7 @@ final class VisitaExtraordinariaProgramada
                 'aprendiz_id' => $aprendizId,
                 'numero_visita' => $numero,
                 'fecha_programada' => $fecha !== '' ? $fecha : null,
+                'hora_programada' => $hora !== '' ? $hora : null,
                 'modalidad' => self::normalizeModalidad($modalidad),
                 'completada' => !empty($row['completada']) ? 1 : 0,
             ]);
@@ -75,7 +77,7 @@ final class VisitaExtraordinariaProgramada
 
     /**
      * @param array<string, mixed> $post
-     * @return list<array{fecha: ?string, modalidad: ?string, completada: bool}>
+     * @return list<array{fecha: ?string, hora: ?string, modalidad: ?string, completada: bool}>
      */
     public static function rowsFromPost(array $post): array
     {
@@ -84,7 +86,7 @@ final class VisitaExtraordinariaProgramada
             return [];
         }
 
-        /** @var list<array{fecha: ?string, modalidad: ?string, completada: bool}> $rows */
+        /** @var list<array{fecha: ?string, hora: ?string, modalidad: ?string, completada: bool}> $rows */
         $rows = [];
         foreach ($raw as $item) {
             if (!is_array($item)) {
@@ -93,12 +95,23 @@ final class VisitaExtraordinariaProgramada
             $fechaIso = date_post_to_iso((string) ($item['fecha'] ?? ''));
             $rows[] = [
                 'fecha' => $fechaIso !== '' ? $fechaIso : null,
+                'hora' => self::normalizeHora((string) ($item['hora'] ?? '')),
                 'modalidad' => self::normalizeModalidad((string) ($item['modalidad'] ?? '')),
                 'completada' => isset($item['completada']),
             ];
         }
 
         return $rows;
+    }
+
+    public static function normalizeHora(string $value): ?string
+    {
+        $value = trim($value);
+        if ($value === '') {
+            return null;
+        }
+
+        return preg_match('/^([01]\d|2[0-3]):([0-5]\d)$/', $value) === 1 ? $value : null;
     }
 
     private static function normalizeModalidad(string $value): ?string

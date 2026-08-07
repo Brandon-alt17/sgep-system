@@ -452,6 +452,53 @@ class Aprendiz
     }
 
     /**
+     * Hora asociada a la próxima visita resuelta por resolveProximaVisitaFromProgramadas(). Debe
+     * invocarse con los mismos argumentos (más la hora de cada momento) para que ambas resoluciones
+     * señalen siempre a la misma visita.
+     *
+     * @param list<array{fecha_programada?: ?string, hora_programada?: ?string, completada?: int|string|bool}> $visitasExtraordinarias
+     */
+    public static function resolveProximaVisitaHoraFromProgramadas(
+        ?string $visitaM1,
+        ?string $visitaM2,
+        ?string $visitaM3,
+        bool $m1Completada,
+        bool $m2Completada,
+        bool $m3Completada = false,
+        array $visitasExtraordinarias = [],
+        ?string $horaM1 = null,
+        ?string $horaM2 = null,
+        ?string $horaM3 = null,
+    ): ?string {
+        $d1 = self::nullableDateString($visitaM1);
+        $d2 = self::nullableDateString($visitaM2);
+        $d3 = self::nullableDateString($visitaM3);
+
+        if (!$m1Completada && $d1 !== null) {
+            return $horaM1;
+        }
+        if ($m1Completada && !$m2Completada && $d2 !== null) {
+            return $horaM2;
+        }
+        if ($m1Completada && $m2Completada && !$m3Completada && $d3 !== null) {
+            return $horaM3;
+        }
+
+        foreach ($visitasExtraordinarias as $visita) {
+            if (!empty($visita['completada'])) {
+                continue;
+            }
+            $fecha = self::nullableDateString((string) ($visita['fecha_programada'] ?? ''));
+            if ($fecha !== null) {
+                $hora = trim((string) ($visita['hora_programada'] ?? ''));
+                return $hora !== '' ? $hora : null;
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * Guarda las visitas programadas desde el modal de agendamiento (fechas en dd/mm/aaaa o ISO).
      *
      * @param array<string, mixed> $data
@@ -471,6 +518,10 @@ class Aprendiz
         $d2 = self::nullableDateString(date_post_to_iso($data['fecha_momento2'] ?? ''));
         $d3 = self::nullableDateString(date_post_to_iso($data['fecha_momento3'] ?? ''));
 
+        $h1 = VisitaExtraordinariaProgramada::normalizeHora((string) ($data['hora_momento1'] ?? ''));
+        $h2 = VisitaExtraordinariaProgramada::normalizeHora((string) ($data['hora_momento2'] ?? ''));
+        $h3 = VisitaExtraordinariaProgramada::normalizeHora((string) ($data['hora_momento3'] ?? ''));
+
         $visitasExtraordinarias = VisitaExtraordinariaProgramada::rowsFromPost($data);
         VisitaExtraordinariaProgramada::syncForAprendiz($id, $visitasExtraordinarias);
 
@@ -484,11 +535,26 @@ class Aprendiz
             $m3Completada,
             $visitasExtraordinariasDb,
         );
+        $proximaVisitaHora = self::resolveProximaVisitaHoraFromProgramadas(
+            $d1,
+            $d2,
+            $d3,
+            $m1Completada,
+            $m2Completada,
+            $m3Completada,
+            $visitasExtraordinariasDb,
+            $h1,
+            $h2,
+            $h3,
+        );
 
         $sql = 'UPDATE aprendices SET
                     visita_programada_m1 = :visita_programada_m1,
                     visita_programada_m2 = :visita_programada_m2,
                     visita_programada_m3 = :visita_programada_m3,
+                    hora_momento1 = :hora_momento1,
+                    hora_momento2 = :hora_momento2,
+                    hora_momento3 = :hora_momento3,
                     modalidad_visita_m1 = :modalidad_visita_m1,
                     modalidad_visita_m2 = :modalidad_visita_m2,
                     modalidad_visita_m3 = :modalidad_visita_m3,
@@ -496,6 +562,7 @@ class Aprendiz
                     visita_m2_completada = :visita_m2_completada,
                     visita_m3_completada = :visita_m3_completada,
                     proxima_visita = :proxima_visita,
+                    proxima_visita_hora = :proxima_visita_hora,
                     updated_at = NOW()
                 WHERE id = :id';
 
@@ -503,6 +570,9 @@ class Aprendiz
             'visita_programada_m1' => $d1,
             'visita_programada_m2' => $d2,
             'visita_programada_m3' => $d3,
+            'hora_momento1' => $h1,
+            'hora_momento2' => $h2,
+            'hora_momento3' => $h3,
             'modalidad_visita_m1' => self::normalizeModalidadVisita($data['modalidad_momento1'] ?? null),
             'modalidad_visita_m2' => self::normalizeModalidadVisita($data['modalidad_momento2'] ?? null),
             'modalidad_visita_m3' => self::normalizeModalidadVisita($data['modalidad_momento3'] ?? null),
@@ -510,6 +580,7 @@ class Aprendiz
             'visita_m2_completada' => $m2Completada ? 1 : 0,
             'visita_m3_completada' => $m3Completada ? 1 : 0,
             'proxima_visita' => $proximaVisita,
+            'proxima_visita_hora' => $proximaVisitaHora,
             'id' => $id,
         ]);
     }
