@@ -17,6 +17,10 @@ Homestead.yaml
 /public/storage
 /storage/documents/*
 /storage/logs/*.log
+
+# Restos de depuración (auditoría de plantillas / XML temporales de trabajo)
+/storage/_tpl_audit/
+/storage/tmp_*.xml
 # Plantillas F-023 (vacías): solo los archivos listados se versionan
 /storage/templates/*
 !/storage/templates/.gitkeep
