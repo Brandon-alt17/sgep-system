@@ -13,6 +13,9 @@ namespace App\Exports;
  */
 final class F023DocxMerge
 {
+    private const RELS_PATH = 'word/_rels/document.xml.rels';
+
+
     /**
      * @param list<string> $docxPaths       rutas absolutas a .docx ya generados
      * @param bool              $m3CompactLayout compactar espaciado si el export incluye M3
@@ -61,8 +64,14 @@ final class F023DocxMerge
         $mask = $m3SegmentMask ?? array_fill(0, count($docxPaths), false);
         $usedParaIds = self::collectParaIds($bodyContent);
         $usedTextIds = self::collectTextIds($bodyContent);
+        $extraRelationships = [];
 
         for ($i = 1, $n = count($docxPaths); $i < $n; $i++) {
+            $extraRelationships = array_merge(
+                $extraRelationships,
+                self::collectF023LinkRelationships($docxPaths[$i])
+            );
+
             $segmentXml = self::readZipEntry($docxPaths[$i], 'word/document.xml');
             $segmentParts = self::splitBody($segmentXml);
             $segmentContent = self::normalizeSegmentForMerge(
@@ -119,7 +128,75 @@ final class F023DocxMerge
             $zip->close();
             throw new \RuntimeException('No se pudo escribir document.xml fusionado.');
         }
+
+        if ($extraRelationships !== []) {
+            $relsXml = $zip->getFromName(self::RELS_PATH);
+            if ($relsXml !== false) {
+                $mergedRelsXml = self::mergeRelationships($relsXml, $extraRelationships);
+                if ($zip->locateName(self::RELS_PATH) !== false) {
+                    $zip->deleteName(self::RELS_PATH);
+                }
+                if (!$zip->addFromString(self::RELS_PATH, $mergedRelsXml)) {
+                    $zip->close();
+                    throw new \RuntimeException('No se pudo escribir las relaciones (hipervínculos) fusionadas.');
+                }
+            }
+        }
+
+        if (!$zip->close()) {
+            throw new \RuntimeException('No se pudo finalizar el archivo .docx fusionado.');
+        }
+    }
+
+    /**
+     * El merge conserva word/_rels/document.xml.rels solo del primer segmento; las relaciones
+     * de hipervínculo (obs. 2) que F023HyperlinkSupport agrega en segmentos posteriores (M1, M2...)
+     * se perderían y dejarían un r:id colgante en el XML fusionado. Se recolectan aquí por Id.
+     *
+     * @return array<string, string> Id => tag `<Relationship .../>` completo
+     */
+    private static function collectF023LinkRelationships(string $docxPath): array
+    {
+        $zip = new \ZipArchive();
+        if ($zip->open($docxPath) !== true) {
+            return [];
+        }
+        $relsXml = $zip->getFromName(self::RELS_PATH);
         $zip->close();
+        if ($relsXml === false || $relsXml === '') {
+            return [];
+        }
+
+        $found = [];
+        if (preg_match_all('/<Relationship\b[^>]*Id="(rIdF023Link[^"]*)"[^>]*\/>/', $relsXml, $m, PREG_SET_ORDER)) {
+            foreach ($m as $match) {
+                $found[$match[1]] = $match[0];
+            }
+        }
+
+        return $found;
+    }
+
+    /**
+     * @param array<string, string> $extraRelationships Id => tag `<Relationship .../>`
+     */
+    private static function mergeRelationships(string $relsXml, array $extraRelationships): string
+    {
+        $toInsert = '';
+        foreach ($extraRelationships as $id => $tag) {
+            if (str_contains($relsXml, 'Id="' . $id . '"')) {
+                continue;
+            }
+            $toInsert .= $tag;
+        }
+
+        if ($toInsert === '') {
+            return $relsXml;
+        }
+
+        $updated = preg_replace('/<\/Relationships>/', $toInsert . '</Relationships>', $relsXml, 1);
+
+        return is_string($updated) ? $updated : $relsXml;
     }
 
     /**

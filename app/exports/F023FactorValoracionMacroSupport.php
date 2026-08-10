@@ -164,6 +164,75 @@ final class F023FactorValoracionMacroSupport
         return is_string($aligned) ? $aligned : $paragraphXml;
     }
 
+    /**
+     * Reduce progresivamente el tamaño de letra de la columna "Observaciones / Compromisos de
+     * mejora" de cada fila de factores, tras la sustitución real (post TemplateProcessor::
+     * setValue()). Localiza cada fila por el nombre del factor (config/factores.php), igual que
+     * injectFactorValoracionMacros() en patchToTemp() — el macro ya no existe como texto en este
+     * punto, pero el nombre del factor de la primera celda nunca se sustituye.
+     */
+    public static function shrinkObservationCellsBySavedLength(string $xml): string
+    {
+        $cfg = require base_path('config/factores.php');
+        /** @var list<string> $names */
+        $names = array_merge($cfg['tecnicos'], $cfg['actitudinales']);
+
+        if (!preg_match_all('/<w:tr\b[^>]*>.*?<\/w:tr>/s', $xml, $matches, PREG_OFFSET_CAPTURE)) {
+            return $xml;
+        }
+
+        /** @var list<array{offset: int, length: int, new: string}> $replacements */
+        $replacements = [];
+        $searchFrom = 0;
+        $rowMatches = $matches[0];
+
+        foreach ($names as $name) {
+            for ($r = $searchFrom, $n = count($rowMatches); $r < $n; $r++) {
+                $rowXml = (string) $rowMatches[$r][0];
+                $offset = (int) $rowMatches[$r][1];
+                $plain = preg_replace('/\s+/u', ' ', strip_tags($rowXml)) ?? '';
+                if (!is_string($plain) || stripos($plain, $name) === false) {
+                    continue;
+                }
+
+                $newRow = self::shrinkObservationCellInRow($rowXml);
+                if ($newRow !== $rowXml) {
+                    $replacements[] = ['offset' => $offset, 'length' => strlen($rowXml), 'new' => $newRow];
+                }
+                $searchFrom = $r + 1;
+
+                break;
+            }
+        }
+
+        usort($replacements, static fn (array $a, array $b): int => $b['offset'] <=> $a['offset']);
+        foreach ($replacements as $rep) {
+            $xml = substr_replace($xml, $rep['new'], $rep['offset'], $rep['length']);
+        }
+
+        return $xml;
+    }
+
+    private static function shrinkObservationCellInRow(string $rowXml): string
+    {
+        $cellIndex = 0;
+        $patched = preg_replace_callback(
+            '/<w:tc\b[^>]*>.*?<\/w:tc>/s',
+            static function (array $match) use (&$cellIndex): string {
+                $cell = $match[0];
+                ++$cellIndex;
+                if ($cellIndex !== 4) {
+                    return $cell;
+                }
+
+                return F023DynamicFontScaleSupport::shrinkFragmentByLength($cell, 'compromisos');
+            },
+            $rowXml
+        );
+
+        return is_string($patched) ? $patched : $rowXml;
+    }
+
     private static function macroRunXml(string $macro): string
     {
         $safe = preg_replace('/[^a-zA-Z0-9_]/', '', $macro) ?? '';

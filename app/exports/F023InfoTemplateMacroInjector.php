@@ -123,7 +123,10 @@ final class F023InfoTemplateMacroInjector
             @unlink($tmpDocx);
             throw new \RuntimeException('No se pudo escribir document.xml en la plantilla temporal.');
         }
-        $zip->close();
+        if (!$zip->close()) {
+            @unlink($tmpDocx);
+            throw new \RuntimeException('No se pudo finalizar la plantilla temporal info.');
+        }
 
         return $tmpDocx;
     }
@@ -153,7 +156,9 @@ final class F023InfoTemplateMacroInjector
             $zip->close();
             throw new \RuntimeException('No se pudo escribir layout en segmento info.');
         }
-        $zip->close();
+        if (!$zip->close()) {
+            throw new \RuntimeException('No se pudo finalizar el layout del segmento info.');
+        }
     }
 
     /**

@@ -83,9 +83,13 @@ final class F023DocxToPdf
         $output = [];
         $exitCode = 1;
         exec($cmd . ' 2>&1', $output, $exitCode);
+
+        // En Windows, soffice.exe puede retornar antes de que el proceso soffice.bin
+        // termine de escribir el PDF; se espera un poco más antes de declarar fallo.
+        $pdfReady = self::waitForPdfReady($pdfPath);
         self::removeDirectory($profileDir);
 
-        if ($exitCode === 0 && is_file($pdfPath) && filesize($pdfPath) >= self::MIN_PDF_BYTES) {
+        if ($pdfReady) {
             return $pdfPath;
         }
 
@@ -94,13 +98,31 @@ final class F023DocxToPdf
         }
 
         $detail = trim(implode("\n", array_slice($output, -5)));
-        if ($detail !== '') {
-            log_error('F023 PDF LibreOffice: ' . $detail);
-        }
+        log_error(sprintf(
+            'F023 PDF LibreOffice: exitCode=%d docx=%s detail=%s',
+            $exitCode,
+            $docxPath,
+            $detail !== '' ? $detail : '(sin salida)'
+        ));
 
         throw new \RuntimeException(
             'LibreOffice no pudo convertir el documento a PDF. Pruebe con Word (.docx) o contacte al administrador.'
         );
+    }
+
+    /** Espera brevemente a que el PDF de salida quede escrito por completo. */
+    private static function waitForPdfReady(string $pdfPath, int $attempts = 6, int $delayMicroseconds = 350000): bool
+    {
+        for ($i = 0; $i < $attempts; $i++) {
+            clearstatcache(true, $pdfPath);
+            if (is_file($pdfPath) && filesize($pdfPath) >= self::MIN_PDF_BYTES) {
+                return true;
+            }
+            usleep($delayMicroseconds);
+        }
+        clearstatcache(true, $pdfPath);
+
+        return is_file($pdfPath) && filesize($pdfPath) >= self::MIN_PDF_BYTES;
     }
 
     /**

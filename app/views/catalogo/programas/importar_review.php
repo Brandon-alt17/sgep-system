@@ -27,6 +27,7 @@ if ($programName === '') {
     $programName = 'Programa sin nombre detectado';
 }
 $programCode = trim((string) ($meta['codigo'] ?? ''));
+$nameFromFallback = (bool) ($nameFromFallback ?? false);
 
 $missingMetaFields = [];
 $metaFieldLabels = [
@@ -43,6 +44,11 @@ foreach ($metaFieldLabels as $metaKey => $metaLabel) {
 <section class="mt-4">
     <h3 class="m-0 cursor-default text-2xl font-semibold text-app-text"><?= e($programName) ?></h3>
     <p class="mt-1 text-sm text-app-muted">Código: <?= e($programCode !== '' ? $programCode : 'No detectado') ?></p>
+    <?php if ($nameFromFallback): ?>
+        <p class="mt-2 inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700">
+            Nombre detectado del archivo, no del contenido del PDF. Verifíquelo antes de guardar.
+        </p>
+    <?php endif; ?>
 </section>
 
 <section class="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">

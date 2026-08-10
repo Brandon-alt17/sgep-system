@@ -524,15 +524,6 @@ class CatalogoController
             $parsed['meta']['nombre'] = $fallbackName;
             $nameFallbackApplied = $fallbackName !== '';
         }
-        if ($nameFallbackApplied) {
-            $parsed['warnings'] = array_values(array_filter(
-                (array) ($parsed['warnings'] ?? []),
-                static function ($warning): bool {
-                    $message = is_array($warning) ? (string) ($warning['message'] ?? '') : (string) $warning;
-                    return stripos($message, 'No se detecto nombre de programa automaticamente.') === false;
-                }
-            ));
-        }
         $parsed['warnings'] = array_merge(
             (array) ($parsed['warnings'] ?? []),
             array_map(static fn (string $w): array => ['severity' => 'warning', 'message' => $w], (array) ($extracted['warnings'] ?? []))
@@ -541,6 +532,7 @@ class CatalogoController
         view('catalogo/programas/importar_review', [
             'fileName' => $name,
             'parsed' => $parsed,
+            'nameFromFallback' => $nameFallbackApplied,
             'encoded' => base64_encode(json_encode($parsed, JSON_UNESCAPED_UNICODE) ?: '{}'),
         ]);
     }

@@ -141,7 +141,7 @@ class AprendizController
         $reporteCampos = ReporteMaestroData::camposForAprendiz($id, ['estado_arl', 'arl']);
         $aprendiz['estado_arl'] = ReporteMaestroData::normalizeEstadoArl($reporteCampos['estado_arl'] ?? '');
         $aprendiz['estado_arl_label'] = ReporteMaestroData::formatEstadoArlExport($aprendiz['estado_arl']);
-        $aprendiz['arl'] = $reporteCampos['arl'] ?? '';
+        $aprendiz['arl'] = trim((string) ($reporteCampos['arl'] ?? ''));
 
         view('aprendices/show', [
             'aprendiz' => $aprendiz,
@@ -229,6 +229,7 @@ class AprendizController
             'aprendiz_actualizado' => ['message' => 'Datos del aprendiz actualizados correctamente.', 'variant' => 'success'],
             'aprendiz_creado' => ['message' => 'Aprendiz registrado correctamente.', 'variant' => 'success'],
             'visitas_actualizadas' => ['message' => 'Visitas programadas correctamente.', 'variant' => 'success'],
+            'momento_ya_existe' => ['message' => 'Ese momento ya estaba registrado para este aprendiz.', 'variant' => 'warning'],
         ];
 
         return $map[$key] ?? null;
@@ -277,7 +278,8 @@ class AprendizController
                 echo json_encode(['ok' => false, 'error' => 'No se pudo actualizar la base de datos'], JSON_UNESCAPED_UNICODE);
             }
         } catch (\Throwable $e) {
-            echo json_encode(['ok' => false, 'error' => $e->getMessage()], JSON_UNESCAPED_UNICODE);
+            log_error('Aprendiz updateVisitas: ' . $e->getMessage());
+            echo json_encode(['ok' => false, 'error' => 'No se pudo actualizar la base de datos'], JSON_UNESCAPED_UNICODE);
         }
     }
 

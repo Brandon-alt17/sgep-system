@@ -70,7 +70,10 @@ final class F023M2TemplateMacroInjector
             @unlink($tmpDocx);
             throw new \RuntimeException('No se pudo escribir document.xml en la plantilla temporal M2.');
         }
-        $zip->close();
+        if (!$zip->close()) {
+            @unlink($tmpDocx);
+            throw new \RuntimeException('No se pudo finalizar la plantilla temporal M2.');
+        }
 
         return $tmpDocx;
     }
@@ -92,8 +95,10 @@ final class F023M2TemplateMacroInjector
         }
 
         $xml = self::compactLayoutForSinglePage($xml);
+        $xml = F023FactorValoracionMacroSupport::shrinkObservationCellsBySavedLength($xml);
         $xml = self::stripComplementaryObservationLabelBorders($xml);
         $xml = self::reinforceComplementaryObservationLines($xml);
+        $xml = self::shrinkComplementaryObservationsByLength($xml);
         $xml = self::pruneUnusedObservationLineParagraphs($xml);
         $xml = self::trimEmptyParagraphsBeforeSignatureTable($xml);
 
@@ -104,7 +109,11 @@ final class F023M2TemplateMacroInjector
             $zip->close();
             throw new \RuntimeException('No se pudo escribir layout en segmento M2.');
         }
-        $zip->close();
+        if (!$zip->close()) {
+            throw new \RuntimeException('No se pudo finalizar el layout del segmento M2.');
+        }
+
+        F023HyperlinkSupport::applyToDocx($docxPath, 'grabación del momento 2: ');
     }
 
     private static function compactLayoutForSinglePage(string $xml): string
@@ -208,6 +217,47 @@ final class F023M2TemplateMacroInjector
         }
 
         return $xml;
+    }
+
+    /**
+     * Reduce progresivamente el tamaño de letra de toda la sección de observaciones
+     * complementarias (obs_instructor + obs_aprendiz + obs_coformador) cuando el texto combinado
+     * ya sustituido supera el umbral "recomendado". Se mide el total de la sección (no cada campo
+     * por separado) porque lo que determina el desborde de página es el bloque completo de las 3
+     * líneas de subrayado, no cada campo aislado.
+     */
+    private static function shrinkComplementaryObservationsByLength(string $xml): string
+    {
+        $sectionStart = strpos($xml, 'complementarias del instructor');
+        if ($sectionStart === false) {
+            return $xml;
+        }
+
+        $firmaPos = strpos($xml, 'Firma del', $sectionStart);
+        $tblPos = strpos($xml, '<w:tbl>', $sectionStart);
+        $sectionEnd = strlen($xml);
+        if ($firmaPos !== false) {
+            $sectionEnd = min($sectionEnd, self::paragraphStartBeforePosition($xml, $firmaPos));
+        }
+        if ($tblPos !== false) {
+            $sectionEnd = min($sectionEnd, $tblPos);
+        }
+
+        $section = substr($xml, $sectionStart, $sectionEnd - $sectionStart);
+        $newSection = F023DynamicFontScaleSupport::shrinkSectionExcludingLabels(
+            $section,
+            'obs_complementarias_total',
+            [
+                'complementarias del instructor',
+                'Observaciones del aprendiz',
+                'Observaciones del responsable ente co-formador',
+            ]
+        );
+        if ($newSection === $section) {
+            return $xml;
+        }
+
+        return substr($xml, 0, $sectionStart) . $newSection . substr($xml, $sectionEnd);
     }
 
     private static function paragraphStartBeforePosition(string $xml, int $textPos): int

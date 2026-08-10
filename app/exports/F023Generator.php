@@ -11,6 +11,7 @@ use App\Models\Empresa;
 use App\Models\Momento;
 use App\Models\Programa;
 use App\Services\F023InfoData;
+use PhpOffice\PhpWord\Settings;
 use PhpOffice\PhpWord\TemplateProcessor;
 
 class F023Generator
@@ -20,6 +21,11 @@ class F023Generator
      */
     public function generate(int $aprendizId, array $partes, string $formato): string
     {
+        // PhpWord no escapa el XML de los valores por defecto: un "&", "<" o ">" suelto en
+        // cualquier campo (enlace de grabación, nombre de empresa, observaciones, etc.) deja
+        // el document.xml mal formado y rompe la generación solo para ese aprendiz.
+        Settings::setOutputEscapingEnabled(true);
+
         $formato = strtolower(trim($formato));
         if (!in_array($formato, ['docx', 'pdf'], true)) {
             $formato = 'docx';
@@ -119,6 +125,9 @@ class F023Generator
                     @unlink($tmp);
                     throw new \RuntimeException('No se pudo preparar segmento .docx.');
                 }
+                // Se registra para limpieza antes de guardar/parchear: si alguno de los pasos
+                // siguientes lanza excepción, el bloque finally igual debe borrar este temporal.
+                $tempCleanup[] = $tmpDocx;
                 $tpl->saveAs($tmpDocx);
                 if (!empty($seg['patch_info_macros'])) {
                     F023InfoTemplateMacroInjector::applyLayoutToSavedDocx($tmpDocx, $formato === 'docx');
@@ -132,13 +141,15 @@ class F023Generator
                 if (!empty($seg['patch_ex_macros'])) {
                     F023ExTemplateMacroInjector::applyLayoutToSavedDocx($tmpDocx);
                 }
+                if (!empty($seg['patch_m3_macros'])) {
+                    F023M3TemplateMacroInjector::applyLayoutToSavedDocx($tmpDocx);
+                }
                 if (!empty($seg['patch_m3_macros']) && str_contains(basename($path), 'm3_p2')) {
                     F023M3TemplateMacroInjector::applyJuicioMarcasToSavedDocx($tmpDocx, [
                         'm3_juicio_marca_aprobado' => (string) ($seg['vars']['m3_juicio_marca_aprobado'] ?? ''),
                         'm3_juicio_marca_no_aprobado' => (string) ($seg['vars']['m3_juicio_marca_no_aprobado'] ?? ''),
                     ]);
                 }
-                $tempCleanup[] = $tmpDocx;
                 $mergeInputs[] = $tmpDocx;
             }
 
@@ -446,12 +457,14 @@ class F023Generator
             }
         }
 
+        $charsPerLineOverrides = self::observationCharsPerLineOverrides($out);
+
         if (($out['tipo'] ?? '') === 'EX') {
             return F023ObservationLines::expandTemplateVars($out, [
                 'obs_instructor',
                 'obs_aprendiz',
                 'obs_coformador',
-            ], 1);
+            ], 1, $charsPerLineOverrides);
         }
 
         return F023ObservationLines::expandTemplateVars($out, [
@@ -459,7 +472,55 @@ class F023Generator
             'obs_aprendiz',
             'obs_coformador',
             'm1_observaciones_adicionales',
-        ]);
+        ], 2, $charsPerLineOverrides);
+    }
+
+    /**
+     * F023ObservationLines envuelve el texto a un ancho de línea fijo (charsPerLine(), calibrado
+     * para el tamaño de letra base de 9pt) ANTES de que F023DynamicFontScale decida, ya con el
+     * documento generado, si esa letra se reduce. Sin este ajuste, un campo que termina en 6pt
+     * queda envuelto igual que si siguiera en 9pt: cada línea usa solo una fracción del ancho
+     * real disponible al tamaño final, y el texto ocupa más renglones de los necesarios (se ve
+     * como espacio desperdiciado). Aquí se calcula, con la misma fórmula que usará el shrink
+     * real más adelante (F023DynamicFontScaleSupport::resolveTargetSize(), mismas claves de
+     * config/f023_limites.php), a qué tamaño quedará cada campo y se agranda proporcionalmente
+     * su ancho de línea para ese caso.
+     *
+     * @param array<string, mixed> $out
+     * @return array<string, int>
+     */
+    private static function observationCharsPerLineOverrides(array $out): array
+    {
+        $baseCharsPerLine = F023ObservationLines::charsPerLine();
+
+        $combinedObsLen = mb_strlen((string) ($out['obs_instructor'] ?? ''))
+            + mb_strlen((string) ($out['obs_aprendiz'] ?? ''))
+            + mb_strlen((string) ($out['obs_coformador'] ?? ''));
+        $obsCharsPerLine = self::scaledCharsPerLine($baseCharsPerLine, $combinedObsLen, 'obs_complementarias_total');
+
+        $obsAdicionalesLen = mb_strlen((string) ($out['m1_observaciones_adicionales'] ?? ''));
+        $obsAdicionalesCharsPerLine = self::scaledCharsPerLine(
+            $baseCharsPerLine,
+            $obsAdicionalesLen,
+            'm1_observaciones_adicionales'
+        );
+
+        return [
+            'obs_instructor' => $obsCharsPerLine,
+            'obs_aprendiz' => $obsCharsPerLine,
+            'obs_coformador' => $obsCharsPerLine,
+            'm1_observaciones_adicionales' => $obsAdicionalesCharsPerLine,
+        ];
+    }
+
+    private static function scaledCharsPerLine(int $baseCharsPerLine, int $length, string $configKey): int
+    {
+        $target = F023DynamicFontScaleSupport::resolveTargetSize($length, $configKey);
+        if ($target['size'] <= 0 || $target['size'] >= $target['maxHalfPoints']) {
+            return $baseCharsPerLine;
+        }
+
+        return max($baseCharsPerLine, (int) round($baseCharsPerLine * $target['maxHalfPoints'] / $target['size']));
     }
 
     /**
@@ -563,16 +624,19 @@ class F023Generator
     }
 
     /**
+     * Texto libre (Word ajusta el renglón dentro de la celda, igual que los campos de M1) — el
+     * límite "compromisos" de config/f023_limites.php es solo indicativo para el conteo del
+     * formulario y el punto donde F023DynamicFontScale reduce la letra, no trunca el contenido.
+     *
      * @param array<string,mixed>|null $factorRow
      * @return array<string, string>
      */
     private static function factorObservacionTemplateVars(int $index, ?array $factorRow): array
     {
         $obs = $factorRow ? trim((string) ($factorRow['observacion'] ?? '')) : '';
-        [$line1, $line2] = F023ObservationLines::split($obs);
 
         return [
-            'factor_' . $index . '_observacion' => F023ObservationLines::combineTwoLines($line1, $line2),
+            'factor_' . $index . '_observacion' => $obs,
         ];
     }
 

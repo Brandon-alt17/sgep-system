@@ -26,6 +26,7 @@ class AprendicesImport
         $rows = $sheet->rangeToArray('A1:' . $highestDataColumn . $highestDataRow, null, true, true, false);
         $headerRow = $rows[0] ?? [];
         $columnMap = ImportColumnResolver::resolve($headerRow, $mapping);
+        $fallbackFields = ImportColumnResolver::fieldsUsingDefaultFallback($headerRow, $mapping);
         $results = [
             'inserted' => 0,
             'updated' => 0,
@@ -41,6 +42,18 @@ class AprendicesImport
             'programa_pending_rows' => [],
             'conflict_rows' => [],
         ];
+
+        if ($fallbackFields !== []) {
+            /** @var array<string, string> $fieldLabels */
+            $fieldLabels = require base_path('config/import_field_labels.php');
+            $fallbackLabels = array_map(
+                static fn (string $field): string => $fieldLabels[$field] ?? $field,
+                $fallbackFields
+            );
+            $results['warnings'][] = 'No se reconoció el encabezado de estas columnas; se usó su '
+                . 'posición habitual en la plantilla — verifique que los datos correspondan: '
+                . implode(', ', $fallbackLabels) . '.';
+        }
 
         $seenThisRun = [];
 

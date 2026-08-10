@@ -15,7 +15,8 @@ $errorMsg = match ($errorKey) {
     'id_aprendiz' => 'Indique un aprendiz válido para exportar.',
     'pdf_libreoffice' => 'La exportación PDF requiere LibreOffice en este equipo. Use Word (.docx) o pida al administrador que instale LibreOffice.',
     'pdf_convert_failed' => 'LibreOffice no pudo convertir el documento a PDF. Pruebe con Word (.docx) o contacte al administrador.',
-    'export_failed' => 'No se pudo generar el archivo. Si eligió PDF, pruebe con Word o contacte al administrador.',
+    'export_failed' => 'No se pudo generar el archivo PDF. Pruebe con Word (.docx) o contacte al administrador.',
+    'docx_export_failed' => 'No se pudo generar el archivo Word. Contacte al administrador.',
     default => $errorKey !== '' ? 'No se pudo completar la solicitud. Inténtelo de nuevo.' : '',
 };
 

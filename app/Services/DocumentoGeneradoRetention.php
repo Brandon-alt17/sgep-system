@@ -84,7 +84,17 @@ final class DocumentoGeneradoRetention
         return $idsToDelete;
     }
 
-    /** Elimina exportaciones legacy del reporte maestro que ya no se conservan en disco. */
+    /** Antigüedad mínima (segundos) antes de purgar un export legacy del reporte maestro. */
+    private const LEGACY_EXPORT_MIN_AGE_SECONDS = 600;
+
+    /**
+     * Elimina exportaciones legacy del reporte maestro que ya no se conservan en disco.
+     *
+     * Solo borra archivos con más de LEGACY_EXPORT_MIN_AGE_SECONDS de antigüedad: si se borrara
+     * cualquier archivo sin importar su edad, dos instructores exportando el reporte maestro casi
+     * al mismo tiempo podían pisarse — uno borraba el .xlsx que el otro apenas había escrito y
+     * que readfile() todavía estaba transmitiendo, dejando una descarga truncada.
+     */
     public static function purgeLegacyReporteMaestroExports(): int
     {
         $dir = base_path('storage/documents');
@@ -93,9 +103,17 @@ final class DocumentoGeneradoRetention
         }
 
         $deleted = 0;
+        $cutoff = time() - self::LEGACY_EXPORT_MIN_AGE_SECONDS;
         $pattern = rtrim($dir, '/\\') . DIRECTORY_SEPARATOR . 'reporte_maestro_*.xlsx';
         foreach (glob($pattern) ?: [] as $path) {
-            if (is_file($path) && @unlink($path)) {
+            if (!is_file($path)) {
+                continue;
+            }
+            $mtime = @filemtime($path);
+            if ($mtime !== false && $mtime > $cutoff) {
+                continue;
+            }
+            if (@unlink($path)) {
                 $deleted++;
             }
         }

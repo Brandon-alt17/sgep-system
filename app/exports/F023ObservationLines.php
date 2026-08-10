@@ -9,8 +9,15 @@ namespace App\Exports;
  */
 final class F023ObservationLines
 {
-    /** Párrafos opcionales inyectados en m2 (líneas 3+). */
-    public const TEMPLATE_SLOT_COUNT = 8;
+    /**
+     * Párrafos opcionales inyectados en m2/EX (líneas 3+). Los límites de caracteres de
+     * config/f023_limites.php (obs_instructor, etc.) son solo indicativos — no truncan el texto
+     * ingresado (ver MomentoController::applyTextLimits() y public/js/app.js) — así que este
+     * techo de líneas físicas es lo único que realmente acota cuánto texto entra en el documento.
+     * Se fija generoso (muy por encima de lo que cualquier caso real necesitaría) para que en la
+     * práctica no se pierda contenido, sin dejar de ser un límite técnico finito.
+     */
+    public const TEMPLATE_SLOT_COUNT = 24;
 
     public static function charsPerLine(): int
     {
@@ -19,25 +26,36 @@ final class F023ObservationLines
         return max(1, (int) ($limites['obs_two_line_chars'] ?? 132));
     }
 
-    public static function maxTotalChars(?string $configKey = null): int
+    /**
+     * Presupuesto de caracteres (sin espacios) que puede repartirse entre las
+     * TEMPLATE_SLOT_COUNT líneas físicas disponibles. Ya NO se acorta por debajo de la capacidad
+     * física real de líneas según ningún límite de campo — los límites de
+     * config/f023_limites.php son indicativos (ver arriba), no deben usarse para descartar texto
+     * que sí cabría en las líneas disponibles.
+     *
+     * $charsPerLine permite calcular el presupuesto total con un ancho de línea distinto al base
+     * (ver splitLines()).
+     */
+    public static function maxTotalChars(?int $charsPerLine = null): int
     {
-        $limites = require base_path('config/f023_limites.php');
-        if ($configKey !== null && isset($limites[$configKey])) {
-            return max(1, (int) $limites[$configKey]);
-        }
-
-        return self::charsPerLine() * 2;
+        return ($charsPerLine ?? self::charsPerLine()) * self::TEMPLATE_SLOT_COUNT;
     }
 
     /**
      * Respeta saltos de línea (Enter) del formulario; solo hace word-wrap si un renglón supera el ancho.
      *
+     * $charsPerLine permite envolver a un ancho distinto del calibrado para el tamaño de letra
+     * base (18 medios-puntos): cuando el caller ya sabe que la letra se va a reducir (ver
+     * F023Generator::observationCharsPerLineOverrides()), pasar aquí el ancho proporcionalmente
+     * mayor evita que el texto quede envuelto en más líneas de las que realmente hacen falta al
+     * tamaño final (cada línea quedaría usando solo una fracción del ancho real disponible).
+     *
      * @return list<string>
      */
-    public static function splitLines(string $text, ?int $maxTotalChars = null): array
+    public static function splitLines(string $text, ?int $maxTotalChars = null, ?int $charsPerLine = null): array
     {
-        $max = $maxTotalChars ?? self::maxTotalChars();
-        $perLine = self::charsPerLine();
+        $perLine = $charsPerLine ?? self::charsPerLine();
+        $max = $maxTotalChars ?? self::maxTotalChars($perLine);
         $normalized = str_replace(["\r\n", "\r"], "\n", trim($text));
         if ($normalized === '') {
             return [];
@@ -149,14 +167,20 @@ final class F023ObservationLines
     /**
      * @param list<string> $keys
      * @param array<string, string> $vars
+     * @param array<string, int> $charsPerLineByKey Ancho de línea override por campo (ver splitLines()).
      * @return array<string, string>
      */
-    public static function expandTemplateVars(array $vars, array $keys, int $minDisplayLines = 2): array
-    {
+    public static function expandTemplateVars(
+        array $vars,
+        array $keys,
+        int $minDisplayLines = 2,
+        array $charsPerLineByKey = []
+    ): array {
         $minDisplayLines = max(1, $minDisplayLines);
 
         foreach ($keys as $key) {
-            $lines = self::splitLines((string) ($vars[$key] ?? ''), self::maxTotalChars($key));
+            $charsPerLine = $charsPerLineByKey[$key] ?? null;
+            $lines = self::splitLines((string) ($vars[$key] ?? ''), self::maxTotalChars($charsPerLine), $charsPerLine);
             $usedLines = count($lines);
             $displayLines = max($minDisplayLines, $usedLines);
 

@@ -16,6 +16,31 @@ final class ImportColumnResolver
      */
     public static function resolve(array $headerRow, array $defaultIndexToField): array
     {
+        return self::resolveWithFallbackReport($headerRow, $defaultIndexToField)['resolved'];
+    }
+
+    /**
+     * Campos que no encontraron ningún encabezado reconocible (ni por alias) y por lo tanto
+     * quedaron en su columna fija por defecto. Si el Excel real trae esa columna movida o
+     * renombrada más allá de los alias conocidos, esos datos se importan en el campo equivocado
+     * sin ningún aviso — se usa para advertir al instructor en la revisión de la importación.
+     *
+     * @param list<mixed> $headerRow
+     * @param array<int, string> $defaultIndexToField
+     * @return list<string>
+     */
+    public static function fieldsUsingDefaultFallback(array $headerRow, array $defaultIndexToField): array
+    {
+        return self::resolveWithFallbackReport($headerRow, $defaultIndexToField)['fallback'];
+    }
+
+    /**
+     * @param list<mixed> $headerRow
+     * @param array<int, string> $defaultIndexToField
+     * @return array{resolved: array<string, int>, fallback: list<string>}
+     */
+    private static function resolveWithFallbackReport(array $headerRow, array $defaultIndexToField): array
+    {
         /** @var array<string, list<string>> $aliases */
         $aliases = require base_path('config/import_header_aliases.php');
 
@@ -73,7 +98,9 @@ final class ImportColumnResolver
             $usedColumns[$index] = true;
         }
 
-        return $resolved;
+        $fallback = array_values(array_diff(array_keys($defaultFieldToIndex), array_keys($usedFields)));
+
+        return ['resolved' => $resolved, 'fallback' => $fallback];
     }
 
     /**

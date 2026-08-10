@@ -78,7 +78,10 @@ final class F023ExTemplateMacroInjector
             @unlink($tmpDocx);
             throw new \RuntimeException('No se pudo escribir document.xml en la plantilla temporal EX.');
         }
-        $zip->close();
+        if (!$zip->close()) {
+            @unlink($tmpDocx);
+            throw new \RuntimeException('No se pudo finalizar la plantilla temporal EX.');
+        }
 
         return $tmpDocx;
     }
@@ -97,7 +100,10 @@ final class F023ExTemplateMacroInjector
         }
 
         $xml = self::compactLayoutForSinglePage($xml);
+        $xml = F023FactorValoracionMacroSupport::shrinkObservationCellsBySavedLength($xml);
         $xml = self::reinforceCompromisosUnderlines($xml);
+        $xml = self::shrinkMotivoByLength($xml);
+        $xml = self::shrinkCompromisosByLength($xml);
         $xml = self::pruneUnusedCompromisoLineParagraphs($xml);
         $xml = self::trimEmptyParagraphsBeforeSignatureTable($xml);
         $xml = self::stripDecorativeTableColors($xml);
@@ -109,7 +115,11 @@ final class F023ExTemplateMacroInjector
             $zip->close();
             throw new \RuntimeException('No se pudo escribir layout en segmento EX.');
         }
-        $zip->close();
+        if (!$zip->close()) {
+            throw new \RuntimeException('No se pudo finalizar el layout del segmento EX.');
+        }
+
+        F023HyperlinkSupport::applyToDocx($docxPath, 'Enlace de grabación del seguimiento extraordinario: ');
     }
 
     /**
@@ -379,6 +389,52 @@ final class F023ExTemplateMacroInjector
         $sectPr = F023SectionHeaderSupport::normalizeSectPrForPdfExport($sectPr, $xml);
 
         return $m[1] . $content . $sectPr . $m[3];
+    }
+
+    /**
+     * Reduce progresivamente el tamaño de letra del campo "Motivo del seguimiento
+     * extraordinario" (flujo libre) cuando el texto ya sustituido supera su umbral
+     * "recomendado" — candidato más probable de desborde reportado en EX.
+     */
+    private static function shrinkMotivoByLength(string $xml): string
+    {
+        return F023DynamicFontScaleSupport::shrinkContentCellFontByLength(
+            $xml,
+            'Motivo del seguimiento extraordinario:',
+            'motivo_seguimiento_extraordinario'
+        );
+    }
+
+    /**
+     * Igual que shrinkMotivoByLength() pero para toda la sección de "Compromisos por parte
+     * de..." (instructor + aprendiz + co-formador): se mide el total combinado, no cada campo
+     * por separado, porque lo que determina el desborde es el bloque completo de las 3 líneas
+     * de subrayado (mismo criterio que F023M2TemplateMacroInjector::
+     * shrinkComplementaryObservationsByLength()).
+     */
+    private static function shrinkCompromisosByLength(string $xml): string
+    {
+        $sectionStart = strpos($xml, 'Compromisos por parte del instructor');
+        if ($sectionStart === false) {
+            return $xml;
+        }
+
+        $sectionEnd = self::compromisosSectionEnd($xml, $sectionStart);
+        $section = substr($xml, $sectionStart, $sectionEnd - $sectionStart);
+        $newSection = F023DynamicFontScaleSupport::shrinkSectionExcludingLabels(
+            $section,
+            'obs_complementarias_total',
+            [
+                'Compromisos por parte del instructor de seguimiento',
+                'Compromisos por parte del aprendiz',
+                'Compromisos por parte del responsable ente co-formador',
+            ]
+        );
+        if ($newSection === $section) {
+            return $xml;
+        }
+
+        return substr($xml, 0, $sectionStart) . $newSection . substr($xml, $sectionEnd);
     }
 
     /**

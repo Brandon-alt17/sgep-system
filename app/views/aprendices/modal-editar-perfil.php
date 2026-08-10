@@ -365,7 +365,7 @@
                     </div>
                     <div class="form-field">
                         <label class="form-label">ARL</label>
-                        <input type="text" name="arl" value="<?= e($aprendiz['arl'] ?? '') ?>" class="form-input" placeholder="Ej. SURA, Positiva, Colmena">
+                        <input type="text" name="arl" value="<?= e($aprendiz['arl'] ?? '') ?>" placeholder="Ej. SURA, Positiva, Colmena" class="form-input">
                     </div>
 
                     <div class="form-field">

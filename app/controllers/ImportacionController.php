@@ -17,6 +17,35 @@ class ImportacionController
 {
     private const HISTORY_PER_PAGE = 10;
 
+    /** Campos de aprendices editables al resolver un conflicto de importación. */
+    private const CONFLICT_ALLOWED_FIELDS = [
+        'nombre_completo',
+        'tipo_documento',
+        'telefono',
+        'correo_personal',
+        'correo_institucional',
+        'ficha',
+        'programa_id',
+        'empresa_id',
+        'fecha_hora_formulario',
+        'direccion_domicilio',
+        'ciudad_domicilio',
+        'alternativa_ep',
+        'nombre_instructor_seguimiento',
+        'telefono_instructor_seguimiento',
+        'correo_instructor_seguimiento',
+        'tipo_asistencia',
+        'sugerencias_comentarios',
+        'jefe_grupo',
+        'coordinacion',
+        'jefe_id',
+        'correo_organizacional',
+        'jefe_nombre',
+        'jefe_cargo',
+        'jefe_correo',
+        'jefe_telefono',
+    ];
+
     public function upload(): void
     {
         $historyState = $this->historyPaginationState();
@@ -245,34 +274,7 @@ class ImportacionController
             return;
         }
 
-        $allowedFields = [
-            'nombre_completo',
-            'tipo_documento',
-            'telefono',
-            'correo_personal',
-            'correo_institucional',
-            'ficha',
-            'programa_id',
-            'empresa_id',
-            'fecha_hora_formulario',
-            'direccion_domicilio',
-            'ciudad_domicilio',
-            'alternativa_ep',
-            'nombre_instructor_seguimiento',
-            'telefono_instructor_seguimiento',
-            'correo_instructor_seguimiento',
-            'tipo_asistencia',
-            'sugerencias_comentarios',
-            'jefe_grupo',
-            'coordinacion',
-            'jefe_id',
-            'correo_organizacional',
-            'jefe_nombre',
-            'jefe_cargo',
-            'jefe_correo',
-            'jefe_telefono',
-        ];
-        if (!in_array($field, $allowedFields, true)) {
+        if (!in_array($field, self::CONFLICT_ALLOWED_FIELDS, true)) {
             $this->jsonResponse(['ok' => false, 'message' => 'Campo no permitido.'], 422);
             return;
         }
@@ -395,6 +397,10 @@ class ImportacionController
 
     private function applyConflictAcceptNew(int $aprendizId, string $field, mixed $newValue, int $incomingJefeId = 0): bool
     {
+        if (!in_array($field, self::CONFLICT_ALLOWED_FIELDS, true)) {
+            return false;
+        }
+
         $pdo = Database::connection();
         $stmt = $pdo->prepare('SELECT id, empresa_id, jefe_id FROM aprendices WHERE id = :id LIMIT 1');
         $stmt->execute(['id' => $aprendizId]);

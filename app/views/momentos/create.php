@@ -20,6 +20,13 @@ $momentoTitulo = match ($tipo) {
 
 $pageTitle = ($modoEdicion ?? false) ? ('Editar: ' . $momentoTitulo) : ('Registrar: ' . $momentoTitulo);
 
+$errorKey = (string) ($error ?? '');
+$errorMsg = match ($errorKey) {
+    'momento_requiere_m2' => 'No se pudo guardar: para registrar el Momento 3 primero debe existir el Momento 2 de este aprendiz.',
+    'factores_incompletos' => 'No se pudo guardar: falta calificar (Satisfactorio / Por mejorar) alguno de los factores técnicos o actitudinales.',
+    default => $errorKey !== '' ? 'No se pudo completar la solicitud. Inténtelo de nuevo.' : '',
+};
+
 $momentoSectionHeading = static function (string $icon, string $title): void {
     ?>
     <h3 class="font-app mb-4 mt-0 flex items-center gap-2.5 text-base font-semibold leading-snug text-app-text">
@@ -102,6 +109,12 @@ $renderDiligenciamientoCard = static function () use ($momentoSectionHeading, $g
     </div>
 </section>
 
+<?php if ($errorMsg !== ''): ?>
+    <div class="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950" role="alert">
+        <?= e($errorMsg) ?>
+    </div>
+<?php endif; ?>
+
 <?php if (empty($aprendiz)): ?>
     <section class="<?= e(ui_warning_card_classes()) ?>">Aprendiz no encontrado.</section>
 <?php else: ?>
@@ -156,7 +169,8 @@ $renderDiligenciamientoCard = static function () use ($momentoSectionHeading, $g
                                 ]); ?>
                             </div>
                         <?php endif; ?>
-                        <textarea id="momento-m1-competencias" name="m1_competencias" maxlength="<?= $maxM1Competencias ?>" class="<?= $ta ?> mt-1.5"><?= e($valueFrom($momento, 'm1_competencias')) ?></textarea>
+                        <textarea id="momento-m1-competencias" name="m1_competencias" data-max="<?= $maxM1Competencias ?>" data-recommended="<?= $recM1Competencias ?>" class="<?= $ta ?> mt-1.5"><?= e($valueFrom($momento, 'm1_competencias')) ?></textarea>
+                        <p class="mt-1 text-right text-xs text-app-muted" data-char-counter aria-live="polite"></p>
                     </div>
                     <div class="min-w-0">
                         <span class="<?= $lc ?> block">Resultados de aprendizaje</span>
@@ -170,16 +184,19 @@ $renderDiligenciamientoCard = static function () use ($momentoSectionHeading, $g
                                 ]); ?>
                             </div>
                         <?php endif; ?>
-                        <textarea id="momento-m1-resultados" name="m1_resultados" maxlength="<?= $maxM1Resultados ?>" class="<?= $ta ?> mt-1.5"><?= e($valueFrom($momento, 'm1_resultados')) ?></textarea>
+                        <textarea id="momento-m1-resultados" name="m1_resultados" data-max="<?= $maxM1Resultados ?>" data-recommended="<?= $recM1Resultados ?>" class="<?= $ta ?> mt-1.5"><?= e($valueFrom($momento, 'm1_resultados')) ?></textarea>
+                        <p class="mt-1 text-right text-xs text-app-muted" data-char-counter aria-live="polite"></p>
                     </div>
                     <label class="<?= $lc ?> min-w-0">Actividades a desarrollar
-                        <textarea name="m1_actividades" maxlength="<?= $maxM1Actividades ?>" class="<?= $ta ?> mt-1.5"><?= e($valueFrom($momento, 'm1_actividades')) ?></textarea>
+                        <textarea name="m1_actividades" data-max="<?= $maxM1Actividades ?>" data-recommended="<?= $recM1Actividades ?>" class="<?= $ta ?> mt-1.5"><?= e($valueFrom($momento, 'm1_actividades')) ?></textarea>
+                        <p class="mt-1 text-right text-xs text-app-muted" data-char-counter aria-live="polite"></p>
                     </label>
                     <label class="<?= $lc ?> min-w-0">Evidencias de aprendizaje
-                        <textarea name="m1_evidencias" maxlength="<?= $maxM1Evidencias ?>" class="<?= $ta ?> mt-1.5"><?= e($valueFrom($momento, 'm1_evidencias')) ?></textarea>
+                        <textarea name="m1_evidencias" data-max="<?= $maxM1Evidencias ?>" data-recommended="<?= $recM1Evidencias ?>" class="<?= $ta ?> mt-1.5"><?= e($valueFrom($momento, 'm1_evidencias')) ?></textarea>
+                        <p class="mt-1 text-right text-xs text-app-muted" data-char-counter aria-live="polite"></p>
                     </label>
                     <label class="<?= $lc ?> min-w-0 font-semibold">Observaciones adicionales
-                        <textarea name="m1_observaciones_adicionales" rows="2" data-max="<?= $maxM1ObsAdicionales ?>" data-max-lines="2" maxlength="<?= $maxM1ObsAdicionales ?>" class="<?= $ta ?> mt-1.5"><?= e($valueFrom($momento, 'm1_observaciones_adicionales')) ?></textarea>
+                        <textarea name="m1_observaciones_adicionales" rows="2" data-max="<?= $maxM1ObsAdicionales ?>" data-recommended="<?= $recM1ObsAdicionales ?>" class="<?= $ta ?> mt-1.5"><?= e($valueFrom($momento, 'm1_observaciones_adicionales')) ?></textarea>
                         <p class="mt-1 text-right text-xs text-app-muted" data-char-counter aria-live="polite"></p>
                     </label>
                 </div>
@@ -215,7 +232,8 @@ $renderDiligenciamientoCard = static function () use ($momentoSectionHeading, $g
                         <input type="text" name="enlace_grabacion" maxlength="<?= $maxUrl ?>" value="<?= e($valueFrom($momento, 'enlace_grabacion')) ?>" class="<?= $ic ?> mt-1.5" placeholder="https://…">
                     </label>
                     <label class="<?= $lc ?> min-w-0 self-start md:col-span-3">Motivo del seguimiento extraordinario
-                        <textarea name="motivo_seguimiento_extraordinario" rows="3" maxlength="<?= (int) ($maxMotivoEx ?? 500) ?>" class="<?= $ta ?> mt-1.5"><?= e($valueFrom($momento, 'motivo_seguimiento_extraordinario')) ?></textarea>
+                        <textarea name="motivo_seguimiento_extraordinario" rows="3" data-max="<?= (int) ($maxMotivoEx ?? 500) ?>" data-recommended="<?= (int) ($recMotivoEx ?? 0) ?>" class="<?= $ta ?> mt-1.5"><?= e($valueFrom($momento, 'motivo_seguimiento_extraordinario')) ?></textarea>
+                        <p class="mt-1 text-right text-xs text-app-muted" data-char-counter aria-live="polite"></p>
                     </label>
                 </div>
             </section>
@@ -275,7 +293,7 @@ $renderDiligenciamientoCard = static function () use ($momentoSectionHeading, $g
                                 </div>
                                 <div class="min-w-0">
                                     <span class="mb-1 block text-xs text-app-muted md:hidden<?= e($compromisosHeaderClass) ?>">Observaciones / Compromisos de mejora</span>
-                                    <textarea name="factores[<?= $idx ?>][observacion]" rows="2" data-max="<?= $maxCompromisos ?>" data-max-lines="2" maxlength="<?= $maxCompromisos ?>" placeholder="Observaciones..." class="<?= $factorObsTextareaClass ?> w-full"><?= e((string) ($factorObsPorIndice[$idx] ?? '')) ?></textarea>
+                                    <textarea name="factores[<?= $idx ?>][observacion]" rows="2" data-max="<?= $maxCompromisos ?>" placeholder="Observaciones..." class="<?= $factorObsTextareaClass ?> w-full"><?= e((string) ($factorObsPorIndice[$idx] ?? '')) ?></textarea>
                                     <p class="mt-1 text-right text-xs text-app-muted" data-char-counter aria-live="polite"></p>
                                 </div>
                             </div>
@@ -313,7 +331,7 @@ $renderDiligenciamientoCard = static function () use ($momentoSectionHeading, $g
                                 </div>
                                 <div class="min-w-0">
                                     <span class="mb-1 block text-xs text-app-muted md:hidden<?= e($compromisosHeaderClass) ?>">Observaciones / Compromisos de mejora</span>
-                                    <textarea name="factores[<?= $i ?>][observacion]" rows="2" data-max="<?= $maxCompromisos ?>" data-max-lines="2" maxlength="<?= $maxCompromisos ?>" placeholder="Observaciones..." class="<?= $factorObsTextareaClass ?> w-full"><?= e((string) ($factorObsPorIndice[$i] ?? '')) ?></textarea>
+                                    <textarea name="factores[<?= $i ?>][observacion]" rows="2" data-max="<?= $maxCompromisos ?>" placeholder="Observaciones..." class="<?= $factorObsTextareaClass ?> w-full"><?= e((string) ($factorObsPorIndice[$i] ?? '')) ?></textarea>
                                     <p class="mt-1 text-right text-xs text-app-muted" data-char-counter aria-live="polite"></p>
                                 </div>
                             </div>
@@ -323,30 +341,22 @@ $renderDiligenciamientoCard = static function () use ($momentoSectionHeading, $g
             </section>
         <?php endif; ?>
 
-        <?php if ($tipo === 'M2' || $tipo === 'M3'): ?>
+        <?php if ($tipo === 'M2'): ?>
             <section class="<?= e(ui_card_classes()) ?> !p-6">
                 <?php $momentoSectionHeading('pencil', 'Observaciones'); ?>
                 <div class="grid gap-5 md:grid-cols-1 md:gap-y-6">
-                    <?php if ($tipo === 'M3'): ?>
-                        <label class="<?= $lc ?> min-w-0">Observaciones del responsable ente co-formador
-                            <textarea name="obs_coformador" rows="2" data-max="<?= $maxObsCoformador ?>" data-max-lines="2" maxlength="<?= $maxObsCoformador ?>" class="<?= $ta ?> mt-1.5"><?= e($valueFrom($momento, 'obs_coformador')) ?></textarea>
-                            <p class="mt-1 text-right text-xs text-app-muted" data-char-counter aria-live="polite"></p>
-                        </label>
-                    <?php endif; ?>
                     <label class="<?= $lc ?> min-w-0">Observaciones instructor de seguimiento
-                        <textarea name="obs_instructor" rows="2" data-max="<?= $maxObsInstructor ?>" data-max-lines="2" maxlength="<?= $maxObsInstructor ?>" class="<?= $ta ?> mt-1.5"><?= e($valueFrom($momento, 'obs_instructor')) ?></textarea>
+                        <textarea name="obs_instructor" rows="2" data-max="<?= $maxObsInstructor ?>" data-recommended="<?= $recObsInstructor ?>" class="<?= $ta ?> mt-1.5"><?= e($valueFrom($momento, 'obs_instructor')) ?></textarea>
                         <p class="mt-1 text-right text-xs text-app-muted" data-char-counter aria-live="polite"></p>
                     </label>
                     <label class="<?= $lc ?> min-w-0">Observaciones del aprendiz
-                        <textarea name="obs_aprendiz" rows="2" data-max="<?= $maxObsAprendiz ?>" data-max-lines="2" maxlength="<?= $maxObsAprendiz ?>" class="<?= $ta ?> mt-1.5"><?= e($valueFrom($momento, 'obs_aprendiz')) ?></textarea>
+                        <textarea name="obs_aprendiz" rows="2" data-max="<?= $maxObsAprendiz ?>" data-recommended="<?= $recObsAprendiz ?>" class="<?= $ta ?> mt-1.5"><?= e($valueFrom($momento, 'obs_aprendiz')) ?></textarea>
                         <p class="mt-1 text-right text-xs text-app-muted" data-char-counter aria-live="polite"></p>
                     </label>
-                    <?php if ($tipo !== 'M3'): ?>
-                        <label class="<?= $lc ?> min-w-0">Observaciones del responsable ente co-formador
-                            <textarea name="obs_coformador" rows="2" data-max="<?= $maxObsCoformador ?>" data-max-lines="2" maxlength="<?= $maxObsCoformador ?>" class="<?= $ta ?> mt-1.5"><?= e($valueFrom($momento, 'obs_coformador')) ?></textarea>
-                            <p class="mt-1 text-right text-xs text-app-muted" data-char-counter aria-live="polite"></p>
-                        </label>
-                    <?php endif; ?>
+                    <label class="<?= $lc ?> min-w-0">Observaciones del responsable ente co-formador
+                        <textarea name="obs_coformador" rows="2" data-max="<?= $maxObsCoformador ?>" data-recommended="<?= $recObsCoformador ?>" class="<?= $ta ?> mt-1.5"><?= e($valueFrom($momento, 'obs_coformador')) ?></textarea>
+                        <p class="mt-1 text-right text-xs text-app-muted" data-char-counter aria-live="polite"></p>
+                    </label>
                 </div>
             </section>
         <?php endif; ?>
@@ -356,15 +366,15 @@ $renderDiligenciamientoCard = static function () use ($momentoSectionHeading, $g
                 <?php $momentoSectionHeading('pencil', 'Compromisos'); ?>
                 <div class="grid gap-5 md:grid-cols-1 md:gap-y-6">
                     <label class="<?= $lc ?> min-w-0 font-semibold">Compromisos por parte del instructor de seguimiento
-                        <textarea name="obs_instructor" rows="2" data-max="<?= $maxObsInstructor ?>" data-max-lines="2" maxlength="<?= $maxObsInstructor ?>" class="<?= $ta ?> mt-1.5"><?= e($valueFrom($momento, 'obs_instructor')) ?></textarea>
+                        <textarea name="obs_instructor" rows="2" data-max="<?= $maxObsInstructor ?>" data-recommended="<?= $recObsInstructor ?>" class="<?= $ta ?> mt-1.5"><?= e($valueFrom($momento, 'obs_instructor')) ?></textarea>
                         <p class="mt-1 text-right text-xs text-app-muted" data-char-counter aria-live="polite"></p>
                     </label>
                     <label class="<?= $lc ?> min-w-0 font-semibold">Compromisos por parte del aprendiz
-                        <textarea name="obs_aprendiz" rows="2" data-max="<?= $maxObsAprendiz ?>" data-max-lines="2" maxlength="<?= $maxObsAprendiz ?>" class="<?= $ta ?> mt-1.5"><?= e($valueFrom($momento, 'obs_aprendiz')) ?></textarea>
+                        <textarea name="obs_aprendiz" rows="2" data-max="<?= $maxObsAprendiz ?>" data-recommended="<?= $recObsAprendiz ?>" class="<?= $ta ?> mt-1.5"><?= e($valueFrom($momento, 'obs_aprendiz')) ?></textarea>
                         <p class="mt-1 text-right text-xs text-app-muted" data-char-counter aria-live="polite"></p>
                     </label>
                     <label class="<?= $lc ?> min-w-0 font-semibold">Compromisos por parte del responsable ente co-formador
-                        <textarea name="obs_coformador" rows="2" data-max="<?= $maxObsCoformador ?>" data-max-lines="2" maxlength="<?= $maxObsCoformador ?>" class="<?= $ta ?> mt-1.5"><?= e($valueFrom($momento, 'obs_coformador')) ?></textarea>
+                        <textarea name="obs_coformador" rows="2" data-max="<?= $maxObsCoformador ?>" data-recommended="<?= $recObsCoformador ?>" class="<?= $ta ?> mt-1.5"><?= e($valueFrom($momento, 'obs_coformador')) ?></textarea>
                         <p class="mt-1 text-right text-xs text-app-muted" data-char-counter aria-live="polite"></p>
                     </label>
                 </div>
@@ -372,26 +382,40 @@ $renderDiligenciamientoCard = static function () use ($momentoSectionHeading, $g
         <?php endif; ?>
 
         <?php if ($tipo === 'M3'): ?>
+            <?php
+            $aprendizNombreCompleto = trim((string) ($aprendiz['nombre_completo'] ?? ''));
+            $valueFromOrAprendizNombre = static function (string $key) use ($momento, $valueFrom, $aprendizNombreCompleto): string {
+                $v = $valueFrom($momento, $key);
+
+                return $v !== '' ? $v : $aprendizNombreCompleto;
+            };
+            ?>
             <section class="<?= e(ui_card_classes()) ?> !p-6">
                 <?php $momentoSectionHeading('book-open', 'Retroalimentación (página 2)'); ?>
                 <div class="grid gap-5 md:grid-cols-1 md:gap-y-6">
                     <label class="<?= $lc ?> min-w-0">Retroalimentación ente co-formador — Proceso de formación
-                        <textarea name="m3_retro_coformador_proceso" maxlength="<?= $maxRetroM3 ?>" class="<?= $ta ?> mt-1.5"><?= e($valueFrom($momento, 'm3_retro_coformador_proceso')) ?></textarea>
+                        <textarea name="m3_retro_coformador_proceso" data-max="<?= $maxRetroM3 ?>" data-recommended="<?= $recRetroM3 ?>" class="<?= $ta ?> mt-1.5"><?= e($valueFromOrAprendizNombre('m3_retro_coformador_proceso')) ?></textarea>
+                        <p class="mt-1 text-right text-xs text-app-muted" data-char-counter aria-live="polite"></p>
                     </label>
                     <label class="<?= $lc ?> min-w-0">Retroalimentación ente co-formador — Desempeño de competencias
-                        <textarea name="m3_retro_coformador_desempeno" maxlength="<?= $maxRetroM3 ?>" class="<?= $ta ?> mt-1.5"><?= e($valueFrom($momento, 'm3_retro_coformador_desempeno')) ?></textarea>
+                        <textarea name="m3_retro_coformador_desempeno" data-max="<?= $maxRetroM3 ?>" data-recommended="<?= $recRetroM3 ?>" class="<?= $ta ?> mt-1.5"><?= e($valueFrom($momento, 'm3_retro_coformador_desempeno')) ?></textarea>
+                        <p class="mt-1 text-right text-xs text-app-muted" data-char-counter aria-live="polite"></p>
                     </label>
                     <label class="<?= $lc ?> min-w-0">Retroalimentación instructor — Proceso de formación
-                        <textarea name="m3_retro_instructor_proceso" maxlength="<?= $maxRetroM3 ?>" class="<?= $ta ?> mt-1.5"><?= e($valueFrom($momento, 'm3_retro_instructor_proceso')) ?></textarea>
+                        <textarea name="m3_retro_instructor_proceso" data-max="<?= $maxRetroM3 ?>" data-recommended="<?= $recRetroM3 ?>" class="<?= $ta ?> mt-1.5"><?= e($valueFromOrAprendizNombre('m3_retro_instructor_proceso')) ?></textarea>
+                        <p class="mt-1 text-right text-xs text-app-muted" data-char-counter aria-live="polite"></p>
                     </label>
                     <label class="<?= $lc ?> min-w-0">Retroalimentación instructor — Desempeño de competencias
-                        <textarea name="m3_retro_instructor_desempeno" maxlength="<?= $maxRetroM3 ?>" class="<?= $ta ?> mt-1.5"><?= e($valueFrom($momento, 'm3_retro_instructor_desempeno')) ?></textarea>
+                        <textarea name="m3_retro_instructor_desempeno" data-max="<?= $maxRetroM3 ?>" data-recommended="<?= $recRetroM3 ?>" class="<?= $ta ?> mt-1.5"><?= e($valueFrom($momento, 'm3_retro_instructor_desempeno')) ?></textarea>
+                        <p class="mt-1 text-right text-xs text-app-muted" data-char-counter aria-live="polite"></p>
                     </label>
                     <label class="<?= $lc ?> min-w-0">Retroalimentación del aprendiz — Proceso de formación
-                        <textarea name="m3_retro_aprendiz_proceso" maxlength="<?= $maxRetroM3 ?>" class="<?= $ta ?> mt-1.5"><?= e($valueFrom($momento, 'm3_retro_aprendiz_proceso')) ?></textarea>
+                        <textarea name="m3_retro_aprendiz_proceso" data-max="<?= $maxRetroM3 ?>" data-recommended="<?= $recRetroM3 ?>" class="<?= $ta ?> mt-1.5"><?= e($valueFromOrAprendizNombre('m3_retro_aprendiz_proceso')) ?></textarea>
+                        <p class="mt-1 text-right text-xs text-app-muted" data-char-counter aria-live="polite"></p>
                     </label>
                     <label class="<?= $lc ?> min-w-0">Retroalimentación del aprendiz — Desempeño de competencias
-                        <textarea name="m3_retro_aprendiz_desempeno" maxlength="<?= $maxRetroM3 ?>" class="<?= $ta ?> mt-1.5"><?= e($valueFrom($momento, 'm3_retro_aprendiz_desempeno')) ?></textarea>
+                        <textarea name="m3_retro_aprendiz_desempeno" data-max="<?= $maxRetroM3 ?>" data-recommended="<?= $recRetroM3 ?>" class="<?= $ta ?> mt-1.5"><?= e($valueFrom($momento, 'm3_retro_aprendiz_desempeno')) ?></textarea>
+                        <p class="mt-1 text-right text-xs text-app-muted" data-char-counter aria-live="polite"></p>
                     </label>
                 </div>
             </section>

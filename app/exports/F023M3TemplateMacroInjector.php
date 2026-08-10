@@ -92,7 +92,10 @@ final class F023M3TemplateMacroInjector
             @unlink($tmpDocx);
             throw new \RuntimeException('No se pudo escribir document.xml en la plantilla temporal M3.');
         }
-        $zip->close();
+        if (!$zip->close()) {
+            @unlink($tmpDocx);
+            throw new \RuntimeException('No se pudo finalizar la plantilla temporal M3.');
+        }
 
         return $tmpDocx;
     }
@@ -113,6 +116,91 @@ final class F023M3TemplateMacroInjector
             '6C2D484F' => 'm3_juicio_marca_aprobado',
             '469EB6AF' => 'm3_juicio_marca_no_aprobado',
         ];
+    }
+
+    /**
+     * Tras TemplateProcessor::saveAs(), reduce progresivamente el tamaño de letra de los 6 campos
+     * de retroalimentación si el texto ya sustituido supera el umbral "recomendado", y convierte
+     * el enlace de grabación en hipervínculo real. Este método es compartido por m3_p1 y m3_p2 (el
+     * $docxPath temporal no conserva el nombre de la plantilla de origen), así que cada paso busca
+     * sus propias anclas y no hace nada si no las encuentra en esta parte del documento — misma
+     * lógica "best effort por ancla" ya usada en el resto de esta clase.
+     */
+    public static function applyLayoutToSavedDocx(string $docxPath): void
+    {
+        $zip = new ZipArchive();
+        if ($zip->open($docxPath) !== true) {
+            throw new \RuntimeException('No se pudo abrir el segmento M3 para layout.');
+        }
+
+        $xml = $zip->getFromName(self::DOCUMENT_XML);
+        if ($xml === false || $xml === '') {
+            $zip->close();
+            throw new \RuntimeException('document.xml ilegible en segmento M3 guardado.');
+        }
+
+        $xml = F023FactorValoracionMacroSupport::shrinkObservationCellsBySavedLength($xml);
+        $xml = self::shrinkRetroFieldsByLength($xml);
+
+        if ($zip->locateName(self::DOCUMENT_XML) !== false) {
+            $zip->deleteName(self::DOCUMENT_XML);
+        }
+        if (!$zip->addFromString(self::DOCUMENT_XML, $xml)) {
+            $zip->close();
+            throw new \RuntimeException('No se pudo escribir layout en segmento M3.');
+        }
+        if (!$zip->close()) {
+            throw new \RuntimeException('No se pudo finalizar el layout del segmento M3.');
+        }
+
+        F023HyperlinkSupport::applyToDocx($docxPath, 'Enlace de grabación del momento 3: ');
+    }
+
+    private static function shrinkRetroFieldsByLength(string $xml): string
+    {
+        $specs = [...self::p1RetroalimentacionSpecs(), ...self::p2RetroalimentacionSpecs()];
+        foreach ($specs as $spec) {
+            $xml = self::shrinkRetroCellFontByLength($xml, (string) $spec['tableAnchor'], (int) $spec['row']);
+        }
+
+        return $xml;
+    }
+
+    /** Misma navegación tabla/fila/celda que injectRetroMacroInTableRow(), sobre texto ya sustituido. */
+    private static function shrinkRetroCellFontByLength(string $xml, string $tableAnchor, int $rowIndex): string
+    {
+        $anchorPos = strpos($xml, $tableAnchor);
+        if ($anchorPos === false) {
+            return $xml;
+        }
+
+        $tblStart = strrpos(substr($xml, 0, $anchorPos), '<w:tbl');
+        $tblEnd = strpos($xml, '</w:tbl>', $anchorPos);
+        if ($tblStart === false || $tblEnd === false) {
+            return $xml;
+        }
+        $tblEnd += strlen('</w:tbl>');
+
+        $table = substr($xml, $tblStart, $tblEnd - $tblStart);
+        if (!preg_match_all('/<w:tr\b[^>]*>.*?<\/w:tr>/s', $table, $rows) || !isset($rows[0][$rowIndex])) {
+            return $xml;
+        }
+
+        $row = (string) $rows[0][$rowIndex];
+        if (!preg_match_all('/<w:tc\b[^>]*>.*?<\/w:tc>/s', $row, $cells) || !isset($cells[0][1])) {
+            return $xml;
+        }
+
+        $dataCell = (string) $cells[0][1];
+        $newDataCell = F023DynamicFontScaleSupport::shrinkFragmentByLength($dataCell, 'retro_m3');
+        if ($newDataCell === $dataCell) {
+            return $xml;
+        }
+
+        $patchedRow = substr_replace($row, $newDataCell, strpos($row, $dataCell), strlen($dataCell));
+        $patchedTable = substr_replace($table, $patchedRow, strpos($table, $row), strlen($row));
+
+        return substr($xml, 0, $tblStart) . $patchedTable . substr($xml, $tblEnd);
     }
 
     /**
@@ -151,7 +239,9 @@ final class F023M3TemplateMacroInjector
             $zip->close();
             throw new \RuntimeException('No se pudo escribir marcas de juicio en segmento M3 p2.');
         }
-        $zip->close();
+        if (!$zip->close()) {
+            throw new \RuntimeException('No se pudo finalizar las marcas de juicio del segmento M3 p2.');
+        }
     }
 
     /**

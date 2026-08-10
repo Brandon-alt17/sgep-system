@@ -409,7 +409,7 @@ class ReporteMaestroData
 
     /**
      * @param list<int> $aprendizIds
-     * @return array<int, array{M1: bool, M2: bool, M3: bool}>
+     * @return array<int, array{M1?: bool, M2?: bool, M3?: bool, fecha_inicio_etapa?: string, fecha_fin_etapa?: string}>
      */
     private static function loadMomentosFlags(array $aprendizIds): array
     {
@@ -420,7 +420,7 @@ class ReporteMaestroData
 
         $placeholders = implode(',', array_fill(0, count($aprendizIds), '?'));
         $stmt = Database::connection()->prepare(
-            "SELECT aprendiz_id, tipo FROM momentos WHERE aprendiz_id IN ($placeholders)"
+            "SELECT aprendiz_id, tipo, fecha_inicio_etapa, fecha_fin_etapa FROM momentos WHERE aprendiz_id IN ($placeholders)"
         );
         $stmt->execute($aprendizIds);
 
@@ -435,6 +435,10 @@ class ReporteMaestroData
                 continue;
             }
             $out[$aid][$tipo] = true;
+            if ($tipo === 'M1') {
+                $out[$aid]['fecha_inicio_etapa'] = trim((string) ($row['fecha_inicio_etapa'] ?? ''));
+                $out[$aid]['fecha_fin_etapa'] = trim((string) ($row['fecha_fin_etapa'] ?? ''));
+            }
         }
 
         return $out;
@@ -474,7 +478,7 @@ class ReporteMaestroData
     /**
      * @param array<string, mixed> $row
      * @param array<string, string> $rc
-     * @param array{M1?: bool, M2?: bool, M3?: bool} $mom
+     * @param array{M1?: bool, M2?: bool, M3?: bool, fecha_inicio_etapa?: string, fecha_fin_etapa?: string} $mom
      * @param int|string $numPorGrupo
      * @return array<string, mixed>
      */
@@ -545,11 +549,17 @@ class ReporteMaestroData
             'fecha_aval_modalidad' => self::rcDateDmY($rc, 'fecha_aval_modalidad'),
             'estado_arl' => self::formatEstadoArlExport(self::rc($rc, 'estado_arl')),
             'arl' => self::rc($rc, 'arl'),
-            'fecha_afiliacion_arl' => self::rc($rc, 'fecha_afiliacion_arl'),
-            'fecha_inicio_etapa' => self::rc($rc, 'fecha_inicio_etapa')
-                ?: self::formatDate($row['created_at'] ?? null),
-            'fecha_fin_etapa' => self::rc($rc, 'fecha_fin_etapa')
-                ?: self::formatDate($row['updated_at'] ?? null),
+            // Sin fallback a created_at/updated_at: esas son marcas de tiempo del registro del
+            // aprendiz en la base de datos (cuándo se creó/modificó la fila), no una fecha real de
+            // etapa productiva — usarlas como último recurso hacía que la celda mostrara
+            // efectivamente "hoy" (o la fecha del último guardado) para cualquier aprendiz sin
+            // fecha manual ni Momento 1 registrado. Si no hay ninguna fuente real, debe quedar vacía.
+            'fecha_inicio_etapa' => self::rc($rc, 'fecha_inicio_etapa') !== ''
+                ? self::rcDateDmY($rc, 'fecha_inicio_etapa')
+                : self::formatDate($mom['fecha_inicio_etapa'] ?? null),
+            'fecha_fin_etapa' => self::rc($rc, 'fecha_fin_etapa') !== ''
+                ? self::rcDateDmY($rc, 'fecha_fin_etapa')
+                : self::formatDate($mom['fecha_fin_etapa'] ?? null),
             'empresa' => trim((string) ($row['empresa'] ?? '')),
             'direccion_empresa' => trim((string) ($row['direccion_empresa'] ?? '')),
             'ciudad' => self::rc($rc, 'ciudad')
@@ -725,6 +735,7 @@ class ReporteMaestroData
             'llamados_atencion',
             'otros_novedad',
             'comite_evaluacion',
+            'vencimiento_terminos',
         ]);
 
         $cache = [
@@ -957,7 +968,13 @@ class ReporteMaestroData
             $acuerdo009 = false;
         }
 
-        $vencimientoIso = self::computeVencimientoTerminosIso($fechaFin, $acuerdo007, $acuerdo009);
+        // Si hay un vencimiento guardado manualmente (el usuario lo ajustó en el drawer), respetarlo
+        // tal cual — solo se recalcula automáticamente cuando no hay un ajuste manual registrado.
+        $vencimientoManual = self::rc($rc, 'vencimiento_terminos');
+        $vencimientoIso = $vencimientoManual !== '' ? date_post_to_iso($vencimientoManual) : '';
+        if ($vencimientoIso === '') {
+            $vencimientoIso = self::computeVencimientoTerminosIso($fechaFin, $acuerdo007, $acuerdo009);
+        }
 
         return [
             'acuerdo_007' => $acuerdo007,

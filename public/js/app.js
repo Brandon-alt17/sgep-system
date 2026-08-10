@@ -1,24 +1,29 @@
-// Utilidad heredada: limita longitud de campos con data-max y muestra contador.
-function enforceMaxLines(value, maxLines) {
-  if (!maxLines || maxLines < 1) return value;
-  var lines = value.split(/\r?\n/);
-  if (lines.length <= maxLines) return value;
-  return lines.slice(0, maxLines).join("\n");
-}
-
+// Contador de caracteres con data-max: puramente indicativo, no bloquea ni recorta lo escrito
+// (el documento generado reduce el tamaño de letra en vez de truncar el texto, ver
+// F023DynamicFontScale). data-max/data-recommended solo definen los umbrales del aviso visual.
 document.querySelectorAll("[data-max]").forEach(function (element) {
   var max = parseInt(element.getAttribute("data-max") || "0", 10);
   if (!max) return;
-  var maxLines = parseInt(element.getAttribute("data-max-lines") || "0", 10);
+  var recommended = parseInt(element.getAttribute("data-recommended") || "0", 10);
   var counter = element.parentElement
     ? element.parentElement.querySelector("[data-char-counter]")
     : null;
   var update = function () {
     var value = element.value || "";
-    if (maxLines > 0) value = enforceMaxLines(value, maxLines);
-    if (value.length > max) value = value.substring(0, max);
-    if (value !== element.value) element.value = value;
-    if (counter) counter.textContent = value.length + " / " + max;
+    if (counter) {
+      var overMax = value.length > max;
+      var overRecommended = !overMax && recommended > 0 && value.length > recommended;
+      var text = value.length + " / " + max;
+      if (overMax) {
+        text += " · Texto muy extenso: la letra se reducirá bastante en el documento generado";
+      } else if (overRecommended) {
+        text += " · Texto extenso: puede generar una segunda hoja";
+      }
+      counter.textContent = text;
+      counter.classList.toggle("text-amber-600", overRecommended);
+      counter.classList.toggle("text-rose-600", overMax);
+      counter.classList.toggle("font-medium", overRecommended || overMax);
+    }
   };
   element.addEventListener("input", update);
   update();
@@ -418,13 +423,19 @@ var initComboboxes = function (scope) {
       });
     }
 
+    // Fase de captura: se ejecuta antes que cualquier stopPropagation() en un contenedor
+    // intermedio (p. ej. el modal de editar aprendiz detiene la propagación de clicks dentro de
+    // #modal-container para no cerrarse a sí mismo), así el menú siempre se cierra al hacer click
+    // afuera sin importar dónde esté ese click. El menú puede vivir en document.body mientras
+    // está abierto (ver attachMenuToBody), por lo que cerrar/ocultar un modal contenedor no lo
+    // cierra por sí solo — este listener es lo único que lo garantiza en ese caso.
     document.addEventListener("click", function (event) {
       var t = event.target;
       if (!(t instanceof Node)) return;
       if (root.contains(t)) return;
       if (menu.contains(t)) return;
       closeMenu();
-    });
+    }, true);
     syncLabelFromValue();
     applyFilter();
   });

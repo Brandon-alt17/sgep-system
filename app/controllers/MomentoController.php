@@ -71,14 +71,25 @@ class MomentoController
             'maxM1Actividades' => (int) ($limites['m1_actividades'] ?? 1200),
             'maxM1Evidencias' => (int) ($limites['m1_evidencias'] ?? 1200),
             'maxM1ObsAdicionales' => (int) ($limites['m1_observaciones_adicionales'] ?? 1200),
+            'recM1Competencias' => (int) ($limites['m1_competencias_recomendado'] ?? 0),
+            'recM1Resultados' => (int) ($limites['m1_resultados_recomendado'] ?? 0),
+            'recM1Actividades' => (int) ($limites['m1_actividades_recomendado'] ?? 0),
+            'recM1Evidencias' => (int) ($limites['m1_evidencias_recomendado'] ?? 0),
+            'recM1ObsAdicionales' => (int) ($limites['m1_observaciones_adicionales_recomendado'] ?? 0),
             'maxCompromisos' => (int) ($limites['compromisos'] ?? 450),
             'maxObsInstructor' => (int) ($limites['obs_instructor'] ?? 500),
             'maxObsAprendiz' => (int) ($limites['obs_aprendiz'] ?? 500),
             'maxObsCoformador' => (int) ($limites['obs_coformador'] ?? 500),
+            'recObsInstructor' => (int) ($limites['obs_instructor_recomendado'] ?? 0),
+            'recObsAprendiz' => (int) ($limites['obs_aprendiz_recomendado'] ?? 0),
+            'recObsCoformador' => (int) ($limites['obs_coformador_recomendado'] ?? 0),
             'maxMotivoEx' => (int) ($limites['motivo_seguimiento_extraordinario'] ?? 500),
+            'recMotivoEx' => (int) ($limites['motivo_seguimiento_extraordinario_recomendado'] ?? 0),
             'maxRetroM3' => (int) ($limites['retro_m3'] ?? 1200),
+            'recRetroM3' => (int) ($limites['retro_m3_recomendado'] ?? 0),
             'factorObsPorIndice' => $factorObsPorIndice,
             'factorValoracionPorIndice' => $factorValoracionPorIndice,
+            'error' => (string) ($_GET['error'] ?? ''),
         ]);
     }
 
@@ -92,13 +103,13 @@ class MomentoController
         $_POST['tipo'] = $tipo;
         $_POST = $this->normalizeMomentoDateFields($_POST);
         if (in_array($tipo, ['M1', 'M2', 'M3'], true) && Momento::existsTipo($aprendizId, $tipo)) {
-            redirect(APP_BASE_PATH . '/aprendices/show?id=' . $aprendizId);
+            redirect(APP_BASE_PATH . '/aprendices/show?id=' . $aprendizId . '&toast=momento_ya_existe');
         }
         if ($tipo === 'M3' && !Momento::existsTipo($aprendizId, 'M2')) {
-            redirect(APP_BASE_PATH . '/momentos/create?aprendiz_id=' . $aprendizId . '&tipo=M3');
+            redirect(APP_BASE_PATH . '/momentos/create?aprendiz_id=' . $aprendizId . '&tipo=M3&error=momento_requiere_m2');
         }
         if (in_array($tipo, ['M2', 'M3', 'EX'], true) && count((array) ($_POST['factores'] ?? [])) !== 13) {
-            redirect(APP_BASE_PATH . '/momentos/create?aprendiz_id=' . $aprendizId . '&tipo=' . $tipo);
+            redirect(APP_BASE_PATH . '/momentos/create?aprendiz_id=' . $aprendizId . '&tipo=' . $tipo . '&error=factores_incompletos');
         }
         if ($tipo === 'M3') {
             $_POST = F023M3RetroSupport::fillFromObservacionesIfEmpty($_POST);
@@ -152,6 +163,10 @@ class MomentoController
                         'proxima_visita' => $proximaVisita,
                         'id' => $aprendizId,
                     ]);
+            }
+
+            if (in_array($tipo, ['M1', 'M2', 'M3'], true)) {
+                Aprendiz::markMomentoCompletado($aprendizId, $tipo);
             }
 
             if ($tipo === 'M3') {
@@ -228,6 +243,11 @@ class MomentoController
                         'proxima_visita' => $proximaVisita,
                         'id' => $aprendizId,
                     ]);
+            }
+
+            $tipoActualizado = (string) ($momentoRow['tipo'] ?? '');
+            if (in_array($tipoActualizado, ['M1', 'M2', 'M3'], true)) {
+                Aprendiz::markMomentoCompletado($aprendizId, $tipoActualizado);
             }
             $pdo->commit();
             redirect(APP_BASE_PATH . '/aprendices/show?id=' . $aprendizId . '&toast=momento_actualizado');
@@ -320,48 +340,52 @@ class MomentoController
         $limitShortText = (int) ($limites['short_text'] ?? 160);
         $limitUrl = (int) ($limites['url'] ?? 500);
 
-        $fieldLimits = [
+        // Campos cortos (no pasan por F023DynamicFontScale): siguen con tope duro real, es
+        // validación razonable de longitud, no una defensa contra desborde de página.
+        $shortFieldLimits = [
             'numero_poliza_arl' => $limitShortText,
             'horario' => $limitShortText,
             'enlace_grabacion' => $limitUrl,
-            'motivo_seguimiento_extraordinario' => (int) ($limites['motivo_seguimiento_extraordinario'] ?? 500),
             'ciudad_diligenciamiento' => $limitShortText,
-            'obs_instructor' => (int) ($limites['obs_instructor'] ?? 500),
-            'obs_aprendiz' => (int) ($limites['obs_aprendiz'] ?? 500),
-            'obs_coformador' => (int) ($limites['obs_coformador'] ?? 500),
-            'm1_competencias' => (int) ($limites['m1_competencias'] ?? 1200),
-            'm1_resultados' => (int) ($limites['m1_resultados'] ?? 1200),
-            'm1_actividades' => (int) ($limites['m1_actividades'] ?? 1200),
-            'm1_evidencias' => (int) ($limites['m1_evidencias'] ?? 1200),
-            'm1_observaciones_adicionales' => (int) ($limites['m1_observaciones_adicionales'] ?? 1200),
-            'm3_retro_coformador_proceso' => (int) ($limites['retro_m3'] ?? 1200),
-            'm3_retro_coformador_desempeno' => (int) ($limites['retro_m3'] ?? 1200),
-            'm3_retro_instructor_proceso' => (int) ($limites['retro_m3'] ?? 1200),
-            'm3_retro_instructor_desempeno' => (int) ($limites['retro_m3'] ?? 1200),
-            'm3_retro_aprendiz_proceso' => (int) ($limites['retro_m3'] ?? 1200),
-            'm3_retro_aprendiz_desempeno' => (int) ($limites['retro_m3'] ?? 1200),
         ];
-
-        foreach ($fieldLimits as $field => $limit) {
+        foreach ($shortFieldLimits as $field => $limit) {
             $value = trim((string) ($data[$field] ?? ''));
-            if ($value === '') {
-                $data[$field] = '';
-                continue;
-            }
-            if (in_array($field, ['m1_competencias', 'm1_resultados'], true)) {
+            $data[$field] = $value === '' ? '' : mb_substr($value, 0, $limit);
+        }
+
+        // Campos largos: los límites de config/f023_limites.php son solo indicativos (contador
+        // del formulario + punto donde F023DynamicFontScale reduce la letra al generar el
+        // documento) — ya no truncan el texto ingresado por el usuario.
+        $longTextFields = [
+            'motivo_seguimiento_extraordinario',
+            'obs_instructor',
+            'obs_aprendiz',
+            'obs_coformador',
+            'm1_competencias',
+            'm1_resultados',
+            'm1_actividades',
+            'm1_evidencias',
+            'm1_observaciones_adicionales',
+            'm3_retro_coformador_proceso',
+            'm3_retro_coformador_desempeno',
+            'm3_retro_instructor_proceso',
+            'm3_retro_instructor_desempeno',
+            'm3_retro_aprendiz_proceso',
+            'm3_retro_aprendiz_desempeno',
+        ];
+        foreach ($longTextFields as $field) {
+            $value = trim((string) ($data[$field] ?? ''));
+            if ($value !== '' && in_array($field, ['m1_competencias', 'm1_resultados'], true)) {
                 $value = Normalizer::normalizeCommaListSentenceCase($value);
             }
-            $data[$field] = mb_substr($value, 0, $limit);
+            $data[$field] = $value;
         }
 
         foreach ((array) ($data['factores'] ?? []) as $idx => $factor) {
             if (!is_array($factor)) {
                 continue;
             }
-            $obs = trim((string) ($factor['observacion'] ?? ''));
-            $data['factores'][$idx]['observacion'] = $obs === ''
-                ? ''
-                : mb_substr($obs, 0, (int) ($limites['compromisos'] ?? 450));
+            $data['factores'][$idx]['observacion'] = trim((string) ($factor['observacion'] ?? ''));
         }
 
         return $data;

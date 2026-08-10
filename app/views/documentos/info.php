@@ -204,7 +204,7 @@ $f023SectionHeading = static function (string $icon, string $title): void {
             <?php $fieldLabel('jefe_telefono', 'Contacto telefónico'); ?>
             <?php $fieldLabel('jefe_correo', 'Correo electrónico jefe'); ?>
             <?php $fieldLabel('contacto2_nombre', 'Nombre otro contacto'); ?>
-            <?php $fieldLabel('contacto2_correo', 'Correo otro contacto'); ?>
+            <?php $fieldLabel('contacto2_correo', 'Teléfono institucional (fijo/móvil)'); ?>
         </div>
     </section>
 

@@ -98,7 +98,7 @@ class DocumentoController
             $path = (new F023Generator())->generate($aprendizId, $partes, $formato);
         } catch (\Throwable $e) {
             log_error('F023 export: ' . $e->getMessage());
-            $errorKey = 'export_failed';
+            $errorKey = $formato === 'pdf' ? 'export_failed' : 'docx_export_failed';
             if ($formato === 'pdf') {
                 if (!F023DocxToPdf::isAvailable()) {
                     $errorKey = 'pdf_libreoffice';
@@ -112,7 +112,8 @@ class DocumentoController
         }
 
         if (!is_file($path)) {
-            redirect(APP_BASE_PATH . '/documentos/generar?aprendiz_id=' . $aprendizId . '&error=export_failed');
+            $errorKey = $formato === 'pdf' ? 'export_failed' : 'docx_export_failed';
+            redirect(APP_BASE_PATH . '/documentos/generar?aprendiz_id=' . $aprendizId . '&error=' . $errorKey);
 
             return;
         }

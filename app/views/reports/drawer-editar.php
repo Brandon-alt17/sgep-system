@@ -57,8 +57,9 @@
                     </label>
                 </div>
                 <div>
-                    <label class="text-xs text-gray-500 font-medium block mb-1" for="vencimiento_terminos_display">Venc. términos</label>
-                    <input type="text" id="vencimiento_terminos_display" readonly class="w-full h-10 border border-gray-200 rounded-lg px-3 bg-gray-50 text-sm text-gray-700" placeholder="Seleccione un acuerdo y registre fecha fin de plataforma">
+                    <label class="text-xs text-gray-500 font-medium block mb-1" for="vencimiento_terminos">Venc. términos</label>
+                    <input type="date" id="vencimiento_terminos" class="w-full h-10 border border-gray-300 rounded-lg px-3 text-sm">
+                    <p class="mt-1 text-xs text-gray-500 m-0">Se calcula automáticamente al elegir el acuerdo (según la fecha fin de plataforma); puede ajustarla manualmente si es necesario.</p>
                 </div>
                 <div>
                     <label class="text-xs text-gray-500 font-medium block mb-1" for="semaforo_vencimiento_display">Semáforo de vencimiento</label>
@@ -105,6 +106,25 @@
             </div>
         </div>
         
+        <!-- INFORMACIÓN DE LA ETAPA PRODUCTIVA -->
+        <div class="border border-teal-200 rounded-xl overflow-hidden">
+            <button type="button" class="section-toggle w-full flex items-center justify-between bg-teal-100 px-4 py-3 text-sm font-semibold text-teal-900 text-left" data-section="s_etapa_info">
+                Información de la etapa productiva
+                <span class="section-icon" data-section="s_etapa_info">⌄</span>
+            </button>
+            <div id="s_etapa_info" class="section-content p-4 space-y-3" style="display: block;">
+                <p class="text-xs text-gray-500 m-0">Fecha inicio/fin de la etapa productiva: se toman del Momento 1; puede ajustarlas manualmente aquí si es necesario.</p>
+                <div>
+                    <label class="text-xs text-gray-500 font-medium block mb-1" for="fecha_inicio_etapa">Fecha de inicio (etapa productiva)</label>
+                    <input type="date" id="fecha_inicio_etapa" class="w-full h-10 border border-gray-300 rounded-lg px-3 text-sm">
+                </div>
+                <div>
+                    <label class="text-xs text-gray-500 font-medium block mb-1" for="fecha_fin_etapa">Fecha de terminación (etapa productiva)</label>
+                    <input type="date" id="fecha_fin_etapa" class="w-full h-10 border border-gray-300 rounded-lg px-3 text-sm">
+                </div>
+            </div>
+        </div>
+
         <!-- NOVEDADES DE LA ETAPA PRODUCTIVA -->
         <div class="border border-lime-300 rounded-xl overflow-hidden">
             <button type="button" class="section-toggle w-full flex items-center justify-between bg-lime-50 px-4 py-3 text-sm font-semibold text-lime-900 text-left" data-section="s_etapa">

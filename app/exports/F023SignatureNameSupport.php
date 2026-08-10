@@ -79,6 +79,7 @@ final class F023SignatureNameSupport
         $macros = [
             0 => 'nombre_aprendiz',
             2 => 'nombre_instructor_seguimiento',
+            4 => 'nombre_coformador',
         ];
 
         foreach ($macros as $cellIndex => $macro) {

@@ -27,6 +27,31 @@
 .badge { font-size: 0.75rem; padding: 2px 8px; border-radius: 999px; font-weight: 500; }
 .badge-success { background: #d1fae5; color: #065f46; }
 .badge-warning { background: #fef3c7; color: #92400e; }
+.hora-picker { display: flex; gap: 6px; }
+.hora-part-wrap { position: relative; flex: 0 0 auto; }
+.hora-part {
+    appearance: none; -webkit-appearance: none; -moz-appearance: none;
+    background: #fff;
+    border: 1px solid #d1d5db;
+    border-radius: 999px;
+    padding: 0.4rem 1.6rem 0.4rem 0.75rem;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: #374151;
+    cursor: pointer;
+}
+.hora-part-h, .hora-part-m { width: 4rem; }
+.hora-part-ap { width: 4.5rem; }
+.hora-part:disabled { background-color: #f3f4f6; color: #9ca3af; cursor: not-allowed; }
+.hora-part-wrap::after {
+    content: '';
+    position: absolute; right: 0.65rem; top: 50%; transform: translateY(-25%);
+    width: 0; height: 0;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-top: 5px solid #6b7280;
+    pointer-events: none;
+}
 </style>
 <?php
 $visitaProgramadaM1 = trim((string) ($aprendiz['visita_programada_m1'] ?? ''));
@@ -47,6 +72,57 @@ $visitaM3Completada = !empty($aprendiz['visita_m3_completada']);
 $visitasExtraordinarias = is_array($visitasExtraordinarias ?? null) ? $visitasExtraordinarias : [];
 $modalidadVisitaSelected = static function (string $current, string $option): string {
     return strcasecmp($current, $option) === 0 ? ' selected' : '';
+};
+
+$horaInputValue = static function (string $hora): string {
+    return substr(trim($hora), 0, 5);
+};
+
+// Selector de hora tipo "reloj" (hora / minuto / a.m.-p.m.) que permite cualquier combinación,
+// no solo franjas fijas. Los tres <select> se combinan en un input oculto con la hora en 24h.
+$horaPickerHtml = static function (string $name, string $id, string $hora) use ($horaInputValue): string {
+    $value24 = $horaInputValue($hora);
+    $hh = null;
+    $mm = null;
+    $ampm = '';
+    if ($value24 !== '' && preg_match('/^(\d{2}):(\d{2})$/', $value24, $matches)) {
+        $h24 = (int) $matches[1];
+        $mm = (int) $matches[2];
+        $ampm = $h24 >= 12 ? 'PM' : 'AM';
+        $hh = $h24 % 12;
+        if ($hh === 0) {
+            $hh = 12;
+        }
+    }
+
+    $hourOptions = '<option value="">--</option>';
+    for ($h = 1; $h <= 12; $h++) {
+        $isSelected = $hh === $h ? ' selected' : '';
+        $hourOptions .= '<option value="' . sprintf('%02d', $h) . '"' . $isSelected . '>' . sprintf('%02d', $h) . '</option>';
+    }
+
+    $minuteOptions = '<option value="">--</option>';
+    for ($min = 0; $min <= 59; $min++) {
+        $isSelected = $mm === $min ? ' selected' : '';
+        $minuteOptions .= '<option value="' . sprintf('%02d', $min) . '"' . $isSelected . '>' . sprintf('%02d', $min) . '</option>';
+    }
+
+    $ampmOptions = '<option value="">--</option>'
+        . '<option value="AM"' . ($ampm === 'AM' ? ' selected' : '') . '>AM</option>'
+        . '<option value="PM"' . ($ampm === 'PM' ? ' selected' : '') . '>PM</option>';
+
+    $idAttr = $id !== '' ? ' id="' . e($id) . '"' : '';
+    // El valor del input oculto debe reflejar exactamente lo que muestran los 3 <select>: si la
+    // hora guardada no coincide con el formato HH:MM válido, se descarta aquí en vez de dejar un
+    // valor "fantasma" que viajaría al guardar aunque los selects se vean en blanco ("--").
+    $hiddenValue = $hh !== null ? $value24 : '';
+
+    return '<div class="hora-picker" data-hora-picker>'
+        . '<input type="hidden" name="' . e($name) . '"' . $idAttr . ' value="' . e($hiddenValue) . '" data-hora-hidden>'
+        . '<div class="hora-part-wrap"><select class="hora-part hora-part-h" data-part="h">' . $hourOptions . '</select></div>'
+        . '<div class="hora-part-wrap"><select class="hora-part hora-part-m" data-part="m">' . $minuteOptions . '</select></div>'
+        . '<div class="hora-part-wrap"><select class="hora-part hora-part-ap" data-part="ap">' . $ampmOptions . '</select></div>'
+        . '</div>';
 };
 ?>
 
@@ -96,7 +172,7 @@ $modalidadVisitaSelected = static function (string $current, string $option): st
                         </div>
                         <div>
                             <label class="form-label">Hora</label>
-                            <input type="time" name="hora_momento1" id="hora-m1" value="<?= e(substr($horaMomento1, 0, 5)) ?>" class="form-input">
+                            <?= $horaPickerHtml('hora_momento1', 'hora-m1', $horaMomento1) ?>
                         </div>
                         <div>
                             <label class="form-label">Modalidad</label>
@@ -127,7 +203,7 @@ $modalidadVisitaSelected = static function (string $current, string $option): st
                         </div>
                         <div>
                             <label class="form-label">Hora</label>
-                            <input type="time" name="hora_momento2" id="hora-m2" value="<?= e(substr($horaMomento2, 0, 5)) ?>" class="form-input">
+                            <?= $horaPickerHtml('hora_momento2', 'hora-m2', $horaMomento2) ?>
                         </div>
                         <div>
                             <label class="form-label">Modalidad</label>
@@ -158,7 +234,7 @@ $modalidadVisitaSelected = static function (string $current, string $option): st
                         </div>
                         <div>
                             <label class="form-label">Hora</label>
-                            <input type="time" name="hora_momento3" id="hora-m3" value="<?= e(substr($horaMomento3, 0, 5)) ?>" class="form-input">
+                            <?= $horaPickerHtml('hora_momento3', 'hora-m3', $horaMomento3) ?>
                         </div>
                         <div>
                             <label class="form-label">Modalidad</label>
@@ -211,8 +287,7 @@ $modalidadVisitaSelected = static function (string $current, string $option): st
                                     </div>
                                     <div>
                                         <label class="form-label">Hora</label>
-                                        <input type="time" name="extraordinarias[<?= (int) $index ?>][hora]"
-                                               value="<?= e(substr($exHora, 0, 5)) ?>" class="form-input">
+                                        <?= $horaPickerHtml('extraordinarias[' . (int) $index . '][hora]', '', $exHora) ?>
                                     </div>
                                     <div>
                                         <label class="form-label">Modalidad</label>
@@ -243,7 +318,55 @@ $modalidadVisitaSelected = static function (string $current, string $option): st
 </div>   
 
 <script>
+function sgBuildHoraOptions() {
+    let h = '<option value="">--</option>';
+    for (let i = 1; i <= 12; i++) {
+        const v = String(i).padStart(2, '0');
+        h += `<option value="${v}">${v}</option>`;
+    }
+    let m = '<option value="">--</option>';
+    for (let i = 0; i <= 59; i++) {
+        const v = String(i).padStart(2, '0');
+        m += `<option value="${v}">${v}</option>`;
+    }
+    return { h, m };
+}
+const SG_HORA_OPTS = sgBuildHoraOptions();
+
+function sgBuildHoraPickerHtml(name) {
+    return `<div class="hora-picker" data-hora-picker>
+        <input type="hidden" name="${name}" value="" data-hora-hidden>
+        <div class="hora-part-wrap"><select class="hora-part hora-part-h" data-part="h">${SG_HORA_OPTS.h}</select></div>
+        <div class="hora-part-wrap"><select class="hora-part hora-part-m" data-part="m">${SG_HORA_OPTS.m}</select></div>
+        <div class="hora-part-wrap"><select class="hora-part hora-part-ap" data-part="ap"><option value="">--</option><option value="AM">AM</option><option value="PM">PM</option></select></div>
+    </div>`;
+}
+
+function sgBindHoraPickers(root) {
+    root.querySelectorAll('[data-hora-picker]').forEach((picker) => {
+        const hidden = picker.querySelector('[data-hora-hidden]');
+        const hSel = picker.querySelector('[data-part="h"]');
+        const mSel = picker.querySelector('[data-part="m"]');
+        const apSel = picker.querySelector('[data-part="ap"]');
+        if (!hidden || !hSel || !mSel || !apSel || picker.dataset.horaBound) return;
+        picker.dataset.horaBound = '1';
+        const sync = () => {
+            const h = hSel.value, m = mSel.value, ap = apSel.value;
+            if (h === '' || m === '' || ap === '') {
+                hidden.value = '';
+                return;
+            }
+            let h24 = parseInt(h, 10) % 12;
+            if (ap === 'PM') h24 += 12;
+            hidden.value = String(h24).padStart(2, '0') + ':' + m;
+        };
+        [hSel, mSel, apSel].forEach((sel) => sel.addEventListener('change', sync));
+    });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
+    sgBindHoraPickers(document);
+
     const chk1 = document.getElementById('chk-m1');
     const chk2 = document.getElementById('chk-m2');
     const card2 = document.getElementById('card-m2');
@@ -256,8 +379,10 @@ document.addEventListener('DOMContentLoaded', () => {
         inputsM2.forEach(el => el.disabled = !enabled);
         chk2.disabled = !enabled;
         if (!enabled) {
+            // No se vacían fecha/hora/modalidad: quedan bloqueadas para edición pero conservan
+            // su valor guardado, que se reenvía igual al guardar (ver handler de submit) para
+            // no borrar M2/M3 por el simple hecho de destildar "Momento 1 completado".
             chk2.checked = false;
-            inputsM2.forEach(el => el.value = '');
             toggleM3(false);
         }
     }
@@ -347,7 +472,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
                 <div>
                     <label class="form-label">Hora</label>
-                    <input type="time" name="extraordinarias[${index}][hora]" value="" class="form-input">
+                    ${sgBuildHoraPickerHtml('extraordinarias[' + index + '][hora]')}
                 </div>
                 <div>
                     <label class="form-label">Modalidad</label>
@@ -366,6 +491,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const row = createExtraordinariaRow(index);
             extraordinariasList.appendChild(row);
             bindDateInputsIn(row);
+            sgBindHoraPickers(row);
         });
 
         extraordinariasList.addEventListener('click', (e) => {
@@ -412,8 +538,16 @@ document.addEventListener('DOMContentLoaded', () => {
             btn.disabled = true;
             btn.textContent = 'Guardando...';
 
+            // Los campos deshabilitados (M2/M3 bloqueados porque el momento anterior no está
+            // completado) quedan fuera de FormData por defecto; se habilitan solo durante la
+            // construcción del payload para que su valor ya guardado viaje y no se borre.
+            const disabledEls = Array.from(form.querySelectorAll(':disabled'));
+            disabledEls.forEach((el) => { el.disabled = false; });
+
             const formData = new FormData(form);
-            
+
+            disabledEls.forEach((el) => { el.disabled = true; });
+
             try {
                 const res = await fetch(form.action, { method: 'POST', body: formData });
                 const data = await res.json();

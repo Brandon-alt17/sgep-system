@@ -585,6 +585,78 @@ class Aprendiz
         ]);
     }
 
+    /**
+     * Marca un momento (M1/M2/M3) como completado y recalcula "próxima visita" a partir de las
+     * fechas ya programadas. Se invoca al guardar el formulario del momento (MomentoController),
+     * que es la acción real de "completar" la visita — antes solo el modal "Programar visitas"
+     * tocaba estas columnas, dejando el dashboard con la fecha vencida hasta que alguien volviera
+     * a abrir ese modal aparte.
+     */
+    public static function markMomentoCompletado(int $id, string $tipo): void
+    {
+        if ($id <= 0 || !in_array($tipo, ['M1', 'M2', 'M3'], true)) {
+            return;
+        }
+
+        $pdo = Database::connection();
+        $stmt = $pdo->prepare(
+            'SELECT visita_programada_m1, visita_programada_m2, visita_programada_m3,
+                    hora_momento1, hora_momento2, hora_momento3,
+                    visita_m1_completada, visita_m2_completada, visita_m3_completada
+             FROM aprendices WHERE id = :id'
+        );
+        $stmt->execute(['id' => $id]);
+        $row = $stmt->fetch();
+        if ($row === false) {
+            return;
+        }
+
+        $m1Completada = $tipo === 'M1' ? true : !empty($row['visita_m1_completada']);
+        $m2Completada = $tipo === 'M2' ? true : !empty($row['visita_m2_completada']);
+        $m3Completada = $tipo === 'M3' ? true : !empty($row['visita_m3_completada']);
+
+        $visitasExtraordinariasDb = VisitaExtraordinariaProgramada::listByAprendiz($id);
+        $proximaVisita = self::resolveProximaVisitaFromProgramadas(
+            $row['visita_programada_m1'],
+            $row['visita_programada_m2'],
+            $row['visita_programada_m3'],
+            $m1Completada,
+            $m2Completada,
+            $m3Completada,
+            $visitasExtraordinariasDb,
+        );
+        $proximaVisitaHora = self::resolveProximaVisitaHoraFromProgramadas(
+            $row['visita_programada_m1'],
+            $row['visita_programada_m2'],
+            $row['visita_programada_m3'],
+            $m1Completada,
+            $m2Completada,
+            $m3Completada,
+            $visitasExtraordinariasDb,
+            $row['hora_momento1'],
+            $row['hora_momento2'],
+            $row['hora_momento3'],
+        );
+
+        $completadaColumn = [
+            'M1' => 'visita_m1_completada',
+            'M2' => 'visita_m2_completada',
+            'M3' => 'visita_m3_completada',
+        ][$tipo];
+
+        $pdo->prepare(
+            "UPDATE aprendices SET {$completadaColumn} = 1,
+                proxima_visita = :proxima_visita,
+                proxima_visita_hora = :proxima_visita_hora,
+                updated_at = NOW()
+             WHERE id = :id"
+        )->execute([
+            'proxima_visita' => $proximaVisita,
+            'proxima_visita_hora' => $proximaVisitaHora,
+            'id' => $id,
+        ]);
+    }
+
     private static function nullableDateString(?string $value): ?string
     {
         $value = trim((string) $value);

@@ -1,4 +1,8 @@
-<script src="<?= e(APP_BASE_PATH) ?>/js/drawer-editar.js"></script>
+<?php
+$drawerEditarJsPath = base_path('public/js/drawer-editar.js');
+$drawerEditarJsVersion = is_file($drawerEditarJsPath) ? (string) filemtime($drawerEditarJsPath) : '1';
+?>
+<script src="<?= e(APP_BASE_PATH) ?>/js/drawer-editar.js?v=<?= e($drawerEditarJsVersion) ?>"></script>
 <?php require __DIR__ . '/drawer-editar.php'; ?>
 
 
@@ -177,8 +181,8 @@
                     <tr>
                         <th colspan="11" style="padding: 10px 8px; text-align: center; font-weight: 600; border: 1px solid #e5e7eb; background: #f3f4f6;">Aprendices y grupos</th>
                         <th colspan="4" style="padding: 10px 8px; text-align: center; font-weight: 600; border: 1px solid #e5e7eb; background: #f3e8ff; cursor: pointer;" data-drawer-section="s0">Reglamento</th>
-                        <th colspan="8" style="padding: 10px 8px; text-align: center; font-weight: 600; border: 1px solid #e5e7eb; background: #dbeafe; cursor: pointer;" data-drawer-section="s_aprendiz">Información del aprendiz</th>
-                        <th colspan="8" style="padding: 10px 8px; text-align: center; font-weight: 600; border: 1px solid #e5e7eb; background: #ccfbf1; cursor: pointer;" data-drawer-section="s_etapa">Información de la etapa productiva</th>
+                        <th colspan="6" style="padding: 10px 8px; text-align: center; font-weight: 600; border: 1px solid #e5e7eb; background: #dbeafe; cursor: pointer;" data-drawer-section="s_aprendiz">Información del aprendiz</th>
+                        <th colspan="10" style="padding: 10px 8px; text-align: center; font-weight: 600; border: 1px solid #e5e7eb; background: #ccfbf1; cursor: pointer;" data-drawer-section="s_etapa_info">Información de la etapa productiva</th>
                         <th colspan="6" style="padding: 10px 8px; text-align: center; font-weight: 600; border: 1px solid #e5e7eb; background: #bbf7d0; cursor: pointer;" data-drawer-section="s_etapa">Novedades de la etapa productiva</th>
                         <th colspan="9" style="padding: 10px 8px; text-align: center; font-weight: 600; border: 1px solid #e5e7eb; background: #ffedd5; cursor: pointer;" data-drawer-section="s1">Proceso documental del seguimiento</th>
                         <th colspan="11" style="padding: 10px 8px; text-align: center; font-weight: 600; border: 1px solid #e5e7eb; background: #d1fae5; cursor: pointer;" data-drawer-section="s2">Documentos para certificación</th>
@@ -208,8 +212,8 @@
                         <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">F. aval</th>
                         <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">Estado ARL</th>
                         <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">ARL</th>
-                        <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">F. inicio</th>
-                        <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">F. fin</th>
+                        <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap; cursor: pointer;" data-drawer-section="s_etapa_info">F. inicio</th>
+                        <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap; cursor: pointer;" data-drawer-section="s_etapa_info">F. fin</th>
                         <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">Empresa</th>
                         <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">Dir. empresa</th>
                         <th style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;">Ciudad</th>
@@ -284,8 +288,8 @@
                             <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;" class="fecha-aval-modalidad"><?= e((string) ($a['fecha_aval_modalidad'] ?? '')) ?></td>
                             <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;"><?= e((string) ($a['estado_arl'] ?? '')) ?></td>
                             <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;"><?= e((string) ($a['arl'] ?? '')) ?></td>
-                            <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;"><?= e((string) ($a['fecha_inicio_etapa'] ?? '')) ?></td>
-                            <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;"><?= e((string) ($a['fecha_fin_etapa'] ?? '')) ?></td>
+                            <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;" class="fecha-inicio-etapa" data-drawer-section="s_etapa_info"><?= e((string) ($a['fecha_inicio_etapa'] ?? '')) ?></td>
+                            <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;" class="fecha-fin-etapa" data-drawer-section="s_etapa_info"><?= e((string) ($a['fecha_fin_etapa'] ?? '')) ?></td>
                             <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap; max-width: 150px; overflow: hidden; text-overflow: ellipsis;"><?= e((string) ($a['empresa'] ?? '')) ?></td>
                             <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap; max-width: 150px; overflow: hidden; text-overflow: ellipsis;"><?= e((string) ($a['direccion_empresa'] ?? '')) ?></td>
                             <td style="padding: 8px; border: 1px solid #e5e7eb; white-space: nowrap;"><?= e((string) ($a['ciudad'] ?? '')) ?></td>

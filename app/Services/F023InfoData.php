@@ -66,9 +66,10 @@ final class F023InfoData
             'jefe_telefono' => trim((string) ($aprendiz['telefono_jefe'] ?? '')),
             'jefe_correo' => trim((string) ($aprendiz['correo_jefe'] ?? '')),
             'contacto2_nombre' => trim((string) ($aprendiz['nombre_contacto2_jefe'] ?? ($empresa['nombre_contacto2'] ?? ''))),
+            // empresa_jefes.correo_contacto2 almacena un teléfono institucional pese a su nombre de columna;
+            // se expone también como contacto2_telefono para el macro del F-023 ("Teléfono institucional").
             'contacto2_correo' => trim((string) ($aprendiz['correo_contacto2_jefe'] ?? ($empresa['correo_contacto2'] ?? ''))),
-            // Teléfono institucional del otro contacto: fila en el F-023; sin columna en BD por ahora.
-            'contacto2_telefono' => '',
+            'contacto2_telefono' => trim((string) ($aprendiz['correo_contacto2_jefe'] ?? ($empresa['correo_contacto2'] ?? ''))),
         ];
         foreach (['estrategia_formativa', 'direccion_domicilio', 'empresa_direccion'] as $mk) {
             $out[$mk] = normalize_multiline_text((string) ($out[$mk] ?? ''));

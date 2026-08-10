@@ -11,8 +11,9 @@
         's_programa', 's_programa', 's_programa',
         null,
         's0', 's0', 's0', 's0',
-        's_aprendiz', 's_aprendiz', 's_aprendiz', 's_aprendiz', 's_aprendiz', 's_aprendiz', 's_aprendiz', 's_aprendiz',
-        's_etapa', 's_etapa', 's_etapa', 's_etapa', 's_etapa', 's_etapa', 's_etapa', 's_etapa',
+        's_aprendiz', 's_aprendiz', 's_aprendiz', 's_aprendiz', 's_aprendiz', 's_aprendiz',
+        's_etapa_info', 's_etapa_info', 's_etapa_info', 's_etapa_info', 's_etapa_info',
+        's_etapa_info', 's_etapa_info', 's_etapa_info', 's_etapa_info', 's_etapa_info',
         's_etapa', 's_etapa', 's_etapa', 's_etapa', 's_etapa', 's_etapa',
         's1', 's1', 's1', 's1', 's1', 's1', 's1', 's1', 's1',
         's2', 's2', 's2', 's2', 's2', 's2', 's2', 's2',
@@ -38,6 +39,13 @@
         const month = String(date.getMonth() + 1).padStart(2, '0');
         const year = date.getFullYear();
         return day + '/' + month + '/' + year;
+    }
+
+    function formatIso(date) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return year + '-' + month + '-' + day;
     }
 
     function isoToDmY(iso) {
@@ -73,12 +81,21 @@
         return v;
     }
 
-    function syncFinPlataformaFromInput() {
+    /**
+     * @param {boolean} [recomputeVencimiento] Por defecto true (recalcula y sobreescribe el campo
+     *   de vencimiento con la sugerencia automática — lo correcto cuando el usuario acaba de
+     *   cambiar la fecha fin de plataforma). Pasar false al abrir el drawer, donde el vencimiento
+     *   ya se cargó desde el valor efectivo guardado (manual o automático) y no debe pisarse.
+     */
+    function syncFinPlataformaFromInput(recomputeVencimiento) {
         const finInput = document.getElementById('fecha_fin_plataforma');
         if (finInput && finInput.value) {
             currentFechaFinPlataforma = isoToDmY(finInput.value);
         } else if (finInput && !finInput.value) {
             currentFechaFinPlataforma = '';
+        }
+        if (recomputeVencimiento === false) {
+            return;
         }
         updateReglamentoPreview();
     }
@@ -95,37 +112,55 @@
         return selected ? selected.value : '';
     }
 
-    function computeReglamentoPreview(fechaFin, acuerdo) {
-        if (!fechaFin || (acuerdo !== '007' && acuerdo !== '009')) {
-            return { vencimiento: '', semaforo: 'SIN FECHA' };
-        }
-        const base = parseDmY(fechaFin);
-        if (!base) {
-            return { vencimiento: '', semaforo: 'SIN FECHA' };
-        }
-        const months = acuerdo === '007' ? 18 : 12;
-        const vencimientoDate = addMonths(base, months);
-        const vencimiento = formatDmY(vencimientoDate);
+    /** Semáforo a partir de una fecha de vencimiento ya resuelta (automática o editada a mano). */
+    function semaforoFromDate(vencimientoDate) {
         const hoy = new Date();
         hoy.setHours(0, 0, 0, 0);
         const vencCompare = new Date(vencimientoDate.getTime());
         vencCompare.setHours(0, 0, 0, 0);
         if (vencCompare < hoy) {
-            return { vencimiento: vencimiento, semaforo: '🔴 VENCIDO' };
+            return '🔴 VENCIDO';
         }
         const diffMs = vencCompare.getTime() - hoy.getTime();
         const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
         if (diffDays < 90) {
-            return { vencimiento: vencimiento, semaforo: '🟠 PRÓXIMO' };
+            return '🟠 PRÓXIMO';
         }
-        return { vencimiento: vencimiento, semaforo: '🟢 VIGENTE' };
+        return '🟢 VIGENTE';
     }
 
+    function semaforoFromVencimientoIso(iso) {
+        const match = String(iso || '').trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        if (!match) return 'SIN FECHA';
+        const date = new Date(parseInt(match[1], 10), parseInt(match[2], 10) - 1, parseInt(match[3], 10));
+        if (isNaN(date.getTime())) return 'SIN FECHA';
+        return semaforoFromDate(date);
+    }
+
+    /** Sugerencia automática (fecha fin de plataforma + meses del acuerdo) — el usuario puede sobreescribirla. */
+    function computeReglamentoPreview(fechaFin, acuerdo) {
+        if (!fechaFin || (acuerdo !== '007' && acuerdo !== '009')) {
+            return { vencimientoIso: '', vencimiento: '', semaforo: 'SIN FECHA' };
+        }
+        const base = parseDmY(fechaFin);
+        if (!base) {
+            return { vencimientoIso: '', vencimiento: '', semaforo: 'SIN FECHA' };
+        }
+        const months = acuerdo === '007' ? 18 : 12;
+        const vencimientoDate = addMonths(base, months);
+        return {
+            vencimientoIso: formatIso(vencimientoDate),
+            vencimiento: formatDmY(vencimientoDate),
+            semaforo: semaforoFromDate(vencimientoDate),
+        };
+    }
+
+    /** Sugiere automáticamente el vencimiento (y su semáforo) al cambiar acuerdo/fecha fin de plataforma. */
     function updateReglamentoPreview() {
         const preview = computeReglamentoPreview(currentFechaFinPlataforma, selectedReglamentoAcuerdo());
-        const vencimientoInput = document.getElementById('vencimiento_terminos_display');
+        const vencimientoInput = document.getElementById('vencimiento_terminos');
         const semaforoInput = document.getElementById('semaforo_vencimiento_display');
-        if (vencimientoInput) vencimientoInput.value = preview.vencimiento;
+        if (vencimientoInput) vencimientoInput.value = preview.vencimientoIso;
         if (semaforoInput) semaforoInput.value = preview.semaforo;
         return preview;
     }
@@ -143,7 +178,28 @@
         currentFechaFinPlataforma = row.dataset.fechaFinPlataforma || '';
         const ac007 = row.dataset.acuerdo007 === '1';
         const ac009 = row.dataset.acuerdo009 === '1';
+        // Sugerencia automática como base (por si la fila aún no tiene nada calculado).
         setReglamentoRadios(ac007, ac009);
+
+        // El servidor ya resolvió el vencimiento efectivo (automático o ajustado a mano) para esta
+        // fila — se usa tal cual en vez de la sugerencia recién calculada en el navegador, para no
+        // perder de vista un ajuste manual ya guardado.
+        const vencimientoCell = row.querySelector('.vencimiento-terminos');
+        const vencimientoInput = document.getElementById('vencimiento_terminos');
+        if (vencimientoCell && vencimientoInput) {
+            const iso = dmYToIso((vencimientoCell.textContent || '').trim());
+            if (iso) {
+                vencimientoInput.value = iso;
+            }
+        }
+        const semaforoCell = row.querySelector('.semaforo-vencimiento');
+        const semaforoInput = document.getElementById('semaforo_vencimiento_display');
+        if (semaforoCell && semaforoInput) {
+            const text = (semaforoCell.textContent || '').trim();
+            if (text) {
+                semaforoInput.value = text;
+            }
+        }
     }
 
     function setupReglamentoListeners() {
@@ -247,7 +303,7 @@
         const vencimientoCell = row.querySelector('.vencimiento-terminos');
         const semaforoCell = row.querySelector('.semaforo-vencimiento');
         if (vencimientoCell && (data.acuerdo_007 !== undefined || data.acuerdo_009 !== undefined || data.vencimiento_terminos !== undefined)) {
-            vencimientoCell.textContent = data.vencimiento_terminos || reglamento.vencimiento || '';
+            vencimientoCell.textContent = data.vencimiento_terminos ? fechaToDmY(data.vencimiento_terminos) : (reglamento.vencimiento || '');
         }
         if (semaforoCell && (data.acuerdo_007 !== undefined || data.acuerdo_009 !== undefined || data.semaforo_vencimiento !== undefined)) {
             semaforoCell.textContent = data.semaforo_vencimiento || reglamento.semaforo || 'SIN FECHA';
@@ -312,6 +368,19 @@
                 if (key === 'fecha_fin_plataforma') {
                     row.dataset.fechaFinPlataforma = display;
                 }
+            }
+        }
+
+        // Fechas de inicio/fin de la etapa productiva
+        const etapaDates = {
+            fecha_inicio_etapa: '.fecha-inicio-etapa',
+            fecha_fin_etapa: '.fecha-fin-etapa',
+        };
+        for (const [key, selector] of Object.entries(etapaDates)) {
+            if (data[key] !== undefined) {
+                const cell = row.querySelector(selector);
+                if (!cell) continue;
+                cell.textContent = data[key] ? fechaToDmY(data[key]) : '';
             }
         }
 
@@ -560,9 +629,12 @@
             hydrateNovedadesFromRow(row);
             hydrateAprendizFromRow(row);
             hydrateProgramaFromRow(row);
+            hydrateEtapaFechasFromRow(row);
         }
-        syncFinPlataformaFromInput();
-        
+        // false: solo sincroniza currentFechaFinPlataforma para futuros cálculos en vivo — no debe
+        // pisar el vencimiento ya cargado arriba desde el valor efectivo (manual o automático).
+        syncFinPlataformaFromInput(false);
+
         popup.style.transform = 'translateX(0%)';
         overlay.style.display = 'block';
         requestAnimationFrame(() => {
@@ -654,11 +726,13 @@
             }
         });
         
-        const ids = ['fecha_entrega', 'observaciones', 'observaciones_novedad', 'estado_etapa', 'llamados_atencion', 'otros_novedad', 'comite_evaluacion', 'reingreso_vencimiento', 'fecha_aval_modalidad', 'fecha_inicio_plataforma', 'inicio_etapa_productiva', 'fecha_fin_plataforma'];
+        const ids = ['fecha_entrega', 'observaciones', 'observaciones_novedad', 'estado_etapa', 'llamados_atencion', 'otros_novedad', 'comite_evaluacion', 'reingreso_vencimiento', 'fecha_aval_modalidad', 'fecha_inicio_plataforma', 'inicio_etapa_productiva', 'fecha_fin_plataforma', 'fecha_inicio_etapa', 'fecha_fin_etapa', 'vencimiento_terminos'];
         ids.forEach(id => {
             const el = document.getElementById(id);
             if (el) el.value = '';
         });
+        const semaforoInput = document.getElementById('semaforo_vencimiento_display');
+        if (semaforoInput) semaforoInput.value = '';
         
         const selects = ['estado_aprendiz'];
         selects.forEach(id => {
@@ -709,6 +783,20 @@
                     estadoSelect.value = match.value;
                 }
             }
+        }
+    }
+
+    function hydrateEtapaFechasFromRow(row) {
+        if (!row) return;
+        const map = {
+            fecha_inicio_etapa: '.fecha-inicio-etapa',
+            fecha_fin_etapa: '.fecha-fin-etapa',
+        };
+        for (const [fieldId, selector] of Object.entries(map)) {
+            const cell = row.querySelector(selector);
+            const el = document.getElementById(fieldId);
+            if (!cell || !el) continue;
+            el.value = dmYToIso((cell.textContent || '').trim());
         }
     }
 
@@ -818,6 +906,7 @@
             'fecha_entrega', 'estado_aprendiz', 'observaciones', 'observaciones_novedad',
             'estado_etapa', 'llamados_atencion', 'otros_novedad', 'comite_evaluacion', 'reingreso_vencimiento',
             'fecha_aval_modalidad', 'fecha_inicio_plataforma', 'inicio_etapa_productiva', 'fecha_fin_plataforma',
+            'fecha_inicio_etapa', 'fecha_fin_etapa', 'vencimiento_terminos',
         ];
         ids.forEach(id => {
             const el = document.getElementById(id);
@@ -830,12 +919,12 @@
         formData.reglamento_acuerdo = acuerdoSeleccionado;
         formData.acuerdo_007 = acuerdoSeleccionado === '007';
         formData.acuerdo_009 = acuerdoSeleccionado === '009';
-        syncFinPlataformaFromInput();
-        const reglamentoPreview = updateReglamentoPreview();
-        formData.vencimiento_terminos = reglamentoPreview.vencimiento;
-        formData.semaforo_vencimiento = reglamentoPreview.semaforo;
-        delete formData.vencimiento_terminos_display;
-        delete formData.semaforo_vencimiento_display;
+        // El vencimiento ya quedó en formData.vencimiento_terminos (arriba, vía el ids.forEach) con
+        // lo que esté en el campo AHORA MISMO — la sugerencia automática si el usuario no la tocó,
+        // o su valor editado a mano si sí. El semáforo se deriva de ese valor final, sea cual sea.
+        formData.semaforo_vencimiento = semaforoFromVencimientoIso(formData.vencimiento_terminos);
+        const semaforoInput = document.getElementById('semaforo_vencimiento_display');
+        if (semaforoInput) semaforoInput.value = formData.semaforo_vencimiento;
         
         localStorage.setItem(`formulario_${currentAprendizId}`, JSON.stringify(formData));
 

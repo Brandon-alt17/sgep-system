@@ -14,6 +14,14 @@ final class F023M1TemplateMacroInjector
     private const DOCUMENT_XML = 'word/document.xml';
 
     /**
+     * Techo de líneas físicas clonadas para "Observaciones adicionales". El límite de
+     * config/f023_limites.php['m1_observaciones_adicionales'] es solo indicativo (no trunca el
+     * texto ingresado) — este valor es lo único que realmente acota cuánto texto entra en el
+     * documento, así que se fija generoso para no perder contenido en la práctica.
+     */
+    private const OBS_ADICIONALES_MAX_LINES = 16;
+
+    /**
      * @return list<array{anchor: string, occ: int, macro: string}>
      */
     private static function injectionSpecs(): array
@@ -89,12 +97,13 @@ final class F023M1TemplateMacroInjector
             );
         }
 
-        $xml = self::injectM1ObservacionesAdicionalesSecondLine($xml);
+        $xml = self::injectM1ObservacionesAdicionalesExtraLines($xml, self::OBS_ADICIONALES_MAX_LINES);
 
-        $xml = F023SignatureNameSupport::injectIntoDocumentXml($xml);
+        $xml = F023SignatureNameSupport::injectIntoDocumentXml($xml, 'left');
         $xml = self::normalizeFooterParagraph($xml);
         $xml = self::insertSpacerParagraphsBeforeFooter($xml, 1);
         $xml = self::stripExtraEmptyParasFromConcertacionCells($xml);
+        $xml = self::tightenConcertacionContentSpacing($xml);
         $xml = self::shrinkConcertacionEmptyRowHeights($xml);
         $xml = self::shrinkBottomSectionRowHeights($xml);
         $xml = self::removeTrailingEmptyParagraphsAfterFooter($xml);
@@ -107,7 +116,10 @@ final class F023M1TemplateMacroInjector
             @unlink($tmpDocx);
             throw new \RuntimeException('No se pudo escribir document.xml en la plantilla temporal M1.');
         }
-        $zip->close();
+        if (!$zip->close()) {
+            @unlink($tmpDocx);
+            throw new \RuntimeException('No se pudo finalizar la plantilla temporal M1.');
+        }
 
         return $tmpDocx;
     }
@@ -128,6 +140,9 @@ final class F023M1TemplateMacroInjector
             throw new \RuntimeException('document.xml ilegible en segmento M1 guardado.');
         }
 
+        $xml = self::shrinkConcertacionFreeTextByLength($xml);
+        $xml = self::shrinkObservacionesAdicionalesByLength($xml);
+        $xml = self::pruneUnusedObservacionesAdicionalesLines($xml);
         $xml = self::compactLayoutForSinglePage($xml);
         $xml = self::removeTrailingEmptyParagraphsAfterFooter($xml);
 
@@ -138,7 +153,11 @@ final class F023M1TemplateMacroInjector
             $zip->close();
             throw new \RuntimeException('No se pudo escribir layout en segmento M1.');
         }
-        $zip->close();
+        if (!$zip->close()) {
+            throw new \RuntimeException('No se pudo finalizar el layout del segmento M1.');
+        }
+
+        F023HyperlinkSupport::applyToDocx($docxPath, 'grabación del momento 1: ');
     }
 
     /**
@@ -528,6 +547,185 @@ final class F023M1TemplateMacroInjector
             . substr($xml, $contentCellEnd + strlen('</w:tc>'));
     }
 
+    /**
+     * Reduce progresivamente el tamaño de letra de los 4 campos de flujo libre (competencias,
+     * resultados, actividades, evidencias) cuando el texto ya sustituido supera su umbral
+     * "recomendado" de config/f023_limites.php — garantía real de 1 sola hoja, más allá del
+     * aviso no bloqueante del contador del formulario.
+     */
+    private static function shrinkConcertacionFreeTextByLength(string $xml): string
+    {
+        $targets = [
+            ['anchor' => 'Competencias a ', 'key' => 'm1_competencias'],
+            ['anchor' => 'Resultados de aprendizaje', 'key' => 'm1_resultados'],
+            ['anchor' => 'Actividades a desarrollar ', 'key' => 'm1_actividades'],
+            ['anchor' => 'Evidencias de aprendizaje', 'key' => 'm1_evidencias'],
+        ];
+
+        foreach ($targets as $target) {
+            $xml = F023DynamicFontScaleSupport::shrinkContentCellFontByLength(
+                $xml,
+                (string) $target['anchor'],
+                (string) $target['key']
+            );
+        }
+
+        return $xml;
+    }
+
+    /**
+     * "Observaciones adicionales" clona hasta OBS_ADICIONALES_MAX_LINES párrafos (ver
+     * injectM1ObservacionesAdicionalesExtraLines) para poder mostrar texto largo; cuando el texto
+     * es corto, la mayoría de esos párrafos quedan sustituidos con texto vacío pero SIGUEN
+     * ocupando su propia línea en la celda (a diferencia de M2/EX, este campo no tiene subrayado
+     * que preservar, así que no hace falta dejar ninguna línea "en blanco" de más). Este método
+     * elimina esos párrafos realmente vacíos tras la sustitución, dejando solo las líneas que
+     * el aprendiz efectivamente escribió — evita el hueco de página en blanco que dejaba cada
+     * línea sobrante sin usar.
+     */
+    private static function pruneUnusedObservacionesAdicionalesLines(string $xml): string
+    {
+        $anchor = 'Observaciones adicionales';
+        $anchorPos = strpos($xml, $anchor);
+        if ($anchorPos === false) {
+            return $xml;
+        }
+
+        $labelCellEnd = strpos($xml, '</w:tc>', $anchorPos);
+        if ($labelCellEnd === false) {
+            return $xml;
+        }
+        $contentCellOffset = $labelCellEnd + strlen('</w:tc>');
+        $contentCellEnd = strpos($xml, '</w:tc>', $contentCellOffset);
+        if ($contentCellEnd === false) {
+            return $xml;
+        }
+
+        $contentCell = substr($xml, $contentCellOffset, $contentCellEnd - $contentCellOffset);
+        $newContentCell = self::removeEmptyTrailingLines($contentCell);
+        if ($newContentCell === $contentCell) {
+            return $xml;
+        }
+
+        return substr($xml, 0, $contentCellOffset) . $newContentCell . substr($xml, $contentCellEnd);
+    }
+
+    /**
+     * Conserva siempre el primer párrafo de la celda (línea base, aunque esté vacío); desde el
+     * segundo en adelante, elimina los que no tengan ningún texto visible (ni siquiera el
+     * marcador NBSP de línea "en blanco pero usada" que sí necesitan M2/EX).
+     */
+    private static function removeEmptyTrailingLines(string $cellXml): string
+    {
+        if (!preg_match_all('/<w:p\b[^>]*>.*?<\/w:p>/s', $cellXml, $matches, PREG_OFFSET_CAPTURE)) {
+            return $cellXml;
+        }
+
+        /** @var list<array{start: int, length: int}> $removals */
+        $removals = [];
+        foreach ($matches[0] as $index => $match) {
+            if ($index === 0) {
+                continue;
+            }
+            $paragraph = (string) $match[0];
+            if (!self::isBlankParagraph($paragraph)) {
+                continue;
+            }
+            $removals[] = ['start' => (int) $match[1], 'length' => strlen($paragraph)];
+        }
+
+        usort($removals, static fn (array $a, array $b): int => $b['start'] <=> $a['start']);
+        foreach ($removals as $removal) {
+            $cellXml = substr_replace($cellXml, '', $removal['start'], $removal['length']);
+        }
+
+        return $cellXml;
+    }
+
+    private static function isBlankParagraph(string $paragraphXml): bool
+    {
+        if (!preg_match_all('/<w:t[^>]*>(.*?)<\/w:t>/s', $paragraphXml, $m)) {
+            return true;
+        }
+
+        $text = implode('', $m[1]);
+        $text = html_entity_decode($text, ENT_XML1 | ENT_QUOTES);
+        $text = str_replace("\u{00A0}", '', $text);
+
+        return trim($text) === '';
+    }
+
+    /**
+     * Igual que shrinkConcertacionFreeTextByLength() pero para "Observaciones adicionales"
+     * (campo de slots fijos): mide el texto combinado de las hasta 4 líneas físicas de la
+     * plantilla y aplica un único tamaño uniforme a todas, para no tener saltos de tamaño entre
+     * renglones del mismo campo.
+     */
+    private static function shrinkObservacionesAdicionalesByLength(string $xml): string
+    {
+        return F023DynamicFontScaleSupport::shrinkContentCellFontByLength(
+            $xml,
+            'Observaciones adicionales',
+            'm1_observaciones_adicionales'
+        );
+    }
+
+    /**
+     * Ajusta el interlineado del único párrafo de contenido de cada campo de concertación
+     * (competencias, resultados, actividades, evidencias, observaciones adicionales) a
+     * espaciado exacto sin espacio antes/después, para recuperar presupuesto vertical de
+     * página cuando el texto es largo.
+     */
+    private static function tightenConcertacionContentSpacing(string $xml): string
+    {
+        foreach ([
+            'Competencias a ',
+            'Resultados de aprendizaje',
+            'Actividades a desarrollar ',
+            'Evidencias de aprendizaje',
+        ] as $anchor) {
+            $xml = self::tightenContentCellSpacing($xml, $anchor);
+        }
+
+        return $xml;
+    }
+
+    private static function tightenContentCellSpacing(string $xml, string $anchor): string
+    {
+        $anchorPos = strpos($xml, $anchor);
+        if ($anchorPos === false) {
+            return $xml;
+        }
+
+        $labelCellEnd = strpos($xml, '</w:tc>', $anchorPos);
+        if ($labelCellEnd === false) {
+            return $xml;
+        }
+        $contentCellOffset = $labelCellEnd + strlen('</w:tc>');
+
+        $contentCellEnd = strpos($xml, '</w:tc>', $contentCellOffset);
+        if ($contentCellEnd === false) {
+            return $xml;
+        }
+
+        $contentCell = substr($xml, $contentCellOffset, $contentCellEnd - $contentCellOffset);
+        $firstParaEnd = strpos($contentCell, '</w:p>');
+        if ($firstParaEnd === false) {
+            return $xml;
+        }
+        $firstParaEnd += strlen('</w:p>');
+
+        $paragraph = substr($contentCell, 0, $firstParaEnd);
+        $newParagraph = self::applyTightLineSpacing($paragraph);
+        if ($newParagraph === $paragraph) {
+            return $xml;
+        }
+
+        $newContentCell = $newParagraph . substr($contentCell, $firstParaEnd);
+
+        return substr($xml, 0, $contentCellOffset) . $newContentCell . substr($xml, $contentCellEnd);
+    }
+
     private static function shrinkConcertacionEmptyRowHeights(string $xml): string
     {
         $targets = [
@@ -577,55 +775,48 @@ final class F023M1TemplateMacroInjector
         return substr($xml, 0, $rowStart) . $newRow . substr($xml, $rowEnd);
     }
 
-    private static function injectM1ObservacionesAdicionalesSecondLine(string $xml): string
+    /**
+     * La celda de datos de "Observaciones adicionales" en m1.docx trae un único párrafo
+     * (recibe ${m1_observaciones_adicionales} vía injectAfterAnchor()). Para poder mostrar
+     * más de 1 línea cuando el texto es largo, se clona ese párrafo (ajustado a interlineado
+     * compacto) tantas veces como líneas adicionales se necesiten, cada una con su propio
+     * macro ${..._lN}, insertadas justo después del párrafo original.
+     */
+    private static function injectM1ObservacionesAdicionalesExtraLines(string $xml, int $totalLines): string
     {
-        $anchor = 'Observaciones adicionales</w:t>';
-        $pos = strpos($xml, $anchor);
-        if ($pos === false) {
+        if ($totalLines < 2) {
             return $xml;
         }
 
-        $tail = substr($xml, $pos);
-        if (!preg_match(
-            '/Observaciones adicionales<\/w:t>.*?<\/w:p><\/w:tc><w:tc\b[^>]*>(?s)(.*?)(<\/w:tc>)/u',
-            $tail,
-            $match
-        )) {
+        $macroToken = '${m1_observaciones_adicionales}';
+        $macroPos = strpos($xml, $macroToken);
+        if ($macroPos === false) {
             return $xml;
         }
 
-        $cellInner = (string) $match[1];
-        if (!preg_match_all('/<w:p\b[^>]*>.*?<\/w:p>/s', $cellInner, $paragraphs, PREG_OFFSET_CAPTURE)) {
+        $before = substr($xml, 0, $macroPos);
+        if (!preg_match_all('/<w:p(?:\s[^>]*)?>/', $before, $pMatches, PREG_OFFSET_CAPTURE)) {
             return $xml;
         }
-        if (count($paragraphs[0]) < 2) {
+        $lastP = end($pMatches[0]);
+        $paraStart = (int) $lastP[1];
+
+        $paraEnd = strpos($xml, '</w:p>', $macroPos);
+        if ($paraEnd === false) {
             return $xml;
         }
+        $paraEnd += strlen('</w:p>');
 
-        $firstParagraph = (string) $paragraphs[0][0][0];
-        $firstPos = (int) $paragraphs[0][0][1];
-        $secondParagraph = (string) $paragraphs[0][1][0];
-        $secondPos = (int) $paragraphs[0][1][1];
+        $paragraph = substr($xml, $paraStart, $paraEnd - $paraStart);
+        $tightParagraph = self::applyTightLineSpacing($paragraph);
 
-        $newFirst = self::applyTightLineSpacing($firstParagraph);
-        $newSecond = self::applyTightLineSpacing($secondParagraph);
-        $newSecond = preg_replace(
-            '/<\/w:p>$/',
-            self::macroRunXml('m1_observaciones_adicionales_l2', true) . '</w:p>',
-            $newSecond,
-            1
-        );
-        if (!is_string($newSecond)) {
-            return $xml;
+        $extraParagraphs = '';
+        for ($line = 2; $line <= $totalLines; $line++) {
+            $lineToken = '${m1_observaciones_adicionales_l' . $line . '}';
+            $extraParagraphs .= str_replace($macroToken, $lineToken, $tightParagraph);
         }
 
-        $newCellInner = substr_replace($cellInner, $newFirst, $firstPos, strlen($firstParagraph));
-        $secondPos += strlen($newFirst) - strlen($firstParagraph);
-        $newCellInner = substr_replace($newCellInner, $newSecond, $secondPos, strlen($secondParagraph));
-
-        $newTail = str_replace($match[1], $newCellInner, $tail);
-
-        return substr($xml, 0, $pos) . $newTail;
+        return substr($xml, 0, $paraStart) . $tightParagraph . $extraParagraphs . substr($xml, $paraEnd);
     }
 
     private static function applyTightLineSpacing(string $paragraphXml): string
