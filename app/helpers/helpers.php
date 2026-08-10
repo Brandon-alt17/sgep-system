@@ -208,7 +208,16 @@ function log_error(string $message): void
     if (!is_dir($dir)) {
         mkdir($dir, 0777, true);
     }
-    error_log('[' . date('Y-m-d H:i:s') . '] ' . $message . PHP_EOL, 3, $dir . '/error.log');
+    $file = $dir . '/error.log';
+
+    // Rotación simple: nadie purga este archivo a mano, así que sin esto crece sin límite en
+    // producción. Al superar ~5 MB se conserva un único respaldo (.1) y se reinicia el activo.
+    $maxBytes = 5 * 1024 * 1024;
+    if (is_file($file) && filesize($file) > $maxBytes) {
+        @rename($file, $file . '.1');
+    }
+
+    error_log('[' . date('Y-m-d H:i:s') . '] ' . $message . PHP_EOL, 3, $file);
 }
 
 function import_result_url(string $importId): string
