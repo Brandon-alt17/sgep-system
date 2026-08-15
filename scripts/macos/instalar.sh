@@ -56,20 +56,6 @@ if [[ -z "$PHP_BIN" ]]; then
 fi
 echo "PHP encontrado: $PHP_BIN"
 
-MYSQL_BIN=""
-MYSQL_PORT="8889"
-for candidate in \
-  /Applications/MAMP/Library/bin/mysql \
-  /Applications/MAMP/bin/mysql/bin/mysql \
-  mysql; do
-  if [[ -x "$candidate" ]] || command -v "$candidate" >/dev/null 2>&1; then
-    if "$candidate" --version >/dev/null 2>&1; then
-      MYSQL_BIN="$candidate"
-      break
-    fi
-  fi
-done
-
 configure_env_for_mamp
 
 read -r -s -p "Contrasena MySQL (Enter = root en MAMP): " DBPASS
@@ -99,11 +85,7 @@ echo "Creando base de datos sgep (si no existe)..."
   exit 1
 }
 
-if [[ -f database/seeds/aprendices_sample.sql && -n "$MYSQL_BIN" ]]; then
-  "$MYSQL_BIN" -u root -p"$DBPASS" -P "$MYSQL_PORT" -h 127.0.0.1 sgep \
-    < database/seeds/aprendices_sample.sql \
-    || echo "AVISO: No se pudo cargar el seed opcional."
-fi
+"$PHP_BIN" database/seed_sample_if_empty.php || echo "AVISO: No se pudo cargar el aprendiz de ejemplo."
 
 SGEP_URL="http://localhost:8888/sgep/"
 echo

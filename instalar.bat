@@ -45,23 +45,9 @@ if %errorlevel% neq 0 (
   exit /b 1
 )
 
-set "MYSQL_EXE=mysql"
-mysql --version >nul 2>&1
+call "%~dp0scripts\php.cmd" database/seed_sample_if_empty.php
 if %errorlevel% neq 0 (
-  if exist "C:\wamp64\bin\mysql\mysql8.4.7\bin\mysql.exe" set "MYSQL_EXE=C:\wamp64\bin\mysql\mysql8.4.7\bin\mysql.exe"
-  if exist "C:\wamp64\bin\mariadb\mariadb11.4.9\bin\mysql.exe" set "MYSQL_EXE=C:\wamp64\bin\mariadb\mariadb11.4.9\bin\mysql.exe"
-)
-
-if exist database\seeds\aprendices_sample.sql (
-  "%MYSQL_EXE%" --version >nul 2>&1
-  if %errorlevel% neq 0 (
-    echo AVISO: MySQL CLI no disponible; se omite carga de seed.
-    goto :done
-  )
-  "%MYSQL_EXE%" -u root -p%DBPASS% sgep < database\seeds\aprendices_sample.sql
-  if %errorlevel% neq 0 (
-    echo AVISO: No se pudo cargar seed opcional de aprendices.
-  )
+  echo AVISO: No se pudo cargar el aprendiz de ejemplo.
 )
 
 :done
